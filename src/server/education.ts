@@ -289,6 +289,14 @@ export async function answerEducationQuestion(
     };
   }
 
+  if (!result.ok && result.reason !== "not_configured") {
+    console.warn("Morrowward educator used its deterministic fallback.", {
+      reason: result.reason,
+      requestId: id,
+      model: OPENAI_MODEL,
+    });
+  }
+
   return {
     ok: true,
     response: responseFromExplanation(fallbackExplanation(input), {

@@ -279,6 +279,7 @@ describe.sequential("Morrowward API contracts and safeguards", () => {
   });
 
   it("falls back without leaking details when the model request fails", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const fetchImpl = vi
       .fn<typeof fetch>()
       .mockRejectedValue(new Error("secret upstream diagnostic"));
@@ -291,6 +292,13 @@ describe.sequential("Morrowward API contracts and safeguards", () => {
     });
     expect(result.ok && result.response.meta.mode).toBe("fallback");
     expect(JSON.stringify(result)).not.toContain("secret upstream diagnostic");
+    expect(warn).toHaveBeenCalledWith(
+      "Morrowward educator used its deterministic fallback.",
+      expect.objectContaining({ reason: "network_error", model: "gpt-5.6" }),
+    );
+    expect(JSON.stringify(warn.mock.calls)).not.toContain(
+      "secret upstream diagnostic",
+    );
   });
 
   it("returns 400 for malformed education input", async () => {

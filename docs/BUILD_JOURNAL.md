@@ -46,9 +46,12 @@ The product therefore focuses on a repeatable weekly habit and a future someone 
 - Passed four Playwright journeys across desktop Chrome and a Pixel 7 viewport, covering the full golden path, keyboard navigation, export/import/reset, serious/critical WCAG checks, service-worker control, and offline reload.
 - Passed the Next.js/Vercel production build, four rendered-worker checks, and a production dependency audit with zero known production vulnerabilities.
 - Deployed the exact committed archive to a Vercel **Preview** environment and verified Vercel Authentication on both its generated URL and branch alias. Anonymous requests redirect to login, while authenticated checks return the expected application shell and `/api/v1/health` response.
-- Removed the first-deployment production alias and its deployment after Vercel assigned it unexpectedly. `morrowward.vercel.app` now returns `DEPLOYMENT_NOT_FOUND`; only the protected preview remains.
+- Removed the first-deployment production alias and its deployment after Vercel assigned it unexpectedly. `morrowward.vercel.app` now returns `DEPLOYMENT_NOT_FOUND`; only protected preview deployments remain.
+- Connected a dedicated, restricted OpenAI project key to the Vercel Preview environment as an unreadable sensitive variable. The key can call only the Responses API; it is not available to the browser or Production environment.
+- Verified the live educator end to end: health reported GPT-5.6 configured, a bounded request returned `mode: ai` with `model: gpt-5.6`, and the public preview URL continued to redirect anonymous visitors to Vercel Authentication.
+- Used the first live requests to find a real reliability boundary: a longer structured response safely fell back when it crossed the original 12-second timeout. Codex increased the bounded timeout to 25 seconds, added metadata-only fallback diagnostics that never log prompts, numeric context, headers, or credentials, and verified the same complex request completed with GPT-5.6 in 21.9 seconds.
 
-Protected preview: `https://morrowward-gqwbcdxjm-thedavedev.vercel.app`
+Latest protected preview: `https://morrowward-kf3ev2lpj-thedavedev.vercel.app`
 
 ## July 15 — Foundation and core experience
 

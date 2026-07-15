@@ -139,6 +139,13 @@ export async function generateDailyBrief(options: {
     maxOutputTokens: 900,
   });
 
+  if (!result.ok && result.reason !== "not_configured") {
+    console.warn("Morrowward daily brief used its deterministic fallback.", {
+      reason: result.reason,
+      model: OPENAI_MODEL,
+    });
+  }
+
   const response =
     result.ok && !containsUnsafeBriefAdvice(result.value)
       ? responseFromGeneration(result.value, { now, mode: "ai" })

@@ -3,6 +3,7 @@ import type { ZodType } from "zod";
 export const OPENAI_MODEL = "gpt-5.6";
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const MAX_RESPONSE_BYTES = 64_000;
+const DEFAULT_REQUEST_TIMEOUT_MS = 25_000;
 
 export type OpenAIFailureReason =
   | "not_configured"
@@ -57,7 +58,10 @@ export async function requestStructuredResponse<T>(options: {
   if (!apiKey) return { ok: false, reason: "not_configured" };
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), options.timeoutMs ?? 12_000);
+  const timeout = setTimeout(
+    () => controller.abort(),
+    options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS,
+  );
 
   let raw: string;
   try {
