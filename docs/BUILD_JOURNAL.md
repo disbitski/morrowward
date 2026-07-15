@@ -51,7 +51,7 @@ The product therefore focuses on a repeatable weekly habit and a future someone 
 - Verified the live educator end to end: health reported GPT-5.6 configured, a bounded request returned `mode: ai` with `model: gpt-5.6`, and the public preview URL continued to redirect anonymous visitors to Vercel Authentication.
 - Used the first live requests to find a real reliability boundary: a longer structured response safely fell back when it crossed the original 12-second timeout. Codex increased the bounded timeout to 25 seconds, added metadata-only fallback diagnostics that never log prompts, numeric context, headers, or credentials, and verified the same complex request completed with GPT-5.6 in 21.9 seconds.
 
-Latest protected preview: `https://morrowward-kf3ev2lpj-thedavedev.vercel.app`
+Latest protected preview: `https://morrowward-qui11xo7k-thedavedev.vercel.app`
 
 ### Hands-on feedback turned a starter portfolio into Market Journey
 
@@ -72,7 +72,9 @@ The same feedback pass added a fourth **Space** theme, adapted from the prior Sp
 
 This is the collaboration loop the project was meant to support: build a complete idea, use it, notice what the lesson still cannot teach, and turn lived experience into a safer, testable interaction.
 
-The hardening pass finished with 90 deterministic unit/integration tests, lint, TypeScript, both production builds, and rendered-worker checks passing. Four Playwright journeys passed across desktop Chrome and a Pixel 7 viewport. The browser suite exercises the Market Journey controls and unrecovered late-decline state, runs serious/critical accessibility checks on the Practice page in all four themes, and re-verifies offline reload. That broader theme matrix found two pre-existing near-threshold Dawn contrast values plus an invalid definition-list structure in the new metrics; both were corrected before the final screenshots were captured.
+The hardening pass finished with 91 deterministic unit/integration tests, lint, TypeScript, both production builds, and rendered-worker checks passing. Four Playwright journeys passed across desktop Chrome and a Pixel 7 viewport. The browser suite exercises the Market Journey controls and unrecovered late-decline state, runs serious/critical accessibility checks on the Practice page in all four themes, and re-verifies offline reload. That broader theme matrix found two pre-existing near-threshold Dawn contrast values plus an invalid definition-list structure in the new metrics; both were corrected before the final screenshots were captured.
+
+The Market Journey and Space work landed in milestone commit `f744de5`. A live protected-preview evaluation then found a subtler product-contract issue: GPT-5.6 explained market timing safely, but its suggested experiment mentioned historical data and removing weak days—controls Morrowward does not provide. Codex tightened the educator instructions, deterministically aligned market-timing next steps to the actual synthetic all-days versus strongest-days lab, and added a regression test in commit `7da9fd1`. The corrected preview returned `mode: ai` with `model: gpt-5.6` and the exact supported experiment. Anonymous access still redirects to Vercel Authentication, `/api/v1/health` reports the expected local-first configuration, and `morrowward.vercel.app` remains unassigned.
 
 ## July 15 — Foundation and core experience
 

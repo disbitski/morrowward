@@ -13,7 +13,7 @@
 - [ ] iPhone-sized and macOS-sized PWA flows are verified.
 - [x] `npm run test:e2e` passes its desktop Chrome and mobile Pixel 7 projects from a production build.
 
-Protected preview verified July 14: `https://morrowward-gqwbcdxjm-thedavedev.vercel.app`. Anonymous requests redirect to Vercel Authentication. The public production alias remains unassigned until July 20.
+Protected preview verified July 14: `https://morrowward-qui11xo7k-thedavedev.vercel.app`. Anonymous requests redirect to Vercel Authentication. Its health route reports GPT-5.6 configured, and the live market-timing lesson returns the supported synthetic experiment. The public production alias remains unassigned until July 20.
 
 ## Devpost
 
