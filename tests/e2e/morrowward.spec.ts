@@ -1,0 +1,131 @@
+import { expect, test, type Page } from "@playwright/test";
+import axe from "axe-core";
+
+async function openView(page: Page, view: "plan" | "practice" | "learn") {
+  const desktop = page.getByTestId(`nav-${view}`);
+  if (await desktop.isVisible()) {
+    await desktop.click();
+    return;
+  }
+  await page.getByTestId(`mobile-nav-${view}`).click();
+}
+
+async function openSettings(page: Page) {
+  const desktop = page.getByTestId("nav-settings");
+  if (await desktop.isVisible()) {
+    await desktop.click();
+    return;
+  }
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+}
+
+async function onboard(page: Page) {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: /Small steps/i })).toBeVisible();
+  await page.getByTestId("experience-new").click();
+  await page.getByTestId("onboarding-next").click();
+  await page.getByTestId("onboarding-theme-horizon").click();
+  await page.getByTestId("onboarding-next").click();
+  await page.getByTestId("plan-current-age").fill("30");
+  await page.getByTestId("plan-target-age").fill("65");
+  await page.getByTestId("plan-starting-balance").fill("1000");
+  await page.getByTestId("plan-weekly-contribution").fill("25");
+  await page.getByTestId("onboarding-complete").click();
+  await expect(page.getByRole("heading", { name: /future is still in motion/i })).toBeVisible();
+}
+
+test("golden path stays educational, local, and fully simulated", async ({ page }, testInfo) => {
+  await onboard(page);
+
+  await openView(page, "plan");
+  await expect(page.getByRole("heading", { name: /Change the inputs/i })).toBeVisible();
+  await page.getByTestId("plan-edit-current-age").fill("30.5");
+  await expect(page.getByTestId("plan-edit-current-age")).toHaveValue("31");
+  await page.getByTestId("scenario-900").click();
+  await expect(page.getByText("Not a forecast").first()).toBeVisible();
+
+  await openView(page, "practice");
+  await expect(page.getByRole("heading", { name: /Learn the motion/i })).toBeVisible();
+  await page.getByTestId("practice-deposit").click();
+  await page.getByTestId("asset-TSLA").click();
+  await page.getByTestId("practice-buy-amount").fill("10");
+  await page.getByTestId("practice-buy").click();
+  await expect(page.getByText(/TSLA simulated purchase/i)).toBeVisible();
+  await expect(page.getByText(/nothing was traded/i)).toBeVisible();
+
+  await openView(page, "learn");
+  await page.getByTestId("educator-chip-0").click();
+  await page.getByTestId("educator-submit").click();
+  await expect(page.locator(".educator-response")).toBeVisible();
+  await expect(page.getByText(/Deterministic fallback|GPT-5\.6 generated|Safety-guided response/i)).toBeVisible();
+
+  await openSettings(page);
+  await expect(page.getByRole("heading", { name: /Your plan belongs to you/i })).toBeVisible();
+  const downloadEvent = page.waitForEvent("download");
+  await page.getByTestId("settings-export").click();
+  const download = await downloadEvent;
+  expect(download.suggestedFilename()).toBe("morrowward-backup.json");
+  const backupPath = await download.path();
+  expect(backupPath).toBeTruthy();
+  await page.locator('input[type="file"]').setInputFiles(backupPath!);
+  await expect(page.getByText(/Backup restored/i)).toBeVisible();
+
+  if (testInfo.project.name === "desktop-chrome") {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: /future is still in motion/i })).toBeVisible();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("link", { name: /Skip to main content/i })).toBeFocused();
+  }
+
+  await openSettings(page);
+  await page.getByTestId("settings-reset").click();
+  await page.getByTestId("settings-reset").click();
+  await expect(page.getByRole("heading", { name: /Small steps/i })).toBeVisible();
+});
+
+test("PWA reloads offline and has no serious automated accessibility violations", async ({ context, page }) => {
+  await onboard(page);
+  await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", /manifest\.json$/u);
+  const manifest = await page.evaluate(async () => {
+    const response = await fetch("/manifest.json");
+    return response.json() as Promise<{ display: string; icons: Array<{ src: string }> }>;
+  });
+  expect(manifest.display).toBe("standalone");
+  expect(manifest.icons.length).toBeGreaterThanOrEqual(2);
+  await page.evaluate(async () => {
+    if (!("serviceWorker" in navigator)) throw new Error("Service workers unavailable");
+    await navigator.serviceWorker.ready;
+  });
+  await page.reload();
+  await expect(page.getByRole("heading", { name: /future is still in motion/i })).toBeVisible();
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+  await page.locator(".view-stack").evaluate(async (element) => {
+    await Promise.all(element.getAnimations().map((animation) => animation.finished));
+  });
+
+  await page.addScriptTag({ content: axe.source });
+  const violations = await page.evaluate(async () => {
+    const result = await window.axe.run(document, {
+      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] },
+    });
+    return result.violations
+      .filter((item) => item.impact === "serious" || item.impact === "critical")
+      .map((item) => ({
+        id: item.id,
+        impact: item.impact,
+        help: item.help,
+        nodes: item.nodes.map((node) => ({ target: node.target, html: node.html, summary: node.failureSummary })),
+      }));
+  });
+  expect(violations).toEqual([]);
+
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: /future is still in motion/i })).toBeVisible();
+});
+
+declare global {
+  interface Window {
+    axe: typeof axe;
+  }
+}
