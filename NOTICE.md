@@ -13,3 +13,5 @@ It is included in this public repository so the Morrowward mission story and sub
 ## Trademarks and educational references
 
 Product names, asset names, and trademarks belong to their respective owners. Their appearance in simulated educational examples does not imply affiliation or endorsement.
+
+Daily educational quote snapshots may include source names and clickable citations returned by OpenAI Responses API web search. Those source names, linked pages, market facts, and third-party trademarks remain the property of their respective owners and are not relicensed under Morrowward's MIT License. Morrowward is not affiliated with or endorsed by OpenAI or any cited market source.

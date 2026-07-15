@@ -7,7 +7,7 @@ function constantTimeEqual(left: string, right: string): boolean {
   return mismatch === 0;
 }
 
-export function isAuthorizedBriefGenerator(
+export function isAuthorizedScheduledGenerator(
   request: Request,
   environment?: {
     CRON_SECRET?: string;
@@ -28,3 +28,6 @@ export function isAuthorizedBriefGenerator(
     .filter((value): value is string => Boolean(value))
     .some((expected) => constantTimeEqual(provided, expected));
 }
+
+// Backward-compatible name for the original daily-brief scheduler route.
+export const isAuthorizedBriefGenerator = isAuthorizedScheduledGenerator;

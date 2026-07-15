@@ -36,6 +36,7 @@ async function onboard(page: Page) {
 
 test("golden path stays educational, local, and fully simulated", async ({ page }, testInfo) => {
   await onboard(page);
+  await expect(page.getByText("Local & private", { exact: true })).toHaveCount(0);
 
   await openView(page, "plan");
   await expect(page.getByRole("heading", { name: /Change the inputs/i })).toBeVisible();
@@ -47,8 +48,8 @@ test("golden path stays educational, local, and fully simulated", async ({ page 
   await openView(page, "practice");
   await expect(page.getByRole("heading", { name: /Learn the motion/i })).toBeVisible();
   await expect(page.getByTestId(/^practice-market-asset-/)).toHaveCount(11);
-  await page.getByTestId("refresh-practice-prices").click();
-  await expect(page.getByTestId("refresh-practice-prices")).toBeEnabled();
+  await expect(page.getByTestId("practice-market-source-status")).toContainText(/Updated daily from current market sources|Practice data available offline/i);
+  await expect(page.getByRole("button", { name: /Refresh prices/i })).toHaveCount(0);
   await page.getByTestId("practice-asset-info-SPCX").click();
   const assetDetail = page.getByTestId("practice-asset-detail");
   await expect(assetDetail).toBeVisible();
@@ -122,9 +123,9 @@ test("practice failures stay labeled and the asset dialog restores focus", async
 
   await onboard(page);
   await openView(page, "practice");
-  await expect(page.getByRole("alert").filter({ hasText: /Prices could not be refreshed/i })).toBeVisible();
+  await expect(page.getByRole("alert").filter({ hasText: /Current sources are temporarily unavailable/i })).toBeVisible();
   await expect(page.getByTestId(/^practice-market-asset-/)).toHaveCount(11);
-  await expect(page.getByText("Sample", { exact: true }).first()).toBeVisible();
+  await expect(page.getByTestId("practice-market-source-status")).toHaveText("Practice data available offline");
 
   const detailTrigger = page.getByTestId("practice-asset-info-SPCX");
   await detailTrigger.click();

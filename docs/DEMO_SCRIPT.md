@@ -16,9 +16,9 @@ Complete onboarding and reveal the three illustrative futures. Point out contrib
 
 ## 0:48–1:32 — Practice market, weekly habit, and Market Journey
 
-“The goal is not predicting prices. It is learning what you see and making a habit visible. Refresh Prices checks the configured educational source; every asset keeps its timestamp, freshness, and provenance. This demo uses a clearly labeled synthetic fallback.”
+“The goal is not predicting prices. Practice shows current market quotes via GPT-5.6 web search, refreshed daily—not real-time. One protected batch covers all eleven assets, and the interface keeps its last update, freshness, and sources visible. If data is unavailable, the labeled synthetic fallback keeps the lesson working.”
 
-Refresh once, open SPCX, and point to **newly public**, **limited history**, category, qualitative risk, and the **synthetic sample** label/disclosure. Close it, deposit the weekly amount, buy one demo asset, then open the 10-year Market Journey.
+Point to **Updated daily from current market sources**, open SPCX, and show its update time, source, **newly public** identity, category, qualitative risk, and the **synthetic sample path** disclosure. Close it, deposit the weekly amount, buy one demo asset, then open the 10-year Market Journey.
 
 “The habit is consistent; the market is not. This deterministic lab separates return from market bumpiness, makes drawdown visible, and distinguishes market CAGR from my contribution-aware return. A late downturn may not recover. Removing the strongest simulated days shows why staying invested can matter, even though nobody knows those days in advance.”
 
@@ -34,7 +34,7 @@ Show the daily brief’s separate facts, sentiment, uncertainty, and takeaway.
 
 ## 1:56–2:28 — Codex, specialist agents, and implementation quality
 
-“GPT-5.6 Sol in Codex orchestrated focused agents for market contracts, accessible UI, optional media tooling, and independent review, then consolidated one tested architecture. Codex built the responsive PWA, deterministic engines, property tests, AI safety evaluations, and decision journal. A fresh consent-gated xAI pipeline can create reviewed media, never financial facts. GPT-5.6 educates; tested code owns the math.”
+“GPT-5.6 Sol in Codex orchestrated focused agents for market contracts, accessible UI, optional media tooling, and independent review, then consolidated one tested architecture. Codex built the PWA, deterministic engines, tests, safety evaluations, and decision journal. One guarded batch creates the daily shared snapshot; singleflight and a 12-hour Redis retry guard let first load self-heal a missed run without blocking visitors, while read-only rechecks update that first screen. GPT-5.6 educates and gathers public quotes; tested code owns the math.”
 
 Flash the test output, architecture section in the README, build journal, and AI orchestration/provenance note.
 

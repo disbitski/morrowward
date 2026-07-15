@@ -1,7 +1,9 @@
+import { after } from "next/server";
 import { QUOTE_SYMBOLS } from "../../../../src/contracts";
 import { apiError, jsonResponse } from "../../../../src/server/http";
 import {
   getMarketQuotes,
+  ensureCurrentMarketQuoteSnapshot,
   parseQuoteHistory,
   parseQuoteSymbols,
 } from "../../../../src/server/quotes";
@@ -17,6 +19,7 @@ export async function GET(request: Request): Promise<Response> {
   if (!rateLimit.ok) return rateLimit.response;
 
   const searchParams = new URL(request.url).searchParams;
+  const observeOnly = searchParams.get("observe") === "1";
   const rawSymbols = searchParams.get("symbols");
   if (rawSymbols && rawSymbols.length > 128) {
     return apiError(
@@ -67,12 +70,28 @@ export async function GET(request: Request): Promise<Response> {
   const headers = new Headers(rateLimit.headers);
   headers.set(
     "cache-control",
-    historySelection.includeHistory
-      ? "public, max-age=0, s-maxage=21600, stale-while-revalidate=86400"
+    observeOnly
+      ? "private, no-store"
       : "public, max-age=0, s-maxage=300, stale-while-revalidate=900",
   );
   const response = await getMarketQuotes(selection.symbols, {
     includeHistory: historySelection.includeHistory,
   });
+  if (!observeOnly) {
+    try {
+      after(async () => {
+        await ensureCurrentMarketQuoteSnapshot();
+      });
+    } catch (error) {
+      // Direct route-unit calls do not establish Next's request work store.
+      if (
+        process.env.NODE_ENV !== "test" ||
+        !(error instanceof Error) ||
+        !error.message.includes("outside a request scope")
+      ) {
+        throw error;
+      }
+    }
+  }
   return jsonResponse(response, { headers });
 }

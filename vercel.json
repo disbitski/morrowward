@@ -6,6 +6,10 @@
     {
       "path": "/api/v1/briefs/generate",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/v1/quotes/generate",
+      "schedule": "15 22 * * *"
     }
   ],
   "headers": [

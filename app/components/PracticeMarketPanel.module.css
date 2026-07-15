@@ -71,12 +71,27 @@
   font-weight: 750;
 }
 
+.marketFreshness[data-source-mode="search"] {
+  border: 1px solid color-mix(in srgb, var(--secondary) 32%, var(--line));
+  border-radius: 999px;
+  padding: 6px 9px;
+  background: color-mix(in srgb, var(--secondary) 8%, var(--surface));
+  color: var(--secondary);
+}
+
+.marketFreshness[data-source-mode="practice"] {
+  color: var(--muted);
+}
+
+.marketFreshness[data-source-mode="mixed"] {
+  color: var(--accent);
+}
+
 .refreshBlock small {
   color: var(--faint);
   font-size: 11px;
 }
 
-.refreshButton,
 .selectButton,
 .selectedButton,
 .infoButton,
@@ -97,7 +112,6 @@
   transition: transform 150ms ease, border-color 150ms ease, background-color 150ms ease, color 150ms ease;
 }
 
-.refreshButton:hover:not(:disabled),
 .selectButton:hover:not(:disabled),
 .selectedButton:hover:not(:disabled),
 .infoButton:hover:not(:disabled),
@@ -107,7 +121,6 @@
   transform: translateY(-1px);
 }
 
-.refreshButton:active:not(:disabled),
 .selectButton:active:not(:disabled),
 .selectedButton:active:not(:disabled),
 .infoButton:active:not(:disabled),
@@ -117,7 +130,6 @@
   transform: translateY(0);
 }
 
-.refreshButton:disabled,
 .selectButton:disabled,
 .selectedButton:disabled,
 .infoButton:disabled,
@@ -125,17 +137,6 @@
 .secondaryButton:disabled {
   cursor: not-allowed;
   opacity: .52;
-}
-
-.refreshButton {
-  border-color: var(--line);
-  padding: 10px 14px;
-  background: var(--surface-raised);
-  color: var(--ink);
-}
-
-.refreshButton:hover:not(:disabled) {
-  border-color: var(--line-strong);
 }
 
 .spinning {
@@ -881,6 +882,47 @@
   text-decoration: underline;
 }
 
+.citations {
+  display: grid;
+  gap: 7px;
+  margin-top: 14px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.citations > span {
+  color: var(--faint);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.citations ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.citations li {
+  min-width: 0;
+}
+
+.citations a {
+  max-width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 9px;
+  background: var(--surface);
+}
+
+.citations a:hover {
+  border-color: var(--line-strong);
+}
+
 .detailDisclosure {
   display: flex;
   align-items: flex-start;
@@ -972,13 +1014,7 @@
 
   .refreshBlock {
     width: 100%;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
     justify-items: start;
-  }
-
-  .refreshBlock small {
-    grid-column: 1 / -1;
   }
 
   .detailDialog {

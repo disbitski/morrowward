@@ -46,9 +46,9 @@ The mission page connects the product to the childhood story behind it, while th
 - A “days you cannot predict” comparison showing the same synthetic path with all days versus its strongest simulated days removed
 - Weekly habit streaks and milestones
 - Simulated cash and precise fractional practice purchases for VTI, BND, AAPL, TSLA, SPCX, NVDA, MRVL, MU, AVGO, BTC, and ETH
-- A refreshable educational-price panel with per-asset source, timestamp, freshness, and change-basis labels
+- Current market quotes via GPT-5.6 web search, refreshed daily, with source, last-successful-update time, freshness, and change-basis labels
 - Accessible asset-detail sheets with plain-language descriptions, qualitative risk context, and a bounded one-year price path
-- Fail-closed optional live/delayed provider support; deterministic synthetic values remain the offline and unlicensed fallback
+- One protected GPT-5.6 web-search batch for the fixed eleven-asset universe; deterministic synthetic values remain the offline fallback
 - Financial-literacy lessons linking to primary Investor.gov and FINRA sources
 - Guided questions and bounded freeform questions for a GPT-5.6 educator
 - Educational daily brief separating facts, sentiment, uncertainty, and takeaway
@@ -57,7 +57,7 @@ The mission page connects the product to the childhood story behind it, while th
 - Installable PWA shell with useful offline fallbacks
 - No account, birthdate, brokerage credential, or real transaction path
 
-The complete simulator works without an OpenAI key, a brokerage account, or network access. GPT-5.6 improves explanations; tested code owns every financial calculation.
+The complete simulator works without an OpenAI key, a brokerage account, or network access. GPT-5.6 adds optional explanations, the educational brief, and a source-backed daily public-quote snapshot; tested code owns every financial calculation.
 
 ## Quick start
 
@@ -79,7 +79,7 @@ npm run dev
 
 The public clone URL becomes available on July 20; until then, this command works only for an authorized collaborator. Open the local URL shown in the terminal. An API key is optional.
 
-### Optional GPT-5.6 educator
+### Optional GPT-5.6 features
 
 Set this only in `.env.local` or your hosting provider’s encrypted environment settings:
 
@@ -87,19 +87,19 @@ Set this only in `.env.local` or your hosting provider’s encrypted environment
 OPENAI_API_KEY=your_project_key
 ```
 
-Never prefix the variable with `NEXT_PUBLIC_` and never place the key in browser code. The server currently uses the explicit hackathon model alias `gpt-5.6`.
+Never prefix the variable with `NEXT_PUBLIC_` and never place the key in browser code. The server currently uses the explicit hackathon model alias `gpt-5.6` for the educator, daily brief, and protected daily quote-snapshot generator. All three have useful deterministic fallbacks when the key is absent.
 
-For the brief-generation endpoint, also set a long random secret:
+For the protected brief and quote generation endpoints, also set a long random secret:
 
 ```bash
 CRON_SECRET=replace_with_a_long_random_value
 ```
 
-Vercel Cron calls `GET /api/v1/briefs/generate` and sends this value as an `Authorization: Bearer …` header. `ADMIN_API_TOKEN` is an optional second bearer token for a manual server-to-server trigger. Neither token belongs in browser code.
+Vercel Cron calls `GET /api/v1/briefs/generate` and `GET /api/v1/quotes/generate` and sends this value as an `Authorization: Bearer …` header. `ADMIN_API_TOKEN` is an optional second bearer token for an operator-controlled server-to-server trigger. Neither token belongs in browser code. Vercel invokes configured cron jobs only for Production deployments, not Preview deployments; protected hackathon previews therefore do not spend on scheduled runs. See Vercel's [Cron Jobs quickstart](https://vercel.com/docs/cron-jobs/quickstart) and [cron security guidance](https://vercel.com/docs/cron-jobs/manage-cron-jobs).
 
-### Optional durable daily-brief cache
+### Optional durable daily-content cache
 
-The app always has a deterministic daily brief. To retain a generated brief across Vercel cold starts, regions, and parallel instances, configure one complete REST credential pair:
+The app always has deterministic brief and quote fallbacks. To share the generated daily brief and quote snapshot across Vercel cold starts, regions, and parallel instances, configure one complete REST credential pair:
 
 ```bash
 # Vercel KV-compatible names
@@ -111,25 +111,19 @@ UPSTASH_REDIS_REST_URL=https://your-store.example
 UPSTASH_REDIS_REST_TOKEN=your_token
 ```
 
-If both complete pairs are present, the `KV_REST_API_*` pair takes precedence. Briefs are validated before storage and after retrieval, keyed by UTC calendar date, and expire after 48 hours. Store operations time out after 1.5 seconds and fail closed to the in-process/deterministic brief, so Redis/KV is an optional durability enhancement rather than an availability dependency. Without a durable store, a generated AI brief is not guaranteed to survive a serverless cold start.
+If both complete pairs are present, the `KV_REST_API_*` pair takes precedence. Content is schema-validated before storage and after retrieval. Briefs use a UTC-date key; the latest quote snapshot uses one shared key. Both expire after 48 hours. Store operations time out after 1.5 seconds and fail closed to in-process/deterministic content, so Redis/KV is a durability enhancement rather than an availability dependency. Without a durable store, generated content is not guaranteed to survive a serverless cold start.
 
 The preview uses a dedicated prepaid OpenAI API project with auto-recharge disabled and a $10 project budget. That dashboard setting is operational protection, not an absolute code-enforced cap because usage reporting can be delayed.
 
-### Optional licensed market data
+### Automatic daily quote snapshot
 
-Practice mode works without a market-data account. In that default mode, Refresh Prices returns fixed synthetic teaching values and the detail chart calls itself a **synthetic sample path**, never historical performance.
+Practice updates automatically. A protected Production cron runs once per UTC day after the regular U.S. equity session and asks GPT-5.6 to gather the full fixed allowlist—VTI, BND, AAPL, TSLA, SPCX, NVDA, MRVL, MU, AVGO, BTC, and ETH—in one Responses API batch. The request uses required hosted `web_search`, `reasoning: { effort: "low" }`, `store: false`, strict structured output, source metadata, and at most one search tool call. The server rejects memory-only or malformed results, validates each returned instrument and its evidence, and uses an explicit per-symbol synthetic fallback when a current supported value is unavailable. No user's plan, balance, holdings, transactions, question, or identity is included; the request contains only the fixed public asset list and data contract.
 
-The server includes an optional Twelve Data adapter. It fails closed unless all three values are present:
+The cron is primary, with a guarded self-healing path for missed runs: when the normal quote route finds no usable daily snapshot, the first request may start the same batch in the background. An in-process singleflight collapses concurrent work in one warm runtime, and the configured Redis/KV store adds a 12-hour distributed `NX` retry guard across instances. Other visitors immediately receive the last saved snapshot or deterministic fallback while generation finishes. The initiating Practice screen performs only two bounded, read-only rechecks—about 8 and 28 seconds after the first response—so a completed background snapshot can appear without a reload; those observation requests cannot start another generation. Normal reads reuse a successful snapshot for up to 24 hours, while the scheduled `GET` uses UTC-calendar-day cadence so near-boundary timing cannot make the cron skip every other day. Persistent failures retry no more frequently than once per 12 hours. Production should configure the durable store so that the snapshot and spend guard are shared across serverless instances.
 
-```bash
-TWELVE_DATA_API_KEY=your_server_only_key
-TWELVE_DATA_DISPLAY_MODE=delayed # or live, matching your licensed entitlement
-MARKET_DATA_PUBLIC_DISPLAY_ALLOWED=true
-```
+The interface says **Updated daily from current market sources**—never “real-time”—and shows the last successful update, per-asset source/citations when supplied, and freshness. URL citations are displayed for an asset only when the completed search call returned that URL and annotated that asset's quote object; hosted `oai-finance` evidence never receives an invented link. If the scheduled call, OpenAI, network, or durable store is unavailable, Practice remains usable with clearly labeled deterministic synthetic values; a synthetic one-year chart is never represented as actual historical performance.
 
-`MARKET_DATA_PUBLIC_DISPLAY_ALLOWED=true` is an operator attestation—not a license grant. Set it only if the account and exchange entitlements permit the intended external/public display. Twelve Data states that individual plans are for personal/internal use and that external display requires an appropriate business agreement; review its [usage-rights guidance](https://support.twelvedata.com/en/articles/5332349-commercial-and-personal-usage) and current plan terms before enabling the adapter on a public deployment.
-
-The key stays server-side, travels to the provider in an authorization header rather than a URL, and never appears in the browser response. A four-second timeout, bounded allowlist, short server cache, stale/fallback labels, and partial-provider fallback keep Practice usable when data is missing. Morrowward does not ship a provider key and never calls Twelve Data merely because a key exists.
+OpenAI documents that Responses API web search can return sourced citations and source records labeled `oai-finance`. The application preserves clickable URL citations when provided and never invents a URL for a hosted source that does not expose one. At the documented price at build time, web search is $10 per 1,000 calls—$0.01 for the normal successful daily search—plus GPT-5.6 model and search-content tokens. With the durable retry guard configured, persistent failures can attempt at most once per 12 hours, so the search-tool portion is bounded to roughly $0.02 per day before tokens during an outage. See OpenAI's [web-search guide](https://developers.openai.com/api/docs/guides/tools-web-search) and [API pricing](https://developers.openai.com/api/docs/pricing). This is a bounded operating design, not a guarantee that API pricing or usage reporting cannot change.
 
 ## Repeatable sample demo
 
@@ -159,8 +153,8 @@ Browser / installed PWA
 └── bounded API calls with minimal context
     ├── education explanation → GPT-5.6 or deterministic fallback
     ├── daily brief → cached deterministic sample or GPT-5.6
-    └── quotes/history → licensed provider when explicitly enabled
-                         or labeled deterministic synthetic fallback
+    └── daily quotes → shared validated GPT-5.6 web-search snapshot
+                       or labeled deterministic synthetic fallback
 ```
 
 ### Finance domain
@@ -169,7 +163,7 @@ Money crosses the domain boundary as integer cents and rates as integer basis po
 
 The Market Journey is a second deterministic teaching model, not a forecast or a replay of a named asset. It keeps the long-term return assumption separate from market bumpiness, generates a reproducible synthetic daily path with weekly contribution checkpoints, and does not force the path to finish at the selected assumption. The interface distinguishes the unitized market path’s CAGR from the contribution-aware money-weighted return and measures drawdown at visible weekly market checkpoints so deposits cannot hide a decline. A late-downturn path intentionally demonstrates that recovery is not guaranteed by the selected horizon.
 
-The asset-detail interface can request one bounded year of adjusted closing-price observations from the explicitly enabled provider. It labels limited history, separates source data from synthetic fallback, and does not describe adjusted price change as investor total return. Without public-display rights, the same interface uses a deterministic synthetic teaching path whose chart and disclosure say it is not actual historical performance.
+The asset-detail interface separates the daily sourced snapshot from its bounded teaching path. It labels limited or synthetic history and does not describe price change as investor total return. The deterministic fallback chart and disclosure explicitly say it is not actual historical performance.
 
 The pure domain layer is shared by projections, practice transactions, portfolio valuation, habit milestones, persistence validation, and tests.
 
@@ -192,7 +186,9 @@ The server calls the OpenAI Responses API using:
 - minimal optional context: years, weekly contribution, illustrative return, and illustrative inflation
 - deterministic educational fallback whenever the key, network, model, or schema is unavailable
 
-The model never receives the local portfolio, transaction history, starting balance, identity, or medical story. It cannot execute trades. Obvious Social Security, payment-card, bank-account, routing, passport, and government-ID patterns are rejected before an OpenAI request. This is a defensive filter, not a promise to detect every kind of private information.
+The daily quote generator adds required `web_search`, `reasoning: { effort: "low" }`, source metadata, and a maximum of one search tool call. It batches the fixed eleven-symbol allowlist into one request, accepts only completed search-backed values that pass strict identity, timestamp, source, and response-schema checks, and never asks the model to calculate portfolio or projection values. Equities/ETFs allow a long-weekend observation window; crypto requires a much newer observation. Regular quote reads reuse the generated snapshot; only a guarded missing/stale first-load recovery may start generation, with singleflight and a 12-hour distributed retry guard preventing duplicate or rapid repeated work.
+
+The model never receives the local portfolio, transaction history, starting balance, identity, or medical story. The quote job sends only the fixed public asset allowlist and quote schema. It cannot execute trades. Obvious Social Security, payment-card, bank-account, routing, passport, and government-ID patterns are rejected before an educator request. This is a defensive filter, not a promise to detect every kind of private information.
 
 `store: false` tells the Responses API not to retain the response as application state; it does **not** mean zero data retention. Under OpenAI's default API controls, prompts and responses may be included in abuse-monitoring logs retained for up to 30 days (or longer when legally required). Eligible API organizations can apply for Modified Abuse Monitoring or Zero Data Retention. OpenAI states that API data is not used to train its models by default unless the organization explicitly opts in. See [OpenAI API data controls](https://platform.openai.com/docs/models/default-usage-policies-by-endpoint), [GPT-5.6 model](https://developers.openai.com/api/docs/models/gpt-5.6-sol), [Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs), and [Responses API migration](https://developers.openai.com/api/docs/guides/migrate-to-responses). The concise project privacy disclosure is in [docs/PRIVACY.md](docs/PRIVACY.md).
 
@@ -213,29 +209,36 @@ The approach follows OpenAI’s recommendation to combine model safeguards with 
 
 | Method | Route | Behavior |
 | --- | --- | --- |
-| `GET` | `/api/v1/health` | Deployment, AI-configuration, quote-mode, and privacy status |
-| `GET` | `/api/v1/quotes` | Allowlisted educational quotes; explicitly enabled provider or synthetic fallback, with provenance |
+| `GET` | `/api/v1/health` | Deployment, AI-configuration, quote-snapshot, durable-store, and privacy status |
+| `GET` | `/api/v1/quotes` | Requested allowlisted quotes from the shared daily snapshot or synthetic fallback, with provenance |
+| `GET` | `/api/v1/quotes/generate` | Protected scheduled generation of one complete eleven-symbol snapshot; bearer `CRON_SECRET` or `ADMIN_API_TOKEN`, no request body |
+| `POST` | `/api/v1/quotes/generate` | Protected operator-controlled generation; same bearer authentication plus `Content-Type: application/json` |
 | `POST` | `/api/v1/education/explain` | Bounded GPT-5.6 explanation or deterministic fallback |
 | `GET` | `/api/v1/briefs/today` | Cached educational brief with separated facts and uncertainty |
 | `GET` | `/api/v1/briefs/generate` | Protected scheduled generation; bearer `CRON_SECRET` or `ADMIN_API_TOKEN`, no request body |
 | `POST` | `/api/v1/briefs/generate` | Protected manual generation; same bearer authentication plus `Content-Type: application/json` |
 
-Both `POST` routes require `Content-Type: application/json`, and browser requests must be same-origin. The manual brief-generation request may use `{}` as its JSON body. The scheduled `GET` route does not require a content type or body. All brief-generation requests require `Authorization: Bearer <CRON_SECRET-or-ADMIN_API_TOKEN>`; Vercel supplies the `CRON_SECRET` bearer header to configured cron invocations. Authenticated schedulers and other server-to-server callers may omit browser-only `Origin` and `Sec-Fetch-Site` headers.
+All three `POST` routes require `Content-Type: application/json`, and browser requests must be same-origin. Either operator generation request may use `{}` as its JSON body. Scheduled `GET` routes require neither content type nor body. Both generation endpoints require `Authorization: Bearer <CRON_SECRET-or-ADMIN_API_TOKEN>`; Vercel supplies the `CRON_SECRET` bearer header to configured cron invocations. Authenticated schedulers and other server-to-server callers may omit browser-only `Origin` and `Sec-Fetch-Site` headers.
 
 ```bash
 # Scheduled/server-to-server GET (no body)
 curl -H "Authorization: Bearer $CRON_SECRET" \
   https://your-deployment.example/api/v1/briefs/generate
 
+curl -H "Authorization: Bearer $CRON_SECRET" \
+  https://your-deployment.example/api/v1/quotes/generate
+
 # Manual JSON POST
 curl -X POST \
   -H "Authorization: Bearer $ADMIN_API_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{}' \
-  https://your-deployment.example/api/v1/briefs/generate
+  https://your-deployment.example/api/v1/quotes/generate
 ```
 
-`GET /api/v1/briefs/today` first checks the optional date-keyed Redis/KV store and validates any saved response. A missing credential pair, timeout, unavailable store, or malformed stored value is treated as a cache miss; the route continues with the safe in-process/deterministic brief. `GET /api/v1/health` reports only whether a complete durable-store pair is configured, never its URL or token.
+`GET /api/v1/briefs/today` first checks the optional date-keyed Redis/KV brief. `GET /api/v1/quotes` first checks the same store's shared latest-snapshot key. Every value is schema-validated after retrieval. A missing credential pair, timeout, unavailable store, or malformed stored value is treated as a cache miss; the route continues with safe in-process/deterministic content. `GET /api/v1/health` reports only whether a complete durable-store pair is configured, never its URL or token.
+
+`vercel.json` schedules the quote job at `15 22 * * *` (22:15 UTC), after the regular U.S. equity session. Cron schedules use UTC. Vercel cron is Production-only, delivery is best effort, and duplicate or missed delivery is possible, so the generator replaces a timestamped snapshot instead of mutating user state. See Vercel's [Cron Jobs overview](https://vercel.com/docs/cron-jobs), [quickstart](https://vercel.com/docs/cron-jobs/quickstart), and [management notes](https://vercel.com/docs/cron-jobs/manage-cron-jobs).
 
 The dependency-free limiter shares a bounded bucket map across modules in one warm server runtime. That protects local use and reduces abuse within a warm Vercel instance, but it is intentionally described as **best effort**: serverless cold starts, regions, and parallel instances do not share memory. A higher-traffic production deployment should enforce a second limit at Vercel Firewall/WAF or replace the exported `RateLimiter` with a durable Vercel Marketplace Redis/KV implementation using an atomic increment plus expiry. This MVP does not claim a global durable limit without that infrastructure.
 
@@ -264,7 +267,7 @@ GET /api/v1/quotes?symbols=VTI,BND,BTC
 GET /api/v1/quotes?symbols=SPCX&history=1y
 ```
 
-Any symbol outside the eleven-asset practice allowlist is rejected. `history=1y` is bounded to exactly one allowlisted symbol: equities request at most 260 daily observations, while always-open crypto assets request at most 53 weekly observations so the label covers a calendar year. Coverage is checked from the returned dates and shorter histories are labeled limited. Equities identify previous-close change, crypto uses a rolling 24-hour comparison when available, and every item includes source, observed time, market mode, freshness, and an educational profile. Values are not suitable for trading.
+Any symbol outside the eleven-asset practice allowlist is rejected. Reads select from the latest shared daily snapshot. If that snapshot is missing or stale, the first read may start one guarded background refresh while still returning saved or synthetic data; concurrent reads do not wait on it. The UI's bounded `observe=1` rechecks are read-only and cannot initiate generation. `history=1y` is bounded to exactly one allowlisted symbol and may return a clearly labeled deterministic synthetic teaching path; it is not presented as actual historical performance. Equities identify previous-close change when available, crypto may use a rolling 24-hour comparison, and every item includes source, observed time, market mode, freshness, and an educational profile. Values are updated daily for education and are not real-time or suitable for trading.
 
 ## Verification
 
@@ -290,8 +293,8 @@ The automated suite covers:
 - Simulated deposit, fractional purchase, overspending, valuation, and allocation
 - Weekly streak and milestone behavior
 - IndexedDB refresh, memory fallback, v1-to-v2 portfolio migration, malformed import, export/restore, and reset
-- Provider-rights gating, quote batching, partial failure, stale/cache behavior, bounded history, SPCX identity protection, and synthetic fallback labels
-- Invalid JSON, oversized bodies, unknown quote symbols/history ranges, rate limits, and admin authorization
+- Required web-search enforcement, one-call quote batching, strict schema/source validation, durable snapshot reads/writes, partial failure, stale behavior, SPCX identity protection, and synthetic fallback labels
+- Invalid JSON, oversized bodies, unknown quote symbols/history ranges, rate limits, cron/admin authorization, and safe generation failure
 - GPT timeout, invalid schema, unsafe generated advice, prompt injection, personalized advice, and no-key fallback
 
 No test sends a real OpenAI request or places a real financial transaction.
@@ -353,7 +356,7 @@ Vercel gives every commit deployment a unique immutable preview URL, so seeing t
 - Options and LEAPS education with payoff simulation—not trade execution
 - Email or notification delivery for daily educational briefs
 - Native iOS and macOS clients sharing the deterministic core
-- Additional user-selectable market-data providers with explicit display rights and freshness contracts
+- Optional user-selectable educational data sources with explicit provenance and freshness contracts
 - Optional ChatGPT companion through the Apps SDK/MCP model
 
 ## Repository guide
@@ -373,4 +376,4 @@ Code is released under the [MIT License](LICENSE).
 
 The childhood photograph is from Dave Isbitski’s personal archive and is covered by the separate [asset notice](NOTICE.md); the MIT license does not grant rights to reuse it outside this project.
 
-Morrowward is an independent educational project. Asset names and trademarks belong to their respective owners. The project is not affiliated with or endorsed by Robinhood, Vanguard, Apple, Tesla, SpaceX, NVIDIA, Marvell, Micron, Broadcom, Bitcoin, Ethereum, FINRA, the SEC, OpenAI, xAI, or Twelve Data.
+Morrowward is an independent educational project. Asset names and trademarks belong to their respective owners. The project is not affiliated with or endorsed by Robinhood, Vanguard, Apple, Tesla, SpaceX, NVIDIA, Marvell, Micron, Broadcom, Bitcoin, Ethereum, FINRA, the SEC, OpenAI, or xAI.

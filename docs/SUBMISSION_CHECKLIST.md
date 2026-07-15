@@ -10,14 +10,14 @@
 - [x] No credentials, personal portfolio data, or private reference folders appear in Git history.
 - [x] Demo seed state works without network access or live market conditions.
 - [x] API-offline and quote-offline fallbacks are verified.
-- [x] Price refresh, eleven-asset allowlist, on-demand detail history, and synthetic/provider provenance are covered by tests.
-- [ ] Leave Twelve Data disabled for the public demo unless appropriate external-display rights are confirmed; never set the attestation flag speculatively.
+- [x] Daily GPT-5.6 quote batching, required web search, strict per-asset source/schema/time rejection, eleven-asset allowlist, durable snapshot/lock behavior, self-healing first load, bounded observation-only rechecks, freshness, and synthetic fallback are covered by the July 15 passing local suite.
+- [ ] Production has one complete KV/Upstash REST credential pair so the daily quote snapshot and 12-hour distributed `NX` retry guard are shared across serverless instances.
 - [ ] iPhone-sized and macOS-sized PWA flows are verified.
 - [x] `npm run test:e2e` passes its desktop Chrome and mobile Pixel 7 projects from a production build.
 
 Earlier protected preview verified July 14: `https://morrowward-qui11xo7k-thedavedev.vercel.app`. Anonymous requests redirect to Vercel Authentication. Its health route reports GPT-5.6 configured, and its deployed GPT-5.6 educator response was verified. The July 15 market-milestone preview is recorded below. The public production alias remains unassigned until July 20.
 
-- [x] July 15 milestone protected preview verified: `https://morrowward-q0us50u15-thedavedev.vercel.app`. Anonymous access redirects to Vercel Authentication; authenticated checks report GPT-5.6 configured, provider disabled with sample fallback, limited synthetic SPCX history, and a successful bounded GPT-5.6 educator response.
+- [x] July 15 milestone protected preview verified: `https://morrowward-q0us50u15-thedavedev.vercel.app`. Anonymous access redirects to Vercel Authentication; authenticated checks report GPT-5.6 configured, safe quote sample fallback, limited synthetic SPCX history, and a successful bounded GPT-5.6 educator response.
 
 Final README link: `https://morrowward.vercel.app`. Commit preview URLs are expected to change; do not substitute one of them for the stable production alias in Devpost or the README.
 
@@ -29,7 +29,7 @@ Final README link: `https://morrowward.vercel.app`. Commit preview URLs are expe
 - [ ] Repository URL added.
 - [ ] Website URL added.
 - [ ] Reconfirm `/feedback` in the primary Codex build task and add Session ID `019f62f7-1709-7e11-8e8f-70951e9a2f7f` to Devpost.
-- [ ] Built-with list includes Codex, GPT-5.6, OpenAI Responses API, React, TypeScript, Dexie, Vercel, and—if selected generated media ships—the xAI image/video/TTS APIs.
+- [ ] Built-with list includes Codex, GPT-5.6, OpenAI Responses API web search, React, TypeScript, Dexie, Vercel Cron, Redis/KV-compatible storage, Vercel, and—if selected generated media ships—the xAI image/video/TTS APIs.
 
 ## Video
 
@@ -44,6 +44,11 @@ Final README link: `https://morrowward.vercel.app`. Commit preview URLs are expe
 ## Final verification
 
 - [ ] Add the restricted `OPENAI_API_KEY` to Vercel **Production**, redeploy, verify `/api/v1/health` reports AI configured, and confirm the bounded educator returns a labeled GPT-5.6 response before public launch.
+- [ ] Set a long random `CRON_SECRET` and one complete KV/Upstash REST credential pair in **Production**; keep all values server-only.
+- [ ] Confirm both Production cron jobs are registered. Vercel cron is Production-only; do not expect either job to run in protected Preview deployments.
+- [ ] Invoke `GET /api/v1/quotes/generate` once with the Production cron bearer, verify the shared eleven-symbol snapshot stores validated sourced values plus explicit per-symbol fallbacks, and confirm the UI says **Updated daily from current market sources** with the last-successful timestamp and source/freshness details. Do not call it real-time.
+- [ ] Verify a missing/stale-snapshot first load starts one guarded background refresh, concurrent reads receive saved/synthetic content, the initiating UI's two observation-only rechecks can adopt the result without retriggering generation, UTC-day cron cadence does not skip the next day, and Redis/KV `NX` plus warm-runtime singleflight enforce the 12-hour failure backoff.
+- [ ] Disable OpenAI temporarily and verify quote reads, synthetic detail paths, projections, practice purchases, educator fallback, and cached brief remain usable without a paid call.
 - [ ] Submit during the evening of July 20, 2026 ET.
 - [ ] Confirm submission is complete before the official deadline: **July 21, 2026 at 8:00 PM ET**.
 - [ ] Save the Devpost confirmation URL and screenshot.

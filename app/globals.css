@@ -665,7 +665,7 @@ textarea:focus-visible,
 .desktop-nav button:hover { color: var(--ink); }
 .desktop-nav button.active { background: var(--surface-raised); color: var(--ink-strong); box-shadow: 0 2px 9px color-mix(in srgb, #000 12%, transparent); }
 .header-actions { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
-.local-badge, .private-pill, .simulation-badge, .level-badge { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 7px 10px; color: var(--muted); font-size: 11px; font-weight: 750; }
+.private-pill, .simulation-badge, .level-badge { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 7px 10px; color: var(--muted); font-size: 11px; font-weight: 750; }
 .simulation-badge { border-color: color-mix(in srgb, var(--secondary) 45%, var(--line)); color: var(--secondary); }
 .theme-picker { display: flex; flex-wrap: wrap; gap: 7px; }
 .theme-picker.compact { gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface-soft); }
@@ -995,7 +995,6 @@ textarea:focus-visible,
   .onboarding-grid { grid-template-columns: .9fr minmax(420px, .8fr); gap: 50px; }
   .onboarding-story h1 { font-size: clamp(45px, 6vw, 62px); }
   .desktop-nav button { padding-inline: 9px; }
-  .local-badge { display: none; }
   .metrics-grid { grid-template-columns: repeat(2, 1fr); }
   .asset-grid { grid-template-columns: repeat(2, 1fr); }
   .mission-hero { gap: 45px; }

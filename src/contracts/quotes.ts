@@ -17,11 +17,21 @@ export const QUOTE_SYMBOLS = [
 export const QuoteSymbolSchema = z.enum(QUOTE_SYMBOLS);
 export const QuoteModeSchema = z.enum(["live", "delayed", "sample"]);
 
+export const QuoteCitationSchema = z
+  .object({
+    title: z.string().min(1).max(200),
+    url: z.string().url(),
+  })
+  .strict();
+
 export const QuoteSourceSchema = z
   .object({
     name: z.string().min(1).max(100),
-    kind: z.enum(["twelve-data", "deterministic-educational-sample"]),
-    url: z.string().url(),
+    kind: z.enum(["openai-web-search", "deterministic-educational-sample"]),
+    // Hosted finance sources such as oai-finance do not expose a public URL.
+    // Never manufacture one; preserve clickable web citations when returned.
+    url: z.string().url().optional(),
+    citations: z.array(QuoteCitationSchema).max(8).optional(),
   })
   .strict();
 
@@ -95,11 +105,15 @@ export const QuotesResponseSchema = z
     generatedAt: z.string().datetime({ offset: true }),
     provider: z
       .object({
-        name: z.literal("Twelve Data").nullable(),
+        name: z.literal("OpenAI web search").nullable(),
         configured: z.boolean(),
         status: z.enum(["ok", "partial", "fallback", "not-configured"]),
         succeededSymbols: z.array(QuoteSymbolSchema),
         fallbackSymbols: z.array(QuoteSymbolSchema),
+        lastSuccessfulUpdate: z
+          .string()
+          .datetime({ offset: true })
+          .nullable(),
       })
       .strict(),
     disclosure: z.string(),

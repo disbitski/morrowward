@@ -302,6 +302,27 @@ const DEMO_QUOTES = Object.fromEntries(
 
 const DEMO_MARKET_QUOTES = { ...EDUCATIONAL_QUOTES } as MarketQuoteMap;
 
+const DAILY_MARKET_SNAPSHOT_MS = 24 * 60 * 60_000;
+const MARKET_SNAPSHOT_FUTURE_SKEW_MS = 5 * 60_000;
+
+export function shouldRecheckDailyMarketSnapshot(
+  provider: {
+    configured: boolean;
+    lastSuccessfulUpdate: string | null;
+  },
+  nowMs = Date.now(),
+): boolean {
+  if (!provider.configured) return false;
+  if (!provider.lastSuccessfulUpdate) return true;
+  const updatedAtMs = Date.parse(provider.lastSuccessfulUpdate);
+  const ageMs = nowMs - updatedAtMs;
+  return (
+    !Number.isFinite(updatedAtMs) ||
+    ageMs < -MARKET_SNAPSHOT_FUTURE_SKEW_MS ||
+    ageMs >= DAILY_MARKET_SNAPSHOT_MS
+  );
+}
+
 export function quotesResponseToMarketQuotes(
   payload: unknown,
 ): MarketQuoteMap | null {
@@ -350,6 +371,7 @@ export function marketQuotesToPracticeAssets(
 ): PracticeMarketAsset[] {
   return PRACTICE_ASSETS.map((asset) => {
     const quote = quotes[asset.symbol] ?? EDUCATIONAL_QUOTES[asset.symbol];
+    const source = quote.source;
     const history = quote.history;
     const syntheticHistory = history?.mode === "sample";
     const historyMethodology = history
@@ -399,8 +421,10 @@ export function marketQuotesToPracticeAssets(
           : null,
         change1yLabel: syntheticHistory ? "Sample 1Y" : "1Y",
         asOf: quote.observedAt,
-        sourceName: quote.source.name,
-        sourceUrl: quote.source.url,
+        sourceName: source.name,
+        sourceUrl: source.url ?? undefined,
+        sourceKind: source.kind,
+        sourceCitations: source.citations,
         freshness,
         freshnessNote: quote.freshness.label,
         methodology: quoteChangeMethod(quote),
@@ -1066,7 +1090,6 @@ function TopBar({
           ))}
         </nav>
         <div className="header-actions">
-          <span className="local-badge"><Lock size={14} aria-hidden="true" /> Local & private</span>
           <ThemePicker theme={theme} onChange={onTheme} compact />
           <button className="icon-button settings-button" data-testid="nav-settings" type="button" onClick={() => onNavigate("settings")} aria-label="Open settings" aria-current={active === "settings" ? "page" : undefined}><Settings size={19} aria-hidden="true" /></button>
           <button ref={menuTriggerRef} className="icon-button menu-button" type="button" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen} aria-controls="mobile-menu" aria-label={menuOpen ? "Close menu" : "Open menu"}>{menuOpen ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}</button>
@@ -1280,38 +1303,39 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
   const [marketQuotes, setMarketQuotes] =
     useState<MarketQuoteMap>(DEMO_MARKET_QUOTES);
   const [refreshStatus, setRefreshStatus] =
-    useState<PracticeRefreshStatus>("idle");
+    useState<PracticeRefreshStatus>("loading");
   const [refreshError, setRefreshError] = useState<string | null>(null);
-  const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
+  const [lastMarketUpdatedAt, setLastMarketUpdatedAt] = useState<string | null>(null);
   const selectedAsset = ASSETS.find((asset) => asset.symbol === selected) ?? ASSETS[0];
   const selectedQuote = quotes[selected] ?? DEMO_QUOTES[selected]!;
   const practiceMarketAssets = useMemo(
     () => marketQuotesToPracticeAssets(marketQuotes),
     [marketQuotes],
   );
-  const quoteSource = useMemo(() => {
-    const activeQuotes = Object.values(marketQuotes);
-    const sources = new Set(activeQuotes.map((quote) => quote.source.name));
-    const modes = new Set(activeQuotes.map((quote) => quote.mode));
-    if (modes.size === 1 && modes.has("sample")) {
-      return "Synthetic sample values are active; they are not market observations";
-    }
-    if (sources.size === 1) {
-      return `${[...sources][0]} educational observations are active; freshness is shown on every asset`;
-    }
-    return "Mixed provider and synthetic fallback values are active; each asset shows its own provenance";
-  }, [marketQuotes]);
   const habit = practiceStatus(data);
   const valuation = valuePracticePortfolio(data.practice, quotes);
   const holdingsValue = valuation.investedValueCents;
 
-  const refreshPrices = useCallback(async () => {
-    setRefreshStatus("loading");
-    setRefreshError(null);
+  const refreshPrices = useCallback(async ({
+    signal,
+    recheckAttempt = 0,
+  }: {
+    signal?: AbortSignal;
+    recheckAttempt?: number;
+  } = {}): Promise<boolean> => {
+    const isRecheck = recheckAttempt > 0;
+    if (!isRecheck) {
+      setRefreshStatus("loading");
+      setRefreshError(null);
+    }
     try {
-      const response = await fetch("/api/v1/quotes", {
+      const endpoint = isRecheck
+        ? `/api/v1/quotes?observe=1&recheck=${recheckAttempt}`
+        : "/api/v1/quotes";
+      const response = await fetch(endpoint, {
         headers: { Accept: "application/json" },
         cache: "no-store",
+        signal,
       });
       if (!response.ok) throw new Error("Quotes unavailable");
       const payload: unknown = await response.json();
@@ -1321,6 +1345,7 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
       if (!parsed.success || !market || !valuationQuotes) {
         throw new Error("Quotes invalid");
       }
+      if (signal?.aborted) return false;
       setMarketQuotes((current) => {
         const next = { ...DEMO_MARKET_QUOTES, ...market };
         for (const symbol of Object.keys(next) as PracticeAssetSymbol[]) {
@@ -1339,13 +1364,17 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
         return next;
       });
       setQuotes({ ...DEMO_QUOTES, ...valuationQuotes });
-      setLastRefreshedAt(parsed.data.generatedAt);
+      setLastMarketUpdatedAt(parsed.data.provider.lastSuccessfulUpdate);
       setRefreshStatus("success");
+      return shouldRecheckDailyMarketSnapshot(parsed.data.provider);
     } catch {
+      if (signal?.aborted) return false;
+      if (isRecheck) return false;
       setRefreshError(
-        "Saved practice values remain available. No trading decision should rely on this page.",
+        "Practice data remains available offline.",
       );
       setRefreshStatus("error");
+      return false;
     }
   }, []);
 
@@ -1369,8 +1398,33 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
   }, []);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => void refreshPrices(), 0);
-    return () => window.clearTimeout(timer);
+    const controller = new AbortController();
+    const timers = new Set<number>();
+    const wait = (delayMs: number) =>
+      new Promise<boolean>((resolve) => {
+        const timer = window.setTimeout(() => {
+          timers.delete(timer);
+          resolve(!controller.signal.aborted);
+        }, delayMs);
+        timers.add(timer);
+      });
+
+    void (async () => {
+      let shouldRecheck = await refreshPrices({ signal: controller.signal });
+      const recheckDelays = [8_000, 20_000] as const;
+      for (const [index, delayMs] of recheckDelays.entries()) {
+        if (!shouldRecheck || !(await wait(delayMs))) return;
+        shouldRecheck = await refreshPrices({
+          signal: controller.signal,
+          recheckAttempt: index + 1,
+        });
+      }
+    })();
+
+    return () => {
+      controller.abort();
+      for (const timer of timers) window.clearTimeout(timer);
+    };
   }, [refreshPrices]);
 
   const deposit = () => {
@@ -1426,7 +1480,7 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
 
   return (
     <div className="view-stack">
-      <div className="page-intro"><div><span className="section-kicker">Practice mode</span><h1>Learn the motion before risking money.</h1><p>Cash, holdings, purchases, and results are simulated. Price inputs are educational and always labeled as provider observations or synthetic samples.</p></div><span className="simulation-badge"><FlaskConical size={16} /> 100% simulation</span></div>
+      <div className="page-intro"><div><span className="section-kicker">Practice mode</span><h1>Learn the motion before risking money.</h1><p>Cash, holdings, purchases, and results are simulated. Price inputs come from current market sources when available, with offline practice data as a fallback.</p></div><span className="simulation-badge"><FlaskConical size={16} /> 100% simulation</span></div>
       <section className="practice-summary">
         <article><span><WalletCards size={19} /> Simulated cash</span><strong>{formatMoney(data.practice.cashCents)}</strong><small>available to practice</small></article>
         <article><span><LineChart size={19} /> Practice holdings</span><strong>{formatMoney(Math.round(holdingsValue))}</strong><small>using labeled educational prices</small></article>
@@ -1439,13 +1493,12 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
           const asset = ASSETS.find((candidate) => candidate.symbol === symbol);
           if (asset) setSelected(asset.symbol);
         }}
-        onRefresh={refreshPrices}
         onRequestHistory={loadOneYearHistory}
         refreshStatus={refreshStatus}
         refreshError={refreshError}
-        lastRefreshedAt={lastRefreshedAt}
+        lastUpdatedAt={lastMarketUpdatedAt}
         title="Explore eleven practice assets"
-        description="Compare broad funds, public companies, and crypto assets. Refresh checks the configured educational source; every value keeps its own freshness and provenance label. Inclusion is not endorsement."
+        description="Compare broad funds, public companies, and crypto assets. The daily snapshot loads automatically, and every value keeps its freshness and provenance. Inclusion is not endorsement."
       />
       <section className="practice-layout">
         <article className="panel habit-flow">
@@ -1470,7 +1523,7 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
           ) : (
             <div className="empty-holdings"><span><Leaf size={25} /></span><h3>Your first practice position will appear here.</h3><p>No pressure. The goal is to understand the steps.</p></div>
           )}
-          <div className="price-note"><Clock size={15} aria-hidden="true" /><span><strong>Educational price inputs</strong>{quoteSource}. These values power only this simulated portfolio and should never be used to place a real trade.</span></div>
+          <div className="price-note"><Clock size={15} aria-hidden="true" /><span><strong>Portfolio valuation</strong>Uses the labeled prices above only inside Practice mode.</span></div>
         </aside>
       </section>
       <MarketJourney

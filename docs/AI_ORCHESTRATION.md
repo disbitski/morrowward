@@ -13,8 +13,8 @@ and consolidated only the work that passed the project's contracts and tests.
 
 For the July 15 practice-market and media pass, the workstreams were:
 
-- market-data contracts, provider isolation, persistence migration, and API tests;
-- the refreshable practice-market interface and accessible asset-detail dialog;
+- daily quote contracts, source validation, persistence migration, and API tests;
+- the automatically updated practice-market interface and accessible asset-detail dialog;
 - a new optional xAI image, video, narration, validation, and composition pipeline;
 - primary-session integration, security review, visual review, browser QA, and
   release documentation.
@@ -25,15 +25,42 @@ integration decisions, full-suite verification, and the final commit.
 
 ## Where GPT-5.6 appears in the product
 
-GPT-5.6 powers the optional financial-literacy educator and daily educational
-brief. It receives a bounded question, experience level, topic, and at most four
-illustrative planning values. It does not receive a user's complete plan,
-portfolio, transaction history, identity, or health story.
+GPT-5.6 powers the optional financial-literacy educator, daily educational
+brief, and daily public-quote snapshot. The educator receives a bounded
+question, experience level, topic, and at most four illustrative planning
+values. The quote job instead receives only the fixed eleven-symbol public
+allowlist and strict quote contract. Neither request receives a user's complete
+plan, portfolio, transaction history, identity, or health story.
 
 The model explains; tested TypeScript calculates. Projection values, simulated
 purchases, Market Journey paths, state migration, and portfolio accounting stay
 in deterministic code. If the model or network is unavailable, Morrowward keeps
 working with deterministic educational fallbacks.
+
+For current market quotes, the primary Production cron makes one batched
+Responses API request after the regular U.S. equity session. It requires hosted
+`web_search`, uses `store: false` and strict structured output, requests source
+metadata, and permits at most one search tool call. Search-backed content is
+accepted only after per-asset identity, observation-time, schema, and evidence
+validation. A URL citation is attached only to the quote object it annotates;
+hosted `oai-finance` evidence receives no invented link. The shared snapshot retains
+its update time and freshness; the UI describes it
+as **refreshed daily**, never real-time.
+
+The cron is backed by a self-healing first-load path. If a daily snapshot is
+missing or stale, one normal quote request may start generation in the
+background while visitors continue with saved or synthetic values. The initiating
+screen makes two bounded observation-only rechecks so a finished snapshot can
+appear without a reload; those reads cannot start another generation. Warm-runtime
+singleflight and a 12-hour Redis/KV `NX` retry guard coordinate that work. Normal
+reads reuse a successful snapshot for up to 24 hours, while the cron uses a UTC-day
+policy to avoid a near-boundary every-other-day skip. Persistent failures retry no
+more frequently than once per 12 hours. This uses
+GPT-5.6 as a bounded, source-backed retrieval agent—not as an investment model.
+
+Primary references: [OpenAI web search](https://developers.openai.com/api/docs/guides/tools-web-search),
+[OpenAI API pricing](https://developers.openai.com/api/docs/pricing), and
+[Vercel Cron Jobs](https://vercel.com/docs/cron-jobs/quickstart).
 
 ## Why xAI is used for selected media
 

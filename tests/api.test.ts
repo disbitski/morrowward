@@ -54,9 +54,6 @@ describe.sequential("Morrowward API contracts and safeguards", () => {
     vi.stubEnv("KV_REST_API_TOKEN", "");
     vi.stubEnv("UPSTASH_REDIS_REST_URL", "");
     vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "");
-    vi.stubEnv("TWELVE_DATA_API_KEY", "");
-    vi.stubEnv("TWELVE_DATA_DISPLAY_MODE", "");
-    vi.stubEnv("MARKET_DATA_PUBLIC_DISPLAY_ALLOWED", "");
   });
 
   afterEach(() => {
@@ -668,10 +665,10 @@ describe.sequential("Morrowward API contracts and safeguards", () => {
       status: "ok",
       ai: { configured: true, model: "gpt-5.6" },
       quotes: {
-        provider: null,
-        configured: false,
-        mode: "sample",
-        publicDisplayAllowed: false,
+        provider: "OpenAI web search",
+        configured: true,
+        mode: "delayed",
+        publicDisplayAllowed: true,
         fallbackAvailable: true,
       },
     });

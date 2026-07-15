@@ -10,6 +10,7 @@ import {
   LineChart,
   RefreshCw,
   ShieldAlert,
+  Sparkles,
   TrendingDown,
   TrendingUp,
   X,
@@ -57,6 +58,13 @@ export interface PracticeMarketQuote {
   asOf: string | null;
   sourceName: string;
   sourceUrl?: string;
+  sourceKind?:
+    | "openai-web-search"
+    | "deterministic-educational-sample";
+  sourceCitations?: readonly {
+    title: string;
+    url: string;
+  }[];
   freshness: PracticeQuoteFreshness;
   freshnessNote?: string;
   methodology?: string;
@@ -99,11 +107,10 @@ export interface PracticeMarketPanelProps {
   assets: readonly PracticeMarketAsset[];
   selectedSymbol: string;
   onSelect: (symbol: string) => void;
-  onRefresh: () => void | Promise<void>;
   onRequestHistory?: (symbol: string) => void | Promise<void>;
   refreshStatus: PracticeRefreshStatus;
   refreshError?: string | null;
-  lastRefreshedAt?: string | null;
+  lastUpdatedAt?: string | null;
   title?: string;
   description?: string;
 }
@@ -111,6 +118,11 @@ export interface PracticeMarketPanelProps {
 type FreshnessPresentation = {
   label: string;
   className: string;
+};
+
+type MarketSourcePresentation = {
+  label: string;
+  mode: "search" | "practice" | "mixed" | "standard";
 };
 
 type HistoryRequestState = {
@@ -204,7 +216,7 @@ function freshnessPresentation(
     case "stale":
       return { label: "Stale", className: styles.freshnessStale };
     case "sample":
-      return { label: "Sample", className: styles.freshnessSample };
+      return { label: "Practice data", className: styles.freshnessSample };
     case "unavailable":
       return {
         label: "Unavailable",
@@ -240,31 +252,99 @@ function riskClass(level: EducationalRiskLevel): string {
   }
 }
 
-function refreshSummary(
+export function marketSourcePresentation(
   assets: readonly PracticeMarketAsset[],
   refreshStatus: PracticeRefreshStatus,
-): string {
-  if (refreshStatus === "loading") return "Refreshing educational prices…";
-  if (refreshStatus === "error") return "Price refresh did not complete";
-  if (assets.length === 0) return "No practice assets available";
+): MarketSourcePresentation {
+  if (refreshStatus === "loading") {
+    return { label: "Loading current market snapshot…", mode: "search" };
+  }
+  if (assets.length === 0) {
+    return { label: "No practice assets available", mode: "standard" };
+  }
+
+  const isOpenAiSource = (kind: PracticeMarketQuote["sourceKind"]) =>
+    kind === "openai-web-search";
+  const allWebSearch = assets.every((asset) =>
+    isOpenAiSource(asset.quote.sourceKind),
+  );
+  const allPracticeData = assets.every(
+    (asset) =>
+      asset.quote.sourceKind === "deterministic-educational-sample" ||
+      asset.quote.freshness === "sample",
+  );
+  const hasWebSearch = assets.some((asset) =>
+    isOpenAiSource(asset.quote.sourceKind),
+  );
+  const hasPracticeData = assets.some(
+    (asset) =>
+      asset.quote.sourceKind === "deterministic-educational-sample" ||
+      asset.quote.freshness === "sample",
+  );
+
+  if (refreshStatus === "error") {
+    if (allPracticeData) {
+      return { label: "Practice data available offline", mode: "practice" };
+    }
+    if (allWebSearch) {
+      return { label: "Saved web-sourced prices", mode: "standard" };
+    }
+    return { label: "Saved educational prices", mode: "standard" };
+  }
+  if (allWebSearch) {
+    return {
+      label: "Updated daily from current market sources",
+      mode: "search",
+    };
+  }
+  if (allPracticeData) {
+    return { label: "Practice data available offline", mode: "practice" };
+  }
+  if (hasWebSearch && hasPracticeData) {
+    return {
+      label: "Daily market snapshot with practice-data fallback",
+      mode: "mixed",
+    };
+  }
 
   const freshness = new Set(assets.map((asset) => asset.quote.freshness));
-  if (freshness.size > 1) return "Mixed quote freshness";
+  if (freshness.size > 1) {
+    return { label: "Mixed quote freshness", mode: "standard" };
+  }
   const only = assets[0]?.quote.freshness ?? "unavailable";
   switch (only) {
     case "live":
-      return "Sources report live prices";
+      return { label: "Sources report live prices", mode: "standard" };
     case "fresh":
-      return "Fresh educational prices";
+      return { label: "Fresh educational prices", mode: "standard" };
     case "delayed":
-      return "Delayed educational prices";
+      return { label: "Delayed educational prices", mode: "standard" };
     case "stale":
-      return "Stale educational prices";
+      return { label: "Stale educational prices", mode: "standard" };
     case "sample":
-      return "Deterministic sample prices";
+      return { label: "Practice data available offline", mode: "practice" };
     case "unavailable":
-      return "Prices unavailable";
+      return { label: "Prices unavailable", mode: "standard" };
   }
+}
+
+function quoteCitations(quote: PracticeMarketQuote): readonly {
+  title: string;
+  url: string;
+}[] {
+  const seen = new Set<string>();
+  const citations: { title: string; url: string }[] = [];
+  for (const citation of quote.sourceCitations ?? []) {
+    const url = externalHttpUrl(citation.url);
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    citations.push({ title: citation.title.trim() || "View source", url });
+  }
+  const sourceUrl = externalHttpUrl(quote.sourceUrl);
+  if (sourceUrl && !seen.has(sourceUrl)) {
+    citations.unshift({ title: quote.sourceName, url: sourceUrl });
+  }
+  return citations;
 }
 
 function HistoryChart({
@@ -480,11 +560,10 @@ export function PracticeMarketPanel({
   assets,
   selectedSymbol,
   onSelect,
-  onRefresh,
   onRequestHistory,
   refreshStatus,
   refreshError,
-  lastRefreshedAt,
+  lastUpdatedAt,
   title = "Choose a practice asset",
   description = "Compare broad funds, individual companies, and crypto assets before making a simulated purchase. Inclusion is not endorsement.",
 }: PracticeMarketPanelProps) {
@@ -498,7 +577,17 @@ export function PracticeMarketPanel({
   const id = rawId.replace(/[^a-zA-Z0-9_-]/g, "");
   const detailAsset = assets.find((asset) => asset.symbol === detailSymbol) ?? null;
   const isRefreshing = refreshStatus === "loading";
-  const marketSummary = refreshSummary(assets, refreshStatus);
+  const marketSummary = marketSourcePresentation(assets, refreshStatus);
+  const allPracticeData =
+    assets.length > 0 &&
+    assets.every(
+      (asset) =>
+        asset.quote.sourceKind === "deterministic-educational-sample" ||
+        asset.quote.freshness === "sample",
+    );
+  const detailCitations = detailAsset
+    ? quoteCitations(detailAsset.quote)
+    : [];
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -563,15 +652,6 @@ export function PracticeMarketPanel({
     if (event.target === event.currentTarget) closeDetail();
   };
 
-  const requestRefresh = () => {
-    if (isRefreshing) return;
-    try {
-      void Promise.resolve(onRefresh()).catch(() => undefined);
-    } catch {
-      // The parent owns refresh error state; prevent a click from breaking UI.
-    }
-  };
-
   const selectFromDetail = (asset: PracticeMarketAsset) => {
     onSelect(asset.symbol);
     closeDetail();
@@ -591,26 +671,22 @@ export function PracticeMarketPanel({
           <p>{description}</p>
         </div>
         <div className={styles.refreshBlock}>
-          <span className={styles.marketFreshness}>
-            <Clock3 size={14} aria-hidden="true" />
-            {marketSummary}
-          </span>
-          <button
-            className={styles.refreshButton}
-            type="button"
-            onClick={requestRefresh}
-            disabled={isRefreshing}
-            data-testid="refresh-practice-prices"
+          <span
+            className={styles.marketFreshness}
+            data-source-mode={marketSummary.mode}
+            data-testid="practice-market-source-status"
           >
-            <RefreshCw
-              className={isRefreshing ? styles.spinning : undefined}
-              size={16}
-              aria-hidden="true"
-            />
-            {isRefreshing ? "Refreshing…" : "Refresh prices"}
-          </button>
-          {lastRefreshedAt && (
-            <small>Last checked {formatTimestamp(lastRefreshedAt)}</small>
+            {marketSummary.mode === "search" ? (
+              <Sparkles size={14} aria-hidden="true" />
+            ) : marketSummary.mode === "practice" ? (
+              <Database size={14} aria-hidden="true" />
+            ) : (
+              <Clock3 size={14} aria-hidden="true" />
+            )}
+            {marketSummary.label}
+          </span>
+          {lastUpdatedAt && (
+            <small>Updated {formatTimestamp(lastUpdatedAt)}</small>
           )}
         </div>
       </header>
@@ -620,14 +696,14 @@ export function PracticeMarketPanel({
           <div className={styles.refreshError} role="alert">
             <CircleAlert size={16} aria-hidden="true" />
             <span>
-              <strong>Prices could not be refreshed.</strong>
-              {refreshError ?? "Existing educational prices remain clearly labeled below."}
+              <strong>Current sources are temporarily unavailable.</strong>
+              {refreshError ?? "Practice data remains available offline."}
             </span>
           </div>
         ) : refreshStatus === "success" ? (
-          <span className={styles.srOnly}>Educational price refresh completed.</span>
+          <span className={styles.srOnly}>Daily market snapshot loaded.</span>
         ) : isRefreshing ? (
-          <span className={styles.srOnly}>Refreshing educational prices.</span>
+          <span className={styles.srOnly}>Loading the daily market snapshot.</span>
         ) : null}
       </div>
 
@@ -653,9 +729,11 @@ export function PracticeMarketPanel({
                     <h3>{asset.symbol}</h3>
                     <span>{asset.name}</span>
                   </div>
-                  <span className={`${styles.freshnessBadge} ${freshness.className}`}>
-                    {freshness.label}
-                  </span>
+                  {!allPracticeData && (
+                    <span className={`${styles.freshnessBadge} ${freshness.className}`}>
+                      {freshness.label}
+                    </span>
+                  )}
                 </div>
 
                 <div className={styles.assetPrice}>
@@ -850,18 +928,7 @@ export function PracticeMarketPanel({
                   <div>
                     <dt>Source</dt>
                     <dd>
-                      {externalHttpUrl(detailAsset.quote.sourceUrl) ? (
-                        <a
-                          href={externalHttpUrl(detailAsset.quote.sourceUrl)!}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          {detailAsset.quote.sourceName}
-                          <ExternalLink size={12} aria-hidden="true" />
-                        </a>
-                      ) : (
-                        detailAsset.quote.sourceName
-                      )}
+                      {detailAsset.quote.sourceName}
                     </dd>
                   </div>
                   <div>
@@ -885,6 +952,26 @@ export function PracticeMarketPanel({
                     </div>
                   )}
                 </dl>
+                {detailCitations.length > 0 && (
+                  <div className={styles.citations}>
+                    <span>
+                      {detailAsset.quote.sourceKind === "openai-web-search"
+                        ? "Web sources"
+                        : "Source link"}
+                    </span>
+                    <ul>
+                      {detailCitations.map((citation) => (
+                        <li key={citation.url}>
+                          <a href={citation.url} target="_blank" rel="noreferrer">
+                            {citation.title}
+                            <ExternalLink size={12} aria-hidden="true" />
+                            <span className={styles.srOnly}> (opens in a new tab)</span>
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </section>
 
               <aside

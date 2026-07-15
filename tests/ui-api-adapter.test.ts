@@ -5,9 +5,31 @@ import {
   parseEducatorReply,
   quotesResponseToMap,
   quotesResponseToMarketQuotes,
+  shouldRecheckDailyMarketSnapshot,
 } from "../app/components/MorrowwardApp";
+import { marketSourcePresentation } from "../app/components/PracticeMarketPanel";
 
 describe("UI API adapters", () => {
+  it("rechecks only configured missing or stale daily market snapshots", () => {
+    const now = Date.parse("2026-07-15T18:00:00.000Z");
+    expect(shouldRecheckDailyMarketSnapshot({
+      configured: false,
+      lastSuccessfulUpdate: null,
+    }, now)).toBe(false);
+    expect(shouldRecheckDailyMarketSnapshot({
+      configured: true,
+      lastSuccessfulUpdate: null,
+    }, now)).toBe(true);
+    expect(shouldRecheckDailyMarketSnapshot({
+      configured: true,
+      lastSuccessfulUpdate: "2026-07-15T17:00:00.000Z",
+    }, now)).toBe(false);
+    expect(shouldRecheckDailyMarketSnapshot({
+      configured: true,
+      lastSuccessfulUpdate: "2026-07-14T17:59:59.000Z",
+    }, now)).toBe(true);
+  });
+
   it("maps a validated educational quote response into integer cents", () => {
     const payload = {
       quotes: [{
@@ -68,6 +90,7 @@ describe("UI API adapters", () => {
         status: "not-configured",
         succeededSymbols: [],
         fallbackSymbols: ["VTI"],
+        lastSuccessfulUpdate: null,
       },
       disclosure: "Educational sample only.",
     };
@@ -95,6 +118,7 @@ describe("UI API adapters", () => {
         change1yBps: 1494,
         change1yLabel: "Sample 1Y",
         freshness: "sample",
+        sourceKind: "deterministic-educational-sample",
       },
       history: {
         kind: "synthetic",
@@ -104,10 +128,96 @@ describe("UI API adapters", () => {
         ],
       },
     });
+    expect(marketSourcePresentation(panelAssets, "success")).toEqual({
+      label: "Practice data available offline",
+      mode: "practice",
+    });
+
+    const webSourcedAssets = panelAssets.map((asset) => ({
+      ...asset,
+      quote: {
+        ...asset.quote,
+        sourceKind: "openai-web-search" as const,
+        freshness: "fresh" as const,
+      },
+    }));
+    expect(marketSourcePresentation(webSourcedAssets, "success")).toEqual({
+      label: "Updated daily from current market sources",
+      mode: "search",
+    });
+    expect(marketSourcePresentation(webSourcedAssets, "error")).toEqual({
+      label: "Saved web-sourced prices",
+      mode: "standard",
+    });
   });
 
   it("rejects malformed or non-allowlisted quote payloads", () => {
     expect(quotesResponseToMap({ quotes: [{ symbol: "GME" }] })).toBeNull();
+  });
+
+  it("preserves OpenAI market provenance and clickable web citations", () => {
+    const payload = {
+      quotes: [{
+        symbol: "VTI",
+        name: "Vanguard Total Stock Market ETF",
+        assetType: "etf",
+        currency: "USD",
+        price: 301.25,
+        change: 1.25,
+        changePercent: 0.42,
+        changeBasis: "previous-close",
+        asOf: "2026-07-15T16:00:00.000Z",
+        observedAt: "2026-07-15T16:00:00.000Z",
+        observedAtKind: "provider",
+        mode: "delayed",
+        marketStatus: "open",
+        source: {
+          name: "OpenAI web search",
+          kind: "openai-web-search",
+          citations: [{
+            title: "VTI market page",
+            url: "https://example.com/markets/vti",
+          }],
+        },
+        freshness: {
+          status: "fresh",
+          label: "Current market observation",
+          isLive: false,
+          ageSeconds: 90,
+        },
+        profile: {
+          category: "Broad U.S. equity ETF",
+          educationalRisk: "medium",
+          summary: "A broad educational fund example.",
+          learnMoreUrl: "https://investor.vanguard.com/investment-products/etfs/profile/vti",
+        },
+      }],
+      allowlist: ["VTI"],
+      generatedAt: "2026-07-15T16:01:30.000Z",
+      provider: {
+        name: "OpenAI web search",
+        configured: true,
+        status: "ok",
+        succeededSymbols: ["VTI"],
+        fallbackSymbols: [],
+        lastSuccessfulUpdate: "2026-07-15T16:01:30.000Z",
+      },
+      disclosure: "Educational market context only.",
+    };
+
+    const market = quotesResponseToMarketQuotes(payload);
+    expect(market).not.toBeNull();
+    const asset = marketQuotesToPracticeAssets(market ?? {})[0];
+    expect(asset.quote).toMatchObject({
+      sourceName: "OpenAI web search",
+      sourceUrl: undefined,
+      sourceKind: "openai-web-search",
+      sourceCitations: [{
+        title: "VTI market page",
+        url: "https://example.com/markets/vti",
+      }],
+      freshness: "fresh",
+    });
   });
 
   it("preserves educator top-level contract fields and GPT provenance", () => {

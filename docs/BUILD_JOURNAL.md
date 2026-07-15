@@ -15,7 +15,7 @@ The product therefore focuses on a repeatable weekly habit and a future someone 
 - Build a web MVP and installable PWA; make native iOS and macOS apps roadmap items.
 - Serve adults 18+ and begin with a plain-language experience that can reveal advanced depth.
 - Keep plans, balances, and simulated holdings on the device with no account required.
-- Make all financial math deterministic and testable; use GPT-5.6 only for bounded education.
+- Make all financial math deterministic and testable; use GPT-5.6 only for bounded education or source-backed public-data retrieval, never projection math or recommendations.
 - Use editable 3%, 6%, and 9% illustrative return scenarios with 3% inflation—not “expected returns.”
 - Simulate fractional practice purchases of VTI, BND, AAPL, TSLA, BTC, and ETH.
 - Label every quote and purchase as educational or simulated.
@@ -82,19 +82,19 @@ Planned milestone: themes, onboarding, projection engine, Horizon Reveal, local 
 
 ### Hands-on feedback expanded Practice into an explainable market sandbox
 
-Dave's next product session produced four concrete questions: can the final URL stay stable, can Practice refresh recent prices, can the universe include five additional public companies, and can every asset explain what it is, its historical context, category, and risk? He also proposed optional motivational media made by a specialized Grok workflow while Codex remained the coordinating system.
+Dave's next product session produced four concrete questions: can the final URL stay stable, can Practice show current daily prices, can the universe include five additional public companies, and can every asset explain what it is, its historical context, category, and risk? He also proposed optional motivational media made by a specialized Grok workflow while Codex remained the coordinating system.
 
 Codex split the pass into bounded market-contract, UI, media-pipeline, and integration/review workstreams, then consolidated them in the primary GPT-5.6 Sol session. The implementation:
 
 - Expanded Practice from six to eleven assets: VTI, BND, AAPL, TSLA, SPCX, NVDA, MRVL, MU, AVGO, BTC, and ETH.
 - Verified SPCX against SpaceX's June 2026 investor-relations release and SEC filing, recorded the June 12 public-trading start, and added a symbol-identity guard because an unrelated ETF previously used SPCX before changing to SPCK.
 - Migrated saved data from schema v1 to v2 while preserving every existing cash balance, holding, and transaction and adding the five new holdings at zero.
-- Added a refreshable educational-price panel whose UI shows source, observation time, freshness, change basis, methodology, and per-symbol fallback status; the validated API also carries the declared market-data mode.
+- Added an educational-price panel whose UI contract shows source, observation time, freshness, change basis, methodology, and per-symbol fallback status.
 - Added keyboard-accessible asset-detail dialogs with focus return, plain-language identity/category/risk context, on-demand bounded one-year charts, source links, and limited-history labels.
-- Kept the provider optional. The server calls Twelve Data only when a key, licensed `live`/`delayed` mode, and explicit public-display-rights attestation are all present. A key alone is insufficient. The public demo therefore remains useful with deterministic synthetic values.
+- Kept current-data retrieval optional. The public demo remains useful with deterministic synthetic values whenever the server-side OpenAI path, source validation, or network is unavailable.
 - Made synthetic history visually and semantically explicit: its heading says **synthetic sample path**, the 1-year change says **Sample 1Y**, and the disclosure says it is not actual historical performance.
 
-The first desktop/mobile browser run found a near-threshold Dawn contrast defect in the selected-asset button. Codex changed the semantic foreground token and reran the complete four-theme accessibility matrix; all four desktop/mobile Playwright journeys then passed, including refresh, all eleven asset cards, SPCX details, the synthetic-history disclosure, fractional purchase, offline reload, and automated serious/critical WCAG checks.
+The first desktop/mobile browser run found a near-threshold Dawn contrast defect in the selected-asset button. Codex changed the semantic foreground token and reran the complete four-theme accessibility matrix; all four desktop/mobile Playwright journeys then passed, including the quote panel, all eleven asset cards, SPCX details, the synthetic-history disclosure, fractional purchase, offline reload, and automated serious/critical WCAG checks.
 
 ### Fresh specialist-media pipeline, with an explicit consent stop
 
@@ -106,9 +106,31 @@ Codex added a deliberate `--confirm-xai-upload` gate because running the scripts
 
 Vercel's changing commit preview URLs are expected: each identifies an immutable deployment. Morrowward will publish the stable production alias `https://morrowward.vercel.app` on July 20 and use that address in the README and Devpost. Future production deployments can change behind the same public URL; protected previews remain private during the build.
 
-This pass reached 122 deterministic unit/integration tests, clean ESLint and TypeScript checks, both production builds, and six passing Playwright journeys across desktop Chrome and Pixel 7. The browser suite now covers refresh and history failures, Escape/backdrop closing, and trigger-focus restoration in addition to the golden path and offline/accessibility matrix. A sandbox-only Turbopack port restriction was rerun in the approved local build environment and compiled successfully; it was not a product-code failure.
+This pass reached 122 deterministic unit/integration tests, clean ESLint and TypeScript checks, both production builds, and six passing Playwright journeys across desktop Chrome and Pixel 7. The browser suite now covers quote and history failures, Escape/backdrop closing, and trigger-focus restoration in addition to the golden path and offline/accessibility matrix. A sandbox-only Turbopack port restriction was rerun in the approved local build environment and compiled successfully; it was not a product-code failure.
 
-Milestone commit `74f77ad` was pushed to the private `main` history and cloned from GitHub into an empty temporary directory. Following the README workflow, that clone completed `npm install`, all 122 unit/integration tests, lint, the no-spend Grok campaign check, the vinext production build, and the Vercel/Next production build. Vercel then built protected preview `https://morrowward-q0us50u15-thedavedev.vercel.app` from the milestone. Anonymous HTTP receives the expected authentication redirect; authenticated verification confirmed GPT-5.6 is configured, external market data remains deliberately disabled, SPCX returns an explicitly limited synthetic sample history, and the bounded educator returns a labeled GPT-5.6 response. The stable public production alias remains intentionally unassigned until July 20.
+Milestone commit `74f77ad` was pushed to the private `main` history and cloned from GitHub into an empty temporary directory. Following the README workflow, that clone completed `npm install`, all 122 unit/integration tests, lint, the no-spend Grok campaign check, the vinext production build, and the Vercel/Next production build. Vercel then built protected preview `https://morrowward-q0us50u15-thedavedev.vercel.app` from the milestone. Anonymous HTTP receives the expected authentication redirect; authenticated verification confirmed GPT-5.6 is configured, the quote endpoint safely returns sample data, SPCX returns an explicitly limited synthetic sample history, and the bounded educator returns a labeled GPT-5.6 response. The stable public production alias remains intentionally unassigned until July 20.
+
+### Current market quotes became one daily GPT-5.6 snapshot
+
+Dave rejected a button that would create repeated upstream calls. The settled experience is **current market quotes via GPT-5.6 web search, refreshed daily**. The UI updates automatically and says **Updated daily from current market sources**, never “real-time.” This turns a variable per-visitor feature into one shared educational snapshot with a visible last-successful-update time, source/citations when available, and explicit freshness.
+
+Codex verified the design against OpenAI's primary [Responses API web-search guide](https://developers.openai.com/api/docs/guides/tools-web-search) and [API pricing](https://developers.openai.com/api/docs/pricing), then split quote retrieval, UI, scheduling, test, and documentation work across bounded agents. The implementation contract is:
+
+- one server-side GPT-5.6 Responses request for all eleven allowlisted assets;
+- required hosted `web_search`, `reasoning: { effort: "low" }`, `store: false`, strict structured output, returned source metadata, and at most one search tool call;
+- rejection of memory-only, malformed, or unsourced output, with no invented URL for a hosted source that does not expose one;
+- no plan, balance, holding, transaction, question, identity, or medical context in the quote request;
+- a protected `GET`/`POST /api/v1/quotes/generate` route, with the Production cron scheduled at 22:15 UTC after the regular U.S. equity session;
+- one shared schema-validated Redis/KV snapshot with a 48-hour expiry; and
+- deterministic synthetic values and paths whenever search, validation, storage, or the network fails.
+
+Cron is the primary refresh mechanism. Because Vercel cron delivery is Production-only and best effort, the normal quote GET also has a non-blocking self-healing path: if the daily snapshot is missing or stale, the first request may start the same batch while returning saved or synthetic content immediately. A warm-runtime singleflight collapses local concurrency; a 12-hour Redis/KV `NX` retry guard coordinates across serverless instances. A successful snapshot is reused while it is no more than 24 hours old, while persistent failures retry no more frequently than every 12 hours. This avoids turning a traffic spike into repeated spend and keeps a missed cron from leaving the demo permanently stale. Protected Preview deployments do not run Vercel cron jobs, per Vercel's [Cron Jobs quickstart](https://vercel.com/docs/cron-jobs/quickstart); the Production behavior must still be smoke-tested after launch configuration.
+
+An independent adversarial review then tightened the implementation before release: URL evidence is associated with the individual quote object it annotates, crypto and equity observations have separate recency bounds, durable lock/write outages cannot masquerade as a successful persisted refresh, and store misses/outages are negatively cached for bounded intervals. The scheduled route uses UTC-calendar-day freshness so a job finishing seconds after one run cannot make the next day's run look “under 24 hours” and skip every other day. The initiating Practice screen makes two observation-only rechecks so a finished background snapshot can appear without a manual reload; those reads cannot launch another generation. In the same feedback pass, the ambiguous header badge reading **Local & private** was removed while all four theme controls remained intact; privacy status stays explicit in onboarding, Settings, disclosures, and the local-data boundary.
+
+At the documented build-time rate, the web-search tool costs $10 per 1,000 calls ($0.01 per call) plus GPT-5.6 model and search-content tokens. Normal operation makes the expected search-tool portion roughly one cent per successful daily snapshot; the 12-hour failure backoff bounds repeated search-tool attempts to roughly two cents per day before tokens during a persistent outage. This is not described as a hard cap because API pricing and usage reporting can change.
+
+Final local verification for this pass reached **136 passing unit/integration tests across 12 files**, clean ESLint and TypeScript checks, a clean vinext production build, a clean Next/Vercel production build, four rendered-worker checks, and all six Playwright journeys across desktop and mobile Chrome. The browser suite confirms the removed header badge stays absent, the theme controls remain available, the automatic Practice snapshot experience has no manual refresh button, all four themes have no serious/critical automated accessibility violations, and the PWA still reloads offline. A Production environment smoke test remains intentionally pending until the server-only key, cron secret, and shared KV/Upstash pair are configured there.
 
 ## July 16 — Practice, education, and AI
 
