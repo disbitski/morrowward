@@ -18,7 +18,7 @@ Complete onboarding and reveal the three illustrative futures. Point out contrib
 
 “The goal is not predicting prices. Practice shows current market quotes via GPT-5.6 web search, refreshed daily—not real-time. One protected batch covers all eleven assets, and the interface keeps its last update, freshness, and sources visible. If data is unavailable, the labeled synthetic fallback keeps the lesson working.”
 
-Point to **Updated daily from current market sources**, open SPCX, and show its update time, source, **newly public** identity, category, qualitative risk, and the **synthetic sample path** disclosure. Close it, deposit the weekly amount, buy one demo asset, then open the 10-year Market Journey.
+Point to **Real Prices Updated Every 24 Hours**, its exact refresh time, and **Current as of _n_ hours ago**. Open SPCX and show its source, **newly public** identity, category, qualitative risk, and the **synthetic sample path** disclosure. Close it, deposit the weekly amount, buy one demo asset, then show Market Journey automatically using the funded Practice Portfolio balance. Toggle to **Use Sample Data** and back before opening the 10-year view.
 
 “The habit is consistent; the market is not. This deterministic lab separates return from market bumpiness, makes drawdown visible, and distinguishes market CAGR from my contribution-aware return. A late downturn may not recover. Removing the strongest simulated days shows why staying invested can matter, even though nobody knows those days in advance.”
 

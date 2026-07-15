@@ -63,22 +63,103 @@
   line-height: 1.65;
 }
 
-.simulationBadge {
-  display: inline-flex;
-  min-width: max-content;
-  align-items: center;
-  gap: 7px;
-  border: 1px solid color-mix(in srgb, var(--secondary) 35%, var(--line));
-  border-radius: 999px;
-  padding: 8px 11px;
-  background: color-mix(in srgb, var(--secondary) 9%, var(--surface));
-  color: var(--secondary);
-  font-size: 10px;
-  font-weight: 800;
+.balanceSelector {
+  width: min(100%, 460px);
+  min-width: 380px;
+  margin: 0;
+  border: 0;
+  padding: 0;
 }
 
-.simulationBadge svg {
-  flex: 0 0 auto;
+.balanceSelector legend {
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 0;
+  color: var(--faint);
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: .095em;
+  text-transform: uppercase;
+}
+
+.balanceChoices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.balanceChoice {
+  display: grid;
+  min-width: 0;
+  min-height: 96px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  padding: 13px;
+  background: color-mix(in srgb, var(--surface-soft) 76%, var(--surface));
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease, box-shadow 150ms ease;
+}
+
+.balanceChoice:hover:not(:disabled) {
+  border-color: var(--line-strong);
+  transform: translateY(-1px);
+}
+
+.balanceChoice[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--accent) 62%, var(--line));
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  box-shadow: inset 0 -3px 0 color-mix(in srgb, var(--accent) 75%, transparent);
+}
+
+.balanceChoice:disabled {
+  cursor: not-allowed;
+  opacity: .58;
+}
+
+.balanceChoiceIcon {
+  display: grid;
+  width: 31px;
+  height: 31px;
+  place-items: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--secondary) 11%, var(--surface));
+  color: var(--secondary);
+}
+
+.balanceChoice[aria-pressed="true"] .balanceChoiceIcon {
+  background: color-mix(in srgb, var(--accent) 17%, var(--surface));
+  color: var(--accent);
+}
+
+.balanceChoiceCopy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.balanceChoiceCopy > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 820;
+  line-height: 1.2;
+}
+
+.balanceChoiceCopy strong {
+  overflow-wrap: anywhere;
+  color: var(--ink-strong);
+  font: 760 17px/1.05 var(--font-display);
+  letter-spacing: -.025em;
+}
+
+.balanceChoiceCopy small {
+  color: var(--faint);
+  font-size: 9px;
+  line-height: 1.3;
 }
 
 .controls {
@@ -678,6 +759,15 @@
 }
 
 @media (max-width: 900px) {
+  .intro {
+    flex-direction: column;
+  }
+
+  .balanceSelector {
+    width: 100%;
+    min-width: 0;
+  }
+
   .controls {
     grid-template-columns: 1fr 1fr;
   }
@@ -709,10 +799,6 @@
 }
 
 @media (max-width: 700px) {
-  .intro {
-    flex-direction: column;
-  }
-
   .controls {
     grid-template-columns: 1fr;
   }
@@ -741,6 +827,14 @@
 
   .intro h2 {
     font-size: 29px;
+  }
+
+  .balanceChoices {
+    grid-template-columns: 1fr;
+  }
+
+  .balanceChoice {
+    min-height: 82px;
   }
 
   .controls,
@@ -826,7 +920,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .choice {
+  .choice,
+  .balanceChoice {
     transition: none;
   }
 }

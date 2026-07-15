@@ -178,6 +178,19 @@ function formatTimestamp(timestamp: string | null | undefined): string {
   }).format(value);
 }
 
+export function formatSnapshotAge(
+  timestamp: string | null | undefined,
+  nowMs: number = Date.now(),
+): string | null {
+  if (!timestamp || !Number.isFinite(nowMs)) return null;
+  const updatedAtMs = Date.parse(timestamp);
+  if (Number.isNaN(updatedAtMs)) return null;
+  const hours = Math.floor(Math.max(0, nowMs - updatedAtMs) / 3_600_000);
+  if (hours === 0) return "less than 1 hour ago";
+  if (hours === 1) return "1 hour ago";
+  return `${hours} hours ago`;
+}
+
 function formatChartDate(timestamp: string): string {
   const value = new Date(timestamp);
   if (Number.isNaN(value.getTime())) return "Unknown";
@@ -255,12 +268,13 @@ function riskClass(level: EducationalRiskLevel): string {
 export function marketSourcePresentation(
   assets: readonly PracticeMarketAsset[],
   refreshStatus: PracticeRefreshStatus,
+  lastUpdatedAt?: string | null,
 ): MarketSourcePresentation {
   if (refreshStatus === "loading") {
-    return { label: "Loading current market snapshot…", mode: "search" };
+    return { label: "Checking today’s market prices…", mode: "search" };
   }
   if (assets.length === 0) {
-    return { label: "No practice assets available", mode: "standard" };
+    return { label: "Daily Price Refresh", mode: "standard" };
   }
 
   const isOpenAiSource = (kind: PracticeMarketQuote["sourceKind"]) =>
@@ -282,50 +296,39 @@ export function marketSourcePresentation(
       asset.quote.freshness === "sample",
   );
 
+  const hasSuccessfulRefresh =
+    typeof lastUpdatedAt === "string" &&
+    !Number.isNaN(Date.parse(lastUpdatedAt));
+
+  if (hasSuccessfulRefresh && hasWebSearch) {
+    return {
+      label: "Real Prices Updated Every 24 Hours",
+      mode: allWebSearch ? "search" : "mixed",
+    };
+  }
+
   if (refreshStatus === "error") {
-    if (allPracticeData) {
-      return { label: "Practice data available offline", mode: "practice" };
-    }
-    if (allWebSearch) {
-      return { label: "Saved web-sourced prices", mode: "standard" };
-    }
-    return { label: "Saved educational prices", mode: "standard" };
+    return {
+      label: "Daily Price Refresh",
+      mode: allPracticeData ? "practice" : "standard",
+    };
   }
   if (allWebSearch) {
     return {
-      label: "Updated daily from current market sources",
+      label: "Daily Price Refresh",
       mode: "search",
     };
   }
   if (allPracticeData) {
-    return { label: "Practice data available offline", mode: "practice" };
+    return { label: "Daily Price Refresh", mode: "practice" };
   }
   if (hasWebSearch && hasPracticeData) {
     return {
-      label: "Daily market snapshot with practice-data fallback",
+      label: "Daily Price Refresh",
       mode: "mixed",
     };
   }
-
-  const freshness = new Set(assets.map((asset) => asset.quote.freshness));
-  if (freshness.size > 1) {
-    return { label: "Mixed quote freshness", mode: "standard" };
-  }
-  const only = assets[0]?.quote.freshness ?? "unavailable";
-  switch (only) {
-    case "live":
-      return { label: "Sources report live prices", mode: "standard" };
-    case "fresh":
-      return { label: "Fresh educational prices", mode: "standard" };
-    case "delayed":
-      return { label: "Delayed educational prices", mode: "standard" };
-    case "stale":
-      return { label: "Stale educational prices", mode: "standard" };
-    case "sample":
-      return { label: "Practice data available offline", mode: "practice" };
-    case "unavailable":
-      return { label: "Prices unavailable", mode: "standard" };
-  }
+  return { label: "Daily Price Refresh", mode: "standard" };
 }
 
 function quoteCitations(quote: PracticeMarketQuote): readonly {
@@ -570,6 +573,7 @@ export function PracticeMarketPanel({
   const [detailSymbol, setDetailSymbol] = useState<string | null>(null);
   const [historyRequest, setHistoryRequest] =
     useState<HistoryRequestState | null>(null);
+  const [currentTimeMs, setCurrentTimeMs] = useState<number | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const detailTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -577,7 +581,20 @@ export function PracticeMarketPanel({
   const id = rawId.replace(/[^a-zA-Z0-9_-]/g, "");
   const detailAsset = assets.find((asset) => asset.symbol === detailSymbol) ?? null;
   const isRefreshing = refreshStatus === "loading";
-  const marketSummary = marketSourcePresentation(assets, refreshStatus);
+  const marketSummary = marketSourcePresentation(
+    assets,
+    refreshStatus,
+    lastUpdatedAt,
+  );
+  const snapshotAge = currentTimeMs === null
+    ? null
+    : formatSnapshotAge(lastUpdatedAt, currentTimeMs);
+  const hasValidLastUpdatedAt =
+    typeof lastUpdatedAt === "string" &&
+    !Number.isNaN(Date.parse(lastUpdatedAt));
+  const lastUpdatedLabel = hasValidLastUpdatedAt
+    ? formatTimestamp(lastUpdatedAt)
+    : null;
   const allPracticeData =
     assets.length > 0 &&
     assets.every(
@@ -595,6 +612,15 @@ export function PracticeMarketPanel({
     dialog.showModal();
     closeButtonRef.current?.focus();
   }, [detailAsset]);
+
+  useEffect(() => {
+    const initialTimer = window.setTimeout(() => setCurrentTimeMs(Date.now()), 0);
+    const timer = window.setInterval(() => setCurrentTimeMs(Date.now()), 60_000);
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.clearInterval(timer);
+    };
+  }, []);
 
   const requestHistory = (asset: PracticeMarketAsset) => {
     if (
@@ -685,8 +711,11 @@ export function PracticeMarketPanel({
             )}
             {marketSummary.label}
           </span>
-          {lastUpdatedAt && (
-            <small>Updated {formatTimestamp(lastUpdatedAt)}</small>
+          {lastUpdatedLabel && (
+            <span className={styles.refreshMeta}>
+              <small>Last updated: {lastUpdatedLabel}</small>
+              {snapshotAge && <small>Current as of {snapshotAge}</small>}
+            </span>
           )}
         </div>
       </header>
@@ -697,7 +726,7 @@ export function PracticeMarketPanel({
             <CircleAlert size={16} aria-hidden="true" />
             <span>
               <strong>Current sources are temporarily unavailable.</strong>
-              {refreshError ?? "Practice data remains available offline."}
+              {refreshError ?? "You can keep practicing while prices reconnect automatically."}
             </span>
           </div>
         ) : refreshStatus === "success" ? (

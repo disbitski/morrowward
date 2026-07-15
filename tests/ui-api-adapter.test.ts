@@ -7,7 +7,11 @@ import {
   quotesResponseToMarketQuotes,
   shouldRecheckDailyMarketSnapshot,
 } from "../app/components/MorrowwardApp";
-import { marketSourcePresentation } from "../app/components/PracticeMarketPanel";
+import {
+  formatSnapshotAge,
+  marketSourcePresentation,
+} from "../app/components/PracticeMarketPanel";
+import { resolveMarketBalanceSource } from "../app/components/MarketJourney";
 
 describe("UI API adapters", () => {
   it("rechecks only configured missing or stale daily market snapshots", () => {
@@ -129,7 +133,7 @@ describe("UI API adapters", () => {
       },
     });
     expect(marketSourcePresentation(panelAssets, "success")).toEqual({
-      label: "Practice data available offline",
+      label: "Daily Price Refresh",
       mode: "practice",
     });
 
@@ -141,14 +145,51 @@ describe("UI API adapters", () => {
         freshness: "fresh" as const,
       },
     }));
-    expect(marketSourcePresentation(webSourcedAssets, "success")).toEqual({
-      label: "Updated daily from current market sources",
+    expect(marketSourcePresentation(
+      webSourcedAssets,
+      "success",
+      "2026-07-15T16:01:30.000Z",
+    )).toEqual({
+      label: "Real Prices Updated Every 24 Hours",
       mode: "search",
     });
     expect(marketSourcePresentation(webSourcedAssets, "error")).toEqual({
-      label: "Saved web-sourced prices",
+      label: "Daily Price Refresh",
       mode: "standard",
     });
+    expect(marketSourcePresentation(
+      [webSourcedAssets[0], ...panelAssets.slice(1)],
+      "success",
+      "2026-07-15T16:01:30.000Z",
+    )).toEqual({
+      label: "Real Prices Updated Every 24 Hours",
+      mode: "mixed",
+    });
+  });
+
+  it("describes daily snapshot age in completed hours without clock-skew negatives", () => {
+    const updatedAt = "2026-07-15T16:00:00.000Z";
+    expect(formatSnapshotAge(null, Date.parse(updatedAt))).toBeNull();
+    expect(formatSnapshotAge("not-a-date", Date.parse(updatedAt))).toBeNull();
+    expect(formatSnapshotAge(updatedAt, Number.NaN)).toBeNull();
+    expect(formatSnapshotAge(updatedAt, Date.parse("2026-07-15T15:00:00.000Z")))
+      .toBe("less than 1 hour ago");
+    expect(formatSnapshotAge(updatedAt, Date.parse("2026-07-15T16:59:59.000Z")))
+      .toBe("less than 1 hour ago");
+    expect(formatSnapshotAge(updatedAt, Date.parse("2026-07-15T17:00:00.000Z")))
+      .toBe("1 hour ago");
+    expect(formatSnapshotAge(updatedAt, Date.parse("2026-07-16T15:00:00.000Z")))
+      .toBe("23 hours ago");
+    expect(formatSnapshotAge(updatedAt, Date.parse("2026-07-16T16:00:00.000Z")))
+      .toBe("24 hours ago");
+  });
+
+  it("defaults the journey to a funded practice portfolio without overriding sample choice", () => {
+    expect(resolveMarketBalanceSource(null, 0)).toBe("sample");
+    expect(resolveMarketBalanceSource(null, 1)).toBe("practice");
+    expect(resolveMarketBalanceSource("sample", 100_000)).toBe("sample");
+    expect(resolveMarketBalanceSource("practice", 100_000)).toBe("practice");
+    expect(resolveMarketBalanceSource("practice", 0)).toBe("sample");
   });
 
   it("rejects malformed or non-allowlisted quote payloads", () => {

@@ -157,6 +157,23 @@ Independent adversarial review substantially hardened the fresh pipeline before 
 
 Final verification for this media pass reached **199 passing unit/integration tests**, clean ESLint and TypeScript checks, clean vinext and Next/Vercel production builds, rendered-worker validation, and the full desktop/mobile Playwright suite. This is a concrete example of GPT-5.6/Codex coordinating specialist models for their strongest media jobs, independently reviewing their output, hardening the orchestration code, and preserving a human final decision.
 
+### Hands-on use connected the practice balance to the future journey
+
+Dave's next real session found two pieces of technically correct UI that still exposed implementation language instead of answering a user's natural questions. The quote header described mixed fallback mechanics, while Market Journey always used the Horizon starting amount even after someone had built a simulated portfolio.
+
+The refinement keeps those mechanics auditable in code and documentation while simplifying the experience:
+
+- After a sourced refresh, the quote header says **Real Prices Updated Every 24 Hours**, gives the exact **Last updated** timestamp, and calculates **Current as of _n_ hours ago** in the browser. Per-asset sheets retain the more detailed source, observation time, freshness, and synthetic-history disclosures.
+- The relative age clamps future clock skew to zero, handles singular and plural hours, and updates while the page remains open.
+- Market Journey replaces its passive top-right badge with two accessible, mutually exclusive balance cards: **Use Sample Data** with the Horizon starting amount and **Use My Practice Portfolio** with simulated cash plus marked-to-price holdings.
+- A positive Practice balance becomes the automatic initial choice. A zero balance defaults to Sample Data, and a user's explicit Sample selection remains stable through later quote changes.
+- The selected amount is only the opening dollar value for the existing deterministic synthetic index. Practice allocation, individual asset history, and predicted asset performance never enter the model or leave the device.
+- The portfolio input is bounded to the Market Journey engine's existing $1 billion educational limit so even an extreme valid import cannot crash the lab.
+
+This was another direct build–use–refine loop: current prices answer “when was this refreshed?” and the journey now answers “what could my practice habit look like from where I am today?” without weakening any simulation or advice boundary.
+
+The refinement closed with **201 passing unit/integration tests**, clean ESLint and TypeScript checks, clean vinext and Next/Vercel production builds, four rendered-worker checks, and all ten Playwright journeys across desktop and mobile Chrome. The browser suite verifies the sourced refresh timestamp and calculated age, automatic funded-portfolio selection, both balance toggles, exact starting-balance changes, no horizontal overflow, all four themes, serious/critical accessibility checks, and offline reload.
+
 ## July 16 — Practice, education, and AI
 
 Planned milestone: weekly simulation, practice portfolio, Education Center, GPT-5.6 educator, daily brief, provenance, and AI safety tests.

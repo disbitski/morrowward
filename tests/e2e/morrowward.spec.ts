@@ -115,8 +115,15 @@ test("golden path stays educational, local, and fully simulated", async ({ page 
   await openView(page, "practice");
   await expect(page.getByRole("heading", { name: /Learn the motion/i })).toBeVisible();
   await expect(page.getByTestId(/^practice-market-asset-/)).toHaveCount(11);
-  await expect(page.getByTestId("practice-market-source-status")).toContainText(/Updated daily from current market sources|Practice data available offline/i);
+  await expect(page.getByTestId("practice-market-source-status")).toContainText(/Real Prices Updated Every 24 Hours|Daily Price Refresh/i);
+  await expect(page.getByText(/practice-data fallback/i)).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Refresh prices/i })).toHaveCount(0);
+  const marketJourney = page.getByTestId("market-journey");
+  const sampleBalance = page.getByTestId("market-balance-sample");
+  const practiceBalance = page.getByTestId("market-balance-portfolio");
+  await expect(practiceBalance).toHaveAttribute("aria-pressed", "true");
+  await expect(sampleBalance).toContainText("$1,000");
+  await expect(practiceBalance).toContainText("$1,000");
   await page.getByTestId("practice-asset-info-SPCX").click();
   const assetDetail = page.getByTestId("practice-asset-detail");
   await expect(assetDetail).toBeVisible();
@@ -134,7 +141,26 @@ test("golden path stays educational, local, and fully simulated", async ({ page 
   await page.getByTestId("practice-buy").click();
   await expect(page.getByText(/TSLA simulated purchase/i)).toBeVisible();
   await expect(page.getByText(/nothing was traded/i)).toBeVisible();
-  await expect(page.getByTestId("market-journey")).toBeVisible();
+  await expect(marketJourney).toBeVisible();
+  const journeyWidth = await marketJourney.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(journeyWidth.scrollWidth).toBeLessThanOrEqual(journeyWidth.clientWidth);
+  const practiceStartingBalance = Number(
+    await marketJourney.getAttribute("data-starting-balance-cents"),
+  );
+  expect(practiceStartingBalance).toBeGreaterThan(100_000);
+  await sampleBalance.click();
+  await expect(marketJourney).toHaveAttribute("data-balance-source", "sample");
+  await expect(marketJourney).toHaveAttribute("data-starting-balance-cents", "100000");
+  await expect(sampleBalance).toHaveAttribute("aria-pressed", "true");
+  await practiceBalance.click();
+  await expect(marketJourney).toHaveAttribute("data-balance-source", "practice");
+  await expect(marketJourney).toHaveAttribute(
+    "data-starting-balance-cents",
+    String(practiceStartingBalance),
+  );
   await page.getByTestId("market-horizon-5").click();
   await page.getByTestId("market-growth-900").click();
   await page.getByTestId("market-risk-higher").click();
@@ -184,6 +210,66 @@ test("golden path stays educational, local, and fully simulated", async ({ page 
     .toBeNull();
 });
 
+test("daily price status shows the successful refresh time and its age", async ({ page }) => {
+  const lastSuccessfulUpdate = new Date(Date.now() - 2 * 60 * 60 * 1_000)
+    .toISOString();
+  await page.route("**/api/v1/quotes**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.has("history")) {
+      await route.continue();
+      return;
+    }
+    const response = await route.fetch();
+    const payload = await response.json() as {
+      quotes: Array<Record<string, unknown>>;
+      allowlist: string[];
+      provider: Record<string, unknown>;
+    };
+    payload.quotes = payload.quotes.map((quote) => ({
+      ...quote,
+      asOf: lastSuccessfulUpdate,
+      observedAt: lastSuccessfulUpdate,
+      observedAtKind: "provider",
+      mode: "delayed",
+      source: {
+        name: "OpenAI web search",
+        kind: "openai-web-search",
+        citations: [{
+          title: `${String(quote.symbol)} market source`,
+          url: `https://example.com/markets/${String(quote.symbol).toLowerCase()}`,
+        }],
+      },
+      freshness: {
+        status: "fresh",
+        label: "Current market observation",
+        isLive: false,
+        ageSeconds: 7_200,
+      },
+    }));
+    payload.provider = {
+      name: "OpenAI web search",
+      configured: true,
+      status: "ok",
+      succeededSymbols: payload.allowlist,
+      fallbackSymbols: [],
+      lastSuccessfulUpdate,
+    };
+    await route.fulfill({
+      response,
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  });
+
+  await onboard(page);
+  await openView(page, "practice");
+  const status = page.getByTestId("practice-market-source-status");
+  await expect(status).toHaveText("Real Prices Updated Every 24 Hours");
+  await expect(page.getByText(/Last updated:/i)).toBeVisible();
+  await expect(page.getByText("Current as of 2 hours ago")).toBeVisible();
+  await expect(page.getByText(/practice-data fallback/i)).toHaveCount(0);
+});
+
 test("practice failures stay labeled and the asset dialog restores focus", async ({ page }) => {
   let historyRequests = 0;
   await page.route("**/api/v1/quotes**", async (route) => {
@@ -199,7 +285,8 @@ test("practice failures stay labeled and the asset dialog restores focus", async
   await openView(page, "practice");
   await expect(page.getByRole("alert").filter({ hasText: /Current sources are temporarily unavailable/i })).toBeVisible();
   await expect(page.getByTestId(/^practice-market-asset-/)).toHaveCount(11);
-  await expect(page.getByTestId("practice-market-source-status")).toHaveText("Practice data available offline");
+  await expect(page.getByTestId("practice-market-source-status")).toHaveText("Daily Price Refresh");
+  await expect(page.getByText(/practice-data fallback/i)).toHaveCount(0);
 
   const detailTrigger = page.getByTestId("practice-asset-info-SPCX");
   await detailTrigger.click();

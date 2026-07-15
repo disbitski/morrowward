@@ -1,6 +1,6 @@
 "use client";
 
-import { FlaskConical, Info } from "lucide-react";
+import { FlaskConical, Info, WalletCards } from "lucide-react";
 import {
   type PointerEvent as ReactPointerEvent,
   useId,
@@ -8,6 +8,7 @@ import {
   useState,
 } from "react";
 import {
+  MAX_MARKET_STARTING_BALANCE_CENTS,
   formatBasisPoints,
   formatCurrencyCents,
   simulateMarketJourney,
@@ -23,6 +24,7 @@ type GrowthAssumptionBps = 300 | 600 | 900;
 
 export interface MarketJourneyProps {
   startingBalanceCents: number;
+  practicePortfolioBalanceCents: number;
   weeklyContributionCents: number;
   initialReturnBps: number;
   experienceLevel: ExperienceLevel;
@@ -33,6 +35,16 @@ type RegimeSegment = {
   startWeek: number;
   endWeek: number;
 };
+
+export type MarketBalanceSource = "sample" | "practice";
+
+export function resolveMarketBalanceSource(
+  manualSource: MarketBalanceSource | null,
+  practiceBalanceCents: number,
+): MarketBalanceSource {
+  if (manualSource === "sample") return "sample";
+  return practiceBalanceCents > 0 ? "practice" : "sample";
+}
 
 const HORIZONS = [1, 5, 10, 20] as const;
 const GROWTH_ASSUMPTIONS = [300, 600, 900] as const;
@@ -187,6 +199,7 @@ function createLinePath(
 
 export function MarketJourney({
   startingBalanceCents,
+  practicePortfolioBalanceCents,
   weeklyContributionCents,
   initialReturnBps,
   experienceLevel,
@@ -199,15 +212,31 @@ export function MarketJourney({
   const [riskLevel, setRiskLevel] = useState<MarketRiskLevel>("medium");
   const [marketSequence, setMarketSequence] =
     useState<MarketSequence>("cycle");
+  const [manualBalanceSource, setManualBalanceSource] =
+    useState<MarketBalanceSource | null>(null);
   const [inspectedIndex, setInspectedIndex] = useState<number | null>(null);
   const rawId = useId();
   const componentId = rawId.replace(/[^a-zA-Z0-9_-]/g, "");
+  const boundedPracticeBalanceCents = Math.min(
+    MAX_MARKET_STARTING_BALANCE_CENTS,
+    Math.max(0, practicePortfolioBalanceCents),
+  );
+  const hasPracticeBalance = boundedPracticeBalanceCents > 0;
+  const balanceSource = resolveMarketBalanceSource(
+    manualBalanceSource,
+    boundedPracticeBalanceCents,
+  );
+  const activeStartingBalanceCents = balanceSource === "practice"
+    ? boundedPracticeBalanceCents
+    : startingBalanceCents;
+  const practiceBalanceWasCapped =
+    practicePortfolioBalanceCents > boundedPracticeBalanceCents;
 
   const journey = useMemo(
     () =>
       simulateMarketJourney({
         years,
-        startingBalanceCents,
+        startingBalanceCents: activeStartingBalanceCents,
         weeklyContributionCents,
         annualReturnBps,
         riskLevel,
@@ -217,7 +246,7 @@ export function MarketJourney({
       annualReturnBps,
       marketSequence,
       riskLevel,
-      startingBalanceCents,
+      activeStartingBalanceCents,
       weeklyContributionCents,
       years,
     ],
@@ -271,7 +300,7 @@ export function MarketJourney({
     ? `It ends ${formatBasisPoints(summary.currentDrawdownBps, 1)} below its latest path peak`
     : "It ends at a synthetic path high";
   const screenSummary = hasMoneyToSimulate
-    ? `${years}-year synthetic journey with ${money(weeklyContributionCents, false)} added at the end of each week. Ending illustration ${money(summary.endingValueCents, false)} after ${money(summary.totalContributionsCents, false)} total contributions. Biggest synthetic weekly-checkpoint drop ${drawdown(summary.maxDrawdownBps)}. ${recoveryText}. ${endingPositionText}.`
+    ? `${years}-year synthetic journey using ${balanceSource === "practice" ? "your current practice portfolio balance" : "sample data based on your Horizon starting balance"} of ${money(activeStartingBalanceCents, false)}, with ${money(weeklyContributionCents, false)} added at the end of each week. Ending illustration ${money(summary.endingValueCents, false)} after ${money(summary.totalContributionsCents, false)} total contributions. Biggest synthetic weekly-checkpoint drop ${drawdown(summary.maxDrawdownBps)}. ${recoveryText}. ${endingPositionText}.`
     : `${years}-year synthetic market path. Add a starting amount or weekly contribution in My Horizon to see a money-based journey.`;
   const heading = experienceLevel === "new"
     ? "See how a steady habit can travel through market ups and downs."
@@ -317,6 +346,17 @@ export function MarketJourney({
     setMarketSequence(next);
     resetInspection();
   };
+  const selectBalanceSource = (next: MarketBalanceSource) => {
+    if (next === "practice" && !hasPracticeBalance) return;
+    if (
+      next === balanceSource &&
+      (manualBalanceSource === null || manualBalanceSource === next)
+    ) {
+      return;
+    }
+    setManualBalanceSource(next);
+    resetInspection();
+  };
   const inspectFromPointer = (event: ReactPointerEvent<SVGSVGElement>) => {
     const bounds = event.currentTarget.getBoundingClientRect();
     const viewBoxX = ((event.clientX - bounds.left) / bounds.width) * CHART.width;
@@ -353,6 +393,8 @@ export function MarketJourney({
     <section
       className={styles.lab}
       aria-labelledby={`${componentId}-lab-title`}
+      data-balance-source={balanceSource}
+      data-starting-balance-cents={activeStartingBalanceCents}
       data-testid="market-journey"
     >
       <header className={styles.intro}>
@@ -367,13 +409,56 @@ export function MarketJourney({
             pullbacks, deep declines, and possible recovery. The synthetic
             market index starts at 100; real markets do not follow a schedule.
             The growth setting shapes the path—it is not an expected return or
-            target for any asset. It uses your plan’s starting amount and
-            weekly habit, not the practice asset selected above.
+            target for any asset. Choose a sample starting point or begin with
+            your current practice portfolio balance. Both use your weekly
+            habit and the same synthetic index—not the future of an asset
+            selected above.
           </p>
         </div>
-        <span className={styles.simulationBadge}>
-          <FlaskConical size={15} aria-hidden="true" /> Synthetic data · no forecast
-        </span>
+        <fieldset className={styles.balanceSelector}>
+          <legend>Journey starting balance</legend>
+          <div className={styles.balanceChoices}>
+            <button
+              className={styles.balanceChoice}
+              type="button"
+              aria-pressed={balanceSource === "sample"}
+              data-testid="market-balance-sample"
+              onClick={() => selectBalanceSource("sample")}
+            >
+              <span className={styles.balanceChoiceIcon} aria-hidden="true">
+                <FlaskConical size={16} />
+              </span>
+              <span className={styles.balanceChoiceCopy}>
+                <span>Use Sample Data</span>
+                <strong>{money(startingBalanceCents, false)}</strong>
+                <small>Horizon starting balance</small>
+              </span>
+            </button>
+            <button
+              className={styles.balanceChoice}
+              type="button"
+              aria-pressed={balanceSource === "practice"}
+              data-testid="market-balance-portfolio"
+              disabled={!hasPracticeBalance}
+              onClick={() => selectBalanceSource("practice")}
+            >
+              <span className={styles.balanceChoiceIcon} aria-hidden="true">
+                <WalletCards size={16} />
+              </span>
+              <span className={styles.balanceChoiceCopy}>
+                <span>Use My Practice Portfolio</span>
+                <strong>{money(practicePortfolioBalanceCents, false)}</strong>
+                <small>
+                  {hasPracticeBalance
+                    ? practiceBalanceWasCapped
+                      ? `${money(boundedPracticeBalanceCents, false)} lab limit`
+                      : "Simulated cash + holdings"
+                    : "Build a practice balance to unlock"}
+                </small>
+              </span>
+            </button>
+          </div>
+        </fieldset>
       </header>
 
       <div className={styles.controls}>
@@ -738,9 +823,11 @@ export function MarketJourney({
           substantially lower, including loss of principal, and may not recover
           during the period shown. Past performance would not predict future
           results. Taxes, fees, spreads, withdrawals, distributions, inflation,
-          and asset-specific fundamentals are not modeled. Starting money and
-          each end-of-week contribution are fully invested in one synthetic
-          index. Regular contributions do not guarantee profit or protect
+          and asset-specific fundamentals are not modeled. Practice Portfolio
+          mode uses only its current simulated total as the starting amount;
+          it does not model that portfolio’s allocation or forecast its assets.
+          Starting money and each end-of-week contribution are fully invested
+          in one synthetic index. Regular contributions do not guarantee profit or protect
           against loss. This educational simulation is not financial advice.
         </p>
       </aside>

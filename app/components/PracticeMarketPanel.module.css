@@ -57,9 +57,10 @@
 
 .refreshBlock {
   display: grid;
-  min-width: 190px;
+  min-width: 230px;
   justify-items: end;
   gap: 8px;
+  text-align: right;
 }
 
 .marketFreshness {
@@ -87,7 +88,13 @@
   color: var(--accent);
 }
 
-.refreshBlock small {
+.refreshMeta {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+}
+
+.refreshMeta small {
   color: var(--faint);
   font-size: 11px;
 }
@@ -1014,6 +1021,11 @@
 
   .refreshBlock {
     width: 100%;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .refreshMeta {
     justify-items: start;
   }
 

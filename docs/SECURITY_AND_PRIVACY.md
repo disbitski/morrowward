@@ -8,7 +8,7 @@ Morrowward is an educational simulator. Its safest path is also its default path
 - The persisted schema intentionally has no name, email, birthdate, account number, brokerage credential, or analytics identifier.
 - Export files contain the same local simulation state and should be treated as private by the user.
 - If IndexedDB is unavailable, the app visibly reports that changes are session-only.
-- Market Journey is calculated in the browser from bounded plan values and ephemeral display controls. Its synthetic path, drawdown, CAGR, money-weighted return, and strongest-day comparison do not call an external market-data service or leave the device.
+- Market Journey is calculated in the browser from bounded plan values or the local cash-plus-holdings total of the simulated Practice Portfolio and ephemeral display controls. Its selected starting balance, synthetic path, drawdown, CAGR, money-weighted return, and strongest-day comparison do not call an external service or leave the device. Portfolio mode never sends or forecasts the underlying allocation.
 - Practice quote/history reads contain only allowlisted public symbols and an optional fixed `history=1y` selector. The daily GPT-5.6 quote job always uses the same fixed eleven-symbol public allowlist and never includes the local plan, simulated cash, holdings, transaction history, identity, or educator question.
 - The educator receives only a sanitized question, experience level, and four bounded illustrative values: years remaining, weekly contribution, return, and inflation. It never receives starting balances or practice holdings.
 

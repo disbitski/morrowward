@@ -1380,7 +1380,7 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
       if (signal?.aborted) return false;
       if (isRecheck) return false;
       setRefreshError(
-        "Practice data remains available offline.",
+        "You can keep practicing while prices reconnect automatically.",
       );
       setRefreshStatus("error");
       return false;
@@ -1537,6 +1537,7 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
       </section>
       <MarketJourney
         startingBalanceCents={data.plan.startingCents}
+        practicePortfolioBalanceCents={valuation.totalValueCents}
         weeklyContributionCents={data.plan.weeklyCents}
         initialReturnBps={data.plan.returnBps}
         experienceLevel={data.experience}
