@@ -178,6 +178,22 @@ The refinement closed with **201 passing unit/integration tests**, clean ESLint 
 
 Planned milestone: weekly simulation, practice portfolio, Education Center, GPT-5.6 educator, daily brief, provenance, and AI safety tests.
 
+### Planned Education Center expansion and creative polish
+
+The next hands-on pass will turn Learn from a compact question surface into a more complete financial-literacy center while preserving the bounded educator and non-advice contract:
+
+- Expand the guided question library across compounding, dollar-cost averaging, diversification, ETFs, inflation, volatility, drawdowns, bear markets, CAGR versus personal return, stocks, crypto, options, market timing, and common terminology.
+- Tailor prompt sets and explanation depth for **New**, **Familiar**, and **Advanced** experience levels.
+- Organize content into approachable learning paths such as **Start Here**, **Build the Habit**, **Understand Risk**, and **Go Deeper**.
+- Offer relevant follow-up questions after each explanation so a learner always has a clear next step.
+- Expand canonical links using verified primary and authoritative sources such as Investor.gov, FINRA, the Federal Reserve, IRS materials, and official fund or issuer education pages.
+- Add verified Grokipedia pages as clearly labeled **Supplemental reading** beside the relevant topics. Remove the separate Grokipedia-specific disclaimer while retaining Morrowward's central educational/non-advice disclosure and transparent source labels.
+- Add a small number of purposeful, freshly generated educational or motivational visuals that strengthen comprehension and fit the established four-theme design system.
+- Produce and review up to two additional 15-second historical greetings, then activate roster rotation only after each asset passes quote verification, media review, accessibility checks, and Dave's explicit approval.
+- Re-evaluate the complete onboarding → Practice → Market Journey → Learn flow on desktop and mobile, then make evidence-based spacing, copy, navigation, and interaction refinements.
+
+Acceptance for this pass includes verified non-broken links, keyboard and screen-reader access, responsive layouts, useful deterministic/offline education, experience-appropriate prompt coverage, and continued rejection of personalized buy/sell instructions, guarantees, urgency, and prompt-injection attempts.
+
 ## July 17 — Feature-complete release candidate
 
 Planned milestone: data portability, offline behavior, accessibility, security review, documentation, demo seed state, and production rehearsal.
