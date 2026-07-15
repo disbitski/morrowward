@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
+import { spawn } from "node:child_process";
 import { lstat, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, extname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 
 export const XAI_API_BASE_URL = "https://api.x.ai/v1";
 export const DEFAULT_MANIFEST_PATH = new URL(
@@ -32,6 +34,18 @@ const IMAGE_MIME_TYPES = new Set([
 ]);
 const VIDEO_MIME_TYPES = new Set(["video/mp4", "video/webm"]);
 const AUDIO_MIME_TYPES = new Set(["audio/wav", "audio/mpeg"]);
+
+// A quarter-second allows for ordinary frame/container timebase rounding while
+// still failing materially short or long generations against the requested
+// duration. Resolution is always checked exactly.
+export const VIDEO_DURATION_TOLERANCE_SECONDS = 0.25;
+export const NARRATION_TAIL_HEADROOM_SECONDS = 0.05;
+export const MINIMUM_2K_16_BY_9_IMAGE_WIDTH = 2048;
+export const MINIMUM_2K_16_BY_9_IMAGE_HEIGHT = 1152;
+export const DEFAULT_MEDIA_DOWNLOAD_TIMEOUT_MS = 60_000;
+export const DEFAULT_MAX_MEDIA_DOWNLOAD_BYTES = 100 * 1024 * 1024;
+export const DEFAULT_XAI_JSON_TIMEOUT_MS = 60_000;
+export const DEFAULT_MAX_XAI_JSON_RESPONSE_BYTES = 100 * 1024 * 1024;
 
 /** @param {Record<string, string | undefined>} environment */
 export function requireXaiApiKey(environment = process.env) {
@@ -219,6 +233,52 @@ export function readImageDimensions(buffer, mimeType = detectMediaMimeType(buffe
   throw new Error(`Could not read dimensions for ${mimeType ?? "unknown image"}.`);
 }
 
+/**
+ * Fail closed unless generated image bytes match the requested 2K widescreen
+ * contract. xAI documents the resolution tier as "2k" rather than promising one
+ * fixed pixel matrix; current valid 16:9 output may be 2048x1152 or 2816x1584.
+ * We therefore enforce the requested ratio and a true 2K-or-better floor.
+ */
+export function assertImageMatchesRequest(
+  dimensions,
+  imageConfiguration,
+  label = "Generated image",
+) {
+  const width = dimensions?.width;
+  const height = dimensions?.height;
+  if (
+    !Number.isSafeInteger(width) ||
+    width < 1 ||
+    !Number.isSafeInteger(height) ||
+    height < 1
+  ) {
+    throw new Error(`${label} has invalid dimensions.`);
+  }
+  const aspectError = Math.abs(width * 9 - height * 16);
+  if (aspectError > 16) {
+    throw new Error(
+      `${label} is ${width}x${height}; expected 16:9 output within one pixel.`,
+    );
+  }
+  if (
+    width < MINIMUM_2K_16_BY_9_IMAGE_WIDTH ||
+    height < MINIMUM_2K_16_BY_9_IMAGE_HEIGHT
+  ) {
+    throw new Error(
+      `${label} is ${width}x${height}; expected at least ${MINIMUM_2K_16_BY_9_IMAGE_WIDTH}x${MINIMUM_2K_16_BY_9_IMAGE_HEIGHT} for the requested 2k tier.`,
+    );
+  }
+  if (
+    !Number.isSafeInteger(imageConfiguration?.minimumEdgePixels) ||
+    Math.min(width, height) < imageConfiguration.minimumEdgePixels
+  ) {
+    throw new Error(
+      `${label} does not satisfy the configured minimum image edge.`,
+    );
+  }
+  return dimensions;
+}
+
 export function sha256Hex(buffer) {
   return createHash("sha256").update(buffer).digest("hex");
 }
@@ -232,38 +292,127 @@ function safeProviderError(payload) {
 /**
  * @param {typeof fetch} fetchImplementation
  * @param {string} url
- * @param {{apiKey: string, method?: string, body?: unknown, acceptedStatuses?: number[]}} options
+ * @param {{apiKey: string, method?: string, body?: unknown, acceptedStatuses?: number[], timeoutMs?: number, maximumBytes?: number}} options
  */
 export async function requestJson(
   fetchImplementation,
   url,
-  { apiKey, method = "GET", body, acceptedStatuses = [200] } = {},
+  {
+    apiKey,
+    method = "GET",
+    body,
+    acceptedStatuses = [200],
+    timeoutMs = DEFAULT_XAI_JSON_TIMEOUT_MS,
+    maximumBytes = DEFAULT_MAX_XAI_JSON_RESPONSE_BYTES,
+  } = {},
 ) {
   if (typeof fetchImplementation !== "function") {
     throw new TypeError("A fetch implementation is required.");
   }
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1) {
+    throw new Error("timeoutMs must be a positive safe integer.");
+  }
+  if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1) {
+    throw new Error("maximumBytes must be a positive safe integer.");
+  }
   const headers = { Authorization: `Bearer ${apiKey}` };
   if (body !== undefined) headers["Content-Type"] = "application/json";
-  const response = await fetchImplementation(url, {
-    method,
-    headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
+
+  const controller = new AbortController();
+  let activeReader = null;
+  let timedOut = false;
+  let timeoutHandle;
+  const timeoutPromise = new Promise((_, rejectPromise) => {
+    timeoutHandle = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+      activeReader?.cancel().catch(() => undefined);
+      rejectPromise(
+        new Error(`xAI JSON request timed out after ${timeoutMs}ms.`),
+      );
+    }, timeoutMs);
+    timeoutHandle.unref?.();
   });
-  let payload = null;
-  const text = await response.text();
-  if (text) {
-    try {
-      payload = JSON.parse(text);
-    } catch {
-      throw new Error(`xAI returned non-JSON data (HTTP ${response.status}).`);
+
+  const operation = (async () => {
+    const response = await fetchImplementation(url, {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const declaredLength = response.headers?.get?.("content-length");
+    if (declaredLength !== null && declaredLength !== undefined) {
+      const parsedLength = Number(declaredLength);
+      if (
+        Number.isSafeInteger(parsedLength) &&
+        parsedLength >= 0 &&
+        parsedLength > maximumBytes
+      ) {
+        throw new Error(
+          `xAI JSON response exceeds the ${maximumBytes}-byte limit.`,
+        );
+      }
     }
+
+    const chunks = [];
+    let receivedBytes = 0;
+    if (response.body !== null && response.body !== undefined) {
+      if (typeof response.body.getReader !== "function") {
+        throw new Error("xAI JSON response body is not a readable byte stream.");
+      }
+      activeReader = response.body.getReader();
+      try {
+        while (true) {
+          const { done, value } = await activeReader.read();
+          if (done) break;
+          if (!(value instanceof Uint8Array)) {
+            throw new Error("xAI JSON response stream returned invalid bytes.");
+          }
+          receivedBytes += value.byteLength;
+          if (receivedBytes > maximumBytes) {
+            await activeReader.cancel().catch(() => undefined);
+            throw new Error(
+              `xAI JSON response exceeds the ${maximumBytes}-byte limit.`,
+            );
+          }
+          chunks.push(Buffer.from(value));
+        }
+      } finally {
+        activeReader.releaseLock();
+        activeReader = null;
+      }
+    }
+
+    const text = Buffer.concat(chunks, receivedBytes).toString("utf8");
+    let payload = null;
+    if (text) {
+      try {
+        payload = JSON.parse(text);
+      } catch {
+        throw new Error(`xAI returned non-JSON data (HTTP ${response.status}).`);
+      }
+    }
+    if (!acceptedStatuses.includes(response.status)) {
+      throw new Error(
+        `xAI request failed (HTTP ${response.status}): ${safeProviderError(payload)}`,
+      );
+    }
+    return { payload, status: response.status };
+  })();
+
+  try {
+    return await Promise.race([operation, timeoutPromise]);
+  } catch (error) {
+    if (timedOut) {
+      throw new Error(`xAI JSON request timed out after ${timeoutMs}ms.`, {
+        cause: error,
+      });
+    }
+    throw error;
+  } finally {
+    if (timeoutHandle) clearTimeout(timeoutHandle);
   }
-  if (!acceptedStatuses.includes(response.status)) {
-    throw new Error(
-      `xAI request failed (HTTP ${response.status}): ${safeProviderError(payload)}`,
-    );
-  }
-  return { payload, status: response.status };
 }
 
 export function buildImageGenerationRequest(manifest, prompt) {
@@ -425,7 +574,17 @@ export function createWebVttFromCharacterTimings(text, characters, times) {
   }
   const sentenceEnds = [];
   for (let index = 0; index < text.length; index += 1) {
-    if (/[.!?]/.test(text[index]) || index === text.length - 1) {
+    if (/[.!?]/.test(text[index])) {
+      let endIndex = index;
+      while (
+        endIndex + 1 < text.length &&
+        /["'\u2019\u201d]/.test(text[endIndex + 1])
+      ) {
+        endIndex += 1;
+      }
+      sentenceEnds.push(endIndex);
+      index = endIndex;
+    } else if (index === text.length - 1) {
       sentenceEnds.push(index);
     }
   }
@@ -484,11 +643,20 @@ export async function pollVideoGeneration(
   const deadline = now() + timeoutMs;
   const encodedRequestId = encodeURIComponent(requestId);
 
-  while (now() <= deadline) {
+  while (true) {
+    const remainingRequestMs = Math.floor(deadline - now());
+    if (remainingRequestMs < 1) break;
     const { payload, status: httpStatus } = await requestJson(
       fetchImplementation,
       `${XAI_API_BASE_URL}/videos/${encodedRequestId}`,
-      { apiKey, acceptedStatuses: [200, 202] },
+      {
+        apiKey,
+        acceptedStatuses: [200, 202],
+        timeoutMs: Math.min(
+          DEFAULT_XAI_JSON_TIMEOUT_MS,
+          remainingRequestMs,
+        ),
+      },
     );
     const status = payload?.status ?? (httpStatus === 202 ? "pending" : null);
     if (status === "done") {
@@ -507,7 +675,9 @@ export async function pollVideoGeneration(
     if (status !== "pending" && status !== null) {
       throw new Error(`Unknown xAI video status: ${status}`);
     }
-    await sleep(intervalMs);
+    const remainingSleepMs = Math.floor(deadline - now());
+    if (remainingSleepMs < 1) break;
+    await sleep(Math.min(intervalMs, remainingSleepMs));
   }
   throw new Error(`xAI video generation timed out after ${timeoutMs}ms.`);
 }
@@ -515,28 +685,139 @@ export async function pollVideoGeneration(
 /**
  * @param {typeof fetch} fetchImplementation
  * @param {string} url
- * @param {{kind?: "image" | "video" | "audio", minimumBytes?: number}} options
+ * @param {{kind?: "image" | "video" | "audio", minimumBytes?: number, maximumBytes?: number, timeoutMs?: number}} options
  */
 export async function downloadAndValidateMedia(
   fetchImplementation,
   url,
-  { kind, minimumBytes = 1 } = {},
+  {
+    kind,
+    minimumBytes = 1,
+    maximumBytes = DEFAULT_MAX_MEDIA_DOWNLOAD_BYTES,
+    timeoutMs = DEFAULT_MEDIA_DOWNLOAD_TIMEOUT_MS,
+  } = {},
 ) {
   const parsedUrl = new URL(url);
   if (parsedUrl.protocol !== "https:") {
     throw new Error("Generated media download URL must use HTTPS.");
   }
-  const response = await fetchImplementation(parsedUrl);
-  if (!response.ok) {
-    throw new Error(`Generated media download failed (HTTP ${response.status}).`);
+  if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1) {
+    throw new Error("maximumBytes must be a positive safe integer.");
   }
-  const buffer = Buffer.from(await response.arrayBuffer());
-  const mimeType = validateMediaBuffer(
-    buffer,
-    response.headers.get("content-type"),
-    { kind, minimumBytes },
-  );
-  return { buffer, mimeType, sha256: sha256Hex(buffer) };
+  if (!Number.isSafeInteger(minimumBytes) || minimumBytes < 1) {
+    throw new Error("minimumBytes must be a positive safe integer.");
+  }
+  if (minimumBytes > maximumBytes) {
+    throw new Error("minimumBytes cannot exceed maximumBytes.");
+  }
+  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1) {
+    throw new Error("timeoutMs must be a positive safe integer.");
+  }
+
+  const controller = new AbortController();
+  let timedOut = false;
+  let timeoutHandle;
+  const timeoutPromise = new Promise((_, rejectPromise) => {
+    timeoutHandle = setTimeout(() => {
+      timedOut = true;
+      rejectPromise(
+        new Error(`Generated media download timed out after ${timeoutMs}ms.`),
+      );
+      controller.abort();
+    }, timeoutMs);
+    timeoutHandle.unref?.();
+  });
+
+  const operation = (async () => {
+    const response = await fetchImplementation(parsedUrl, {
+      redirect: "follow",
+      signal: controller.signal,
+    });
+    if (response.url) {
+      let finalUrl;
+      try {
+        finalUrl = new URL(response.url);
+      } catch {
+        throw new Error("Generated media response has an invalid final URL.");
+      }
+      if (finalUrl.protocol !== "https:") {
+        throw new Error(
+          "Generated media final redirect URL must continue to use HTTPS.",
+        );
+      }
+    }
+    if (!response.ok) {
+      throw new Error(
+        `Generated media download failed (HTTP ${response.status}).`,
+      );
+    }
+
+    const declaredLength = response.headers.get("content-length");
+    if (declaredLength !== null) {
+      const parsedLength = Number(declaredLength);
+      if (
+        Number.isSafeInteger(parsedLength) &&
+        parsedLength >= 0 &&
+        parsedLength > maximumBytes
+      ) {
+        throw new Error(
+          `Generated media exceeds the ${maximumBytes}-byte download limit.`,
+        );
+      }
+    }
+
+    let buffer;
+    if (response.body && typeof response.body.getReader === "function") {
+      const reader = response.body.getReader();
+      const chunks = [];
+      let downloadedBytes = 0;
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (!(value instanceof Uint8Array)) {
+            throw new Error("Generated media stream returned invalid bytes.");
+          }
+          downloadedBytes += value.byteLength;
+          if (downloadedBytes > maximumBytes) {
+            await reader.cancel().catch(() => undefined);
+            throw new Error(
+              `Generated media exceeds the ${maximumBytes}-byte download limit.`,
+            );
+          }
+          chunks.push(Buffer.from(value));
+        }
+      } finally {
+        reader.releaseLock();
+      }
+      buffer = Buffer.concat(chunks, downloadedBytes);
+    } else {
+      buffer = Buffer.from(await response.arrayBuffer());
+      if (buffer.length > maximumBytes) {
+        throw new Error(
+          `Generated media exceeds the ${maximumBytes}-byte download limit.`,
+        );
+      }
+    }
+
+    const mimeType = validateMediaBuffer(
+      buffer,
+      response.headers.get("content-type"),
+      { kind, minimumBytes },
+    );
+    return { buffer, mimeType, sha256: sha256Hex(buffer) };
+  })();
+
+  try {
+    return await Promise.race([operation, timeoutPromise]);
+  } catch (error) {
+    if (timedOut) {
+      throw new Error(`Generated media download timed out after ${timeoutMs}ms.`);
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutHandle);
+  }
 }
 
 export async function imageFileToDataUri(filePath) {
@@ -555,10 +836,350 @@ export async function imageFileToDataUri(filePath) {
   };
 }
 
+function positiveDuration(value) {
+  const parsed = typeof value === "number" ? value : Number.parseFloat(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+/** Parse the deliberately small ffprobe JSON shape requested by probeMediaFile. */
+export function parseFfprobeMedia(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new Error("ffprobe output must be a JSON object.");
+  }
+  if (!Array.isArray(payload.streams)) {
+    throw new Error("ffprobe output is missing its streams array.");
+  }
+
+  const videoStream = payload.streams.find(
+    (stream) => stream?.codec_type === "video",
+  );
+  const audioStream = payload.streams.find(
+    (stream) => stream?.codec_type === "audio",
+  );
+  const durationSeconds =
+    positiveDuration(payload.format?.duration) ??
+    positiveDuration(videoStream?.duration) ??
+    positiveDuration(audioStream?.duration);
+  if (durationSeconds === null) {
+    throw new Error("ffprobe output has no positive media duration.");
+  }
+
+  let video = null;
+  if (videoStream) {
+    if (
+      !Number.isSafeInteger(videoStream.width) ||
+      videoStream.width < 1 ||
+      !Number.isSafeInteger(videoStream.height) ||
+      videoStream.height < 1
+    ) {
+      throw new Error("ffprobe video stream has invalid dimensions.");
+    }
+    video = {
+      width: videoStream.width,
+      height: videoStream.height,
+    };
+  }
+
+  return {
+    durationSeconds,
+    video,
+    hasAudio: Boolean(audioStream),
+  };
+}
+
+/** Inspect actual media bytes with ffprobe; never trust only request metadata. */
+export function probeMediaFile(
+  path,
+  { spawnImplementation = spawn } = {},
+) {
+  if (typeof path !== "string" || !path.trim()) {
+    throw new Error("Media probe path must be a non-empty string.");
+  }
+  return new Promise((resolvePromise, rejectPromise) => {
+    const child = spawnImplementation(
+      "ffprobe",
+      [
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration:stream=codec_type,width,height,duration",
+        "-of",
+        "json",
+        path,
+      ],
+      { stdio: ["ignore", "pipe", "pipe"] },
+    );
+    let output = "";
+    let errorOutput = "";
+    child.stdout.on("data", (chunk) => {
+      output += chunk.toString();
+      if (output.length > 1_000_000) {
+        child.kill();
+        rejectPromise(new Error("ffprobe output exceeded the 1 MB safety limit."));
+      }
+    });
+    child.stderr.on("data", (chunk) => {
+      errorOutput += chunk.toString();
+      if (errorOutput.length > 8_000) errorOutput = errorOutput.slice(-8_000);
+    });
+    child.on("error", (error) => {
+      rejectPromise(new Error(`Could not start ffprobe: ${error.message}`));
+    });
+    child.on("close", (code) => {
+      if (code !== 0) {
+        rejectPromise(
+          new Error(`ffprobe exited ${code}: ${errorOutput.trim() || "no details"}`),
+        );
+        return;
+      }
+      try {
+        resolvePromise(parseFfprobeMedia(JSON.parse(output)));
+      } catch (error) {
+        rejectPromise(new Error(`Could not validate ffprobe output: ${error.message}`));
+      }
+    });
+  });
+}
+
+export function assertVideoMatchesRequest(
+  probe,
+  {
+    expectedWidth = 1280,
+    expectedHeight = 720,
+    expectedDurationSeconds,
+    toleranceSeconds = VIDEO_DURATION_TOLERANCE_SECONDS,
+    requireAudio = false,
+    label = "Video",
+  },
+) {
+  if (!probe?.video) throw new Error(`${label} has no video stream.`);
+  if (!Number.isFinite(probe.durationSeconds) || probe.durationSeconds <= 0) {
+    throw new Error(`${label} has no positive measured duration.`);
+  }
+  if (
+    probe.video.width !== expectedWidth ||
+    probe.video.height !== expectedHeight
+  ) {
+    throw new Error(
+      `${label} is ${probe.video.width}x${probe.video.height}; expected exactly ${expectedWidth}x${expectedHeight}.`,
+    );
+  }
+  if (!Number.isFinite(expectedDurationSeconds) || expectedDurationSeconds <= 0) {
+    throw new Error("Expected video duration must be a positive number.");
+  }
+  if (!Number.isFinite(toleranceSeconds) || toleranceSeconds < 0) {
+    throw new Error("Video duration tolerance must be a non-negative number.");
+  }
+  const difference = Math.abs(
+    probe.durationSeconds - expectedDurationSeconds,
+  );
+  if (difference > toleranceSeconds) {
+    throw new Error(
+      `${label} is ${probe.durationSeconds.toFixed(3)}s; expected ${expectedDurationSeconds}s within +/-${toleranceSeconds}s.`,
+    );
+  }
+  if (requireAudio && !probe.hasAudio) {
+    throw new Error(`${label} has no audio stream.`);
+  }
+  return probe;
+}
+
+export function assertNarrationFitsVisual(videoProbe, narrationProbe) {
+  if (!videoProbe?.video) throw new Error("Visual input has no video stream.");
+  if (
+    !Number.isFinite(videoProbe.durationSeconds) ||
+    videoProbe.durationSeconds <= 0
+  ) {
+    throw new Error("Visual input has no positive measured duration.");
+  }
+  if (!narrationProbe?.hasAudio) {
+    throw new Error("Narration input has no audio stream.");
+  }
+  if (
+    !Number.isFinite(narrationProbe.durationSeconds) ||
+    narrationProbe.durationSeconds <= 0
+  ) {
+    throw new Error("Narration input has no positive measured duration.");
+  }
+  const maximumNarrationDuration =
+    videoProbe.durationSeconds - NARRATION_TAIL_HEADROOM_SECONDS;
+  if (narrationProbe.durationSeconds > maximumNarrationDuration) {
+    throw new Error(
+      `Narration is ${narrationProbe.durationSeconds.toFixed(3)}s but the visual is ${videoProbe.durationSeconds.toFixed(3)}s; narration must fit with at least ${NARRATION_TAIL_HEADROOM_SECONDS}s tail headroom.`,
+    );
+  }
+  return {
+    visualDurationSeconds: videoProbe.durationSeconds,
+    narrationDurationSeconds: narrationProbe.durationSeconds,
+    tailHeadroomSeconds:
+      videoProbe.durationSeconds - narrationProbe.durationSeconds,
+  };
+}
+
 function assertString(value, field) {
   if (typeof value !== "string" || !value.trim()) {
     throw new Error(`Manifest field ${field} must be a non-empty string.`);
   }
+}
+
+export function assertQuoteSourceConsistency(
+  metadata,
+  label = "Manifest metadata",
+) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    throw new Error(`${label} must be an object.`);
+  }
+  assertString(metadata.transcript, `${label}.transcript`);
+  assertString(metadata.directQuote, `${label}.directQuote`);
+  assertString(
+    metadata.directQuoteAttribution,
+    `${label}.directQuoteAttribution`,
+  );
+  const source = metadata.source;
+  if (!source || typeof source !== "object" || Array.isArray(source)) {
+    throw new Error(`${label}.source must be an object.`);
+  }
+  for (const field of [
+    "author",
+    "work",
+    "location",
+    "translator",
+    "publicDomainExactText",
+    "usage",
+    "url",
+  ]) {
+    assertString(source[field], `${label}.source.${field}`);
+  }
+  if (
+    !Number.isSafeInteger(source.translationYear) ||
+    source.translationYear < 1 ||
+    source.translationYear > 2100
+  ) {
+    throw new Error(`${label}.source.translationYear must be a valid year.`);
+  }
+  if (metadata.directQuote !== source.publicDomainExactText) {
+    throw new Error(
+      `${label}.directQuote must exactly match source.publicDomainExactText.`,
+    );
+  }
+  if (!metadata.transcript.includes(metadata.directQuote)) {
+    throw new Error(`${label}.transcript must include the exact direct quote.`);
+  }
+  if (
+    !metadata.directQuoteAttribution.includes(source.work) ||
+    !metadata.directQuoteAttribution.includes(source.translator)
+  ) {
+    throw new Error(
+      `${label}.directQuoteAttribution must identify the source work and translator.`,
+    );
+  }
+  let sourceUrl;
+  try {
+    sourceUrl = new URL(source.url);
+  } catch {
+    throw new Error(`${label}.source.url must be a valid HTTPS URL.`);
+  }
+  if (sourceUrl.protocol !== "https:") {
+    throw new Error(`${label}.source.url must be a valid HTTPS URL.`);
+  }
+  return metadata;
+}
+
+export function validateReviewPolicy(review, label = "review") {
+  if (!review || typeof review !== "object" || Array.isArray(review)) {
+    throw new Error(`Manifest field ${label} must be an object.`);
+  }
+  if (!Array.isArray(review.hardGates) || review.hardGates.length < 1) {
+    throw new Error("Review manifest must include hard gates.");
+  }
+  const hardGateSet = new Set();
+  for (const [index, hardGate] of review.hardGates.entries()) {
+    assertString(hardGate, `${label}.hardGates[${index}]`);
+    if (hardGateSet.has(hardGate)) {
+      throw new Error(`${label}.hardGates must not contain duplicates.`);
+    }
+    hardGateSet.add(hardGate);
+  }
+  if (!Array.isArray(review.scorecard) || review.scorecard.length < 1) {
+    throw new Error("Review manifest must include a scorecard.");
+  }
+
+  const scorecardIds = new Set();
+  let maximumTotal = 0;
+  let smallestMaximum = Number.POSITIVE_INFINITY;
+  for (const [index, dimension] of review.scorecard.entries()) {
+    if (!dimension || typeof dimension !== "object" || Array.isArray(dimension)) {
+      throw new Error(`${label}.scorecard[${index}] must be an object.`);
+    }
+    assertString(dimension.id, `${label}.scorecard[${index}].id`);
+    if (!/^[a-z0-9][a-z0-9-]{1,60}$/.test(dimension.id)) {
+      throw new Error(`${label}.scorecard[${index}].id must be a safe slug.`);
+    }
+    if (scorecardIds.has(dimension.id)) {
+      throw new Error(`${label}.scorecard ids must be unique.`);
+    }
+    scorecardIds.add(dimension.id);
+    assertString(dimension.label, `${label}.scorecard[${index}].label`);
+    if (
+      !Number.isSafeInteger(dimension.maximum) ||
+      dimension.maximum < 1 ||
+      dimension.maximum > 10
+    ) {
+      throw new Error(
+        `${label}.scorecard[${index}].maximum must be an integer from 1 to 10.`,
+      );
+    }
+    maximumTotal += dimension.maximum;
+    smallestMaximum = Math.min(smallestMaximum, dimension.maximum);
+  }
+
+  if (
+    !Number.isSafeInteger(review.minimumDimensionScore) ||
+    review.minimumDimensionScore < 1 ||
+    review.minimumDimensionScore > smallestMaximum
+  ) {
+    throw new Error(
+      `${label}.minimumDimensionScore must be a positive integer no greater than every dimension maximum.`,
+    );
+  }
+  const dimensionFloorTotal =
+    review.minimumDimensionScore * review.scorecard.length;
+  if (
+    !Number.isSafeInteger(review.minimumScore) ||
+    review.minimumScore < dimensionFloorTotal ||
+    review.minimumScore > maximumTotal
+  ) {
+    throw new Error(
+      `${label}.minimumScore must be an integer from ${dimensionFloorTotal} to ${maximumTotal}.`,
+    );
+  }
+  if (review.humanFinalApprovalRequired !== true) {
+    throw new Error(`${label}.humanFinalApprovalRequired must be true.`);
+  }
+  return { maximumTotal, scorecard: review.scorecard };
+}
+
+/**
+ * A run's editable review.json may record scores and notes, but it may not
+ * redefine what passing means. Bind every acceptance step to the exact review
+ * policy in the selected, committed campaign manifest.
+ */
+export function assertReviewPolicyMatchesCampaign(
+  runReviewPolicy,
+  campaignReviewPolicy,
+  label = "review.json.reviewPolicy",
+) {
+  validateReviewPolicy(
+    campaignReviewPolicy,
+    "campaign manifest review policy",
+  );
+  validateReviewPolicy(runReviewPolicy, label);
+  if (!isDeepStrictEqual(runReviewPolicy, campaignReviewPolicy)) {
+    throw new Error(
+      `${label} must exactly match the campaign manifest review policy.`,
+    );
+  }
+  return runReviewPolicy;
 }
 
 export function validateCampaignManifest(manifest) {
@@ -580,8 +1201,20 @@ export function validateCampaignManifest(manifest) {
   if (manifest.image.resolution !== "2k") {
     throw new Error("Morrowward image candidates must request 2k resolution.");
   }
+  if (manifest.image.aspectRatio !== "16:9") {
+    throw new Error("Morrowward image candidates must request 16:9 output.");
+  }
   if (manifest.image.responseFormat !== "b64_json") {
     throw new Error("Morrowward images must use b64_json for private local review.");
+  }
+  if (
+    !Number.isSafeInteger(manifest.image.minimumEdgePixels) ||
+    manifest.image.minimumEdgePixels < 1000 ||
+    manifest.image.minimumEdgePixels > MINIMUM_2K_16_BY_9_IMAGE_HEIGHT
+  ) {
+    throw new Error(
+      `image.minimumEdgePixels must be an integer from 1000 to ${MINIMUM_2K_16_BY_9_IMAGE_HEIGHT}.`,
+    );
   }
   for (const mode of ["imageToVideo", "textToVideo"]) {
     const video = manifest.video?.[mode];
@@ -593,6 +1226,12 @@ export function validateCampaignManifest(manifest) {
       video.durationSeconds > 15
     ) {
       throw new Error(`video.${mode}.durationSeconds must be from 1 to 15.`);
+    }
+    if (video.aspectRatio !== "16:9") {
+      throw new Error(`video.${mode}.aspectRatio must be 16:9.`);
+    }
+    if (video.resolution !== "720p") {
+      throw new Error(`video.${mode}.resolution must be 720p.`);
     }
   }
   assertString(manifest.narration?.textFile, "narration.textFile");
@@ -606,19 +1245,15 @@ export function validateCampaignManifest(manifest) {
   if (manifest.narration.codec !== "wav") {
     throw new Error("Narration must request WAV for lossless post-production.");
   }
+  assertString(manifest.metadata?.aiInterpretationBadge, "metadata.aiInterpretationBadge");
   assertString(manifest.metadata?.historicalFigureDisclosure, "metadata.historicalFigureDisclosure");
   assertString(manifest.metadata?.caption, "metadata.caption");
-  assertString(manifest.metadata?.transcript, "metadata.transcript");
-  assertString(manifest.metadata?.source?.url, "metadata.source.url");
+  assertString(manifest.metadata?.voiceDisclosure, "metadata.voiceDisclosure");
+  assertQuoteSourceConsistency(manifest.metadata, "metadata");
   if (manifest.playback?.autoplay !== false) {
     throw new Error("Playback metadata must explicitly disable autoplay.");
   }
-  if (!Array.isArray(manifest.review?.hardGates) || manifest.review.hardGates.length < 1) {
-    throw new Error("Review manifest must include hard gates.");
-  }
-  if (!Array.isArray(manifest.review?.scorecard) || manifest.review.scorecard.length < 1) {
-    throw new Error("Review manifest must include a scorecard.");
-  }
+  validateReviewPolicy(manifest.review);
   return manifest;
 }
 
@@ -661,6 +1296,65 @@ export async function resolveMediaReviewPath(candidate, label = "Media review pa
   return resolvedCandidate;
 }
 
+export function assertReviewScores(
+  candidateReview,
+  reviewPolicy,
+  label = "The reviewed item",
+) {
+  if (
+    !candidateReview?.scores ||
+    typeof candidateReview.scores !== "object" ||
+    Array.isArray(candidateReview.scores)
+  ) {
+    throw new Error(`${label} must include a complete score object.`);
+  }
+  const expectedIds = reviewPolicy.scorecard.map((dimension) => dimension.id);
+  const actualIds = Object.keys(candidateReview.scores);
+  const missingIds = expectedIds.filter(
+    (id) => !Object.hasOwn(candidateReview.scores, id),
+  );
+  const unexpectedIds = actualIds.filter((id) => !expectedIds.includes(id));
+  if (missingIds.length > 0 || unexpectedIds.length > 0) {
+    throw new Error(
+      `${label}'s scores must exactly match the review scorecard (missing: ${missingIds.join(", ") || "none"}; unexpected: ${unexpectedIds.join(", ") || "none"}).`,
+    );
+  }
+
+  let computedTotal = 0;
+  for (const dimension of reviewPolicy.scorecard) {
+    const score = candidateReview.scores[dimension.id];
+    if (
+      !Number.isSafeInteger(score) ||
+      score < 1 ||
+      score > dimension.maximum
+    ) {
+      throw new Error(
+        `Review score ${dimension.id} must be an integer from 1 to ${dimension.maximum}.`,
+      );
+    }
+    if (score < reviewPolicy.minimumDimensionScore) {
+      throw new Error(
+        `Review score ${dimension.id} is below minimumDimensionScore ${reviewPolicy.minimumDimensionScore}.`,
+      );
+    }
+    computedTotal += score;
+  }
+  if (
+    !Number.isSafeInteger(candidateReview.totalScore) ||
+    candidateReview.totalScore !== computedTotal
+  ) {
+    throw new Error(
+      `${label}'s totalScore must equal the computed score total ${computedTotal}.`,
+    );
+  }
+  if (computedTotal < reviewPolicy.minimumScore) {
+    throw new Error(
+      `The selected candidate's score total ${computedTotal} is below minimumScore ${reviewPolicy.minimumScore}.`,
+    );
+  }
+  return computedTotal;
+}
+
 /**
  * Ensure image-to-video receives only the exact provisional winner recorded
  * in a run's review manifest after its hard gates passed.
@@ -674,6 +1368,16 @@ export function assertReviewedCandidateUpload(
   if (!reviewManifest || typeof reviewManifest !== "object") {
     throw new Error("The selected run has no valid review manifest.");
   }
+  assertQuoteSourceConsistency(
+    {
+      transcript: reviewManifest.transcript,
+      directQuote: reviewManifest.directQuote,
+      directQuoteAttribution: reviewManifest.directQuoteAttribution,
+      source: reviewManifest.source,
+    },
+    "review.json",
+  );
+  validateReviewPolicy(reviewManifest.reviewPolicy, "review.json.reviewPolicy");
   const selectedCandidateId = reviewManifest.selection?.selectedCandidateId;
   if (typeof selectedCandidateId !== "string" || !selectedCandidateId) {
     throw new Error(
@@ -697,6 +1401,11 @@ export function assertReviewedCandidateUpload(
       "The selected image candidate must pass every hard gate before upload.",
     );
   }
+  assertReviewScores(
+    candidate.review,
+    reviewManifest.reviewPolicy,
+    "The selected candidate",
+  );
   if (
     typeof candidate.filename !== "string" ||
     !candidate.filename ||

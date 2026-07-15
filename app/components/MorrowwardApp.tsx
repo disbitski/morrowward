@@ -96,6 +96,15 @@ import {
 } from "../hooks/usePersistedState";
 import { MarketJourney } from "./MarketJourney";
 import {
+  GREETING_ROSTER,
+  HistoricalGreetingDialog,
+  HistoricalGreetingReplayCard,
+  clearGreetingWelcomeState,
+  getOrCreateGreetingWelcomeState,
+  greetingById,
+  markGreetingWelcomeSeen,
+} from "./HistoricalGreeting";
+import {
   PracticeMarketPanel,
   type PracticeMarketAsset,
   type PracticeRefreshStatus,
@@ -1606,7 +1615,13 @@ function LearnView({ data }: { data: AppData }) {
   );
 }
 
-function MissionView() {
+function MissionView({
+  greetingId,
+  onNavigate,
+}: {
+  greetingId: string;
+  onNavigate: (view: View) => void;
+}) {
   return (
     <div className="view-stack mission-view">
       <section className="mission-hero" aria-labelledby="mission-title">
@@ -1630,6 +1645,11 @@ function MissionView() {
         <span className="mission-symbol"><Leaf size={28} aria-hidden="true" /></span>
         <div><span className="section-kicker">The mission</span><h2>Make long-term financial thinking feel possible—not exclusive.</h2><p>Morrowward is for the person starting with ten dollars, one question, or no investing experience at all. Financial literacy should not be a gate. It should be a light.</p></div>
       </section>
+      <HistoricalGreetingReplayCard
+        greetingId={greetingId}
+        onPractice={() => onNavigate("practice")}
+        onExplore={() => onNavigate("today")}
+      />
       <section aria-labelledby="values-title">
         <div className="section-heading"><div><span className="section-kicker">What guides us</span><h2 id="values-title">Built around human agency</h2></div></div>
         <div className="values-grid">
@@ -1657,11 +1677,13 @@ function SettingsView({
   setData,
   persistence,
   persistNow,
+  onResetGreeting,
 }: {
   data: AppData;
   setData: (data: AppData) => void;
   persistence: PersistenceStatus;
   persistNow: PersistNow<AppData>;
+  onResetGreeting: () => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [message, setMessage] = useState("");
@@ -1708,6 +1730,7 @@ function SettingsView({
     }
     try {
       await persistNow(stateToAppData(createDefaultState()));
+      onResetGreeting();
       setMessage(persistence.mode === "indexeddb" ? "Local Morrowward data reset." : "Morrowward reset for this session; persistent browser storage is unavailable.");
     } catch {
       setMessage("Morrowward could not reset local storage. Nothing changed.");
@@ -1762,6 +1785,11 @@ export function MorrowwardApp() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [brief, setBrief] = useState<Brief>(FALLBACK_BRIEF);
   const [briefLoading, setBriefLoading] = useState(false);
+  const [greetingOpen, setGreetingOpen] = useState(false);
+  const [selectedGreetingId, setSelectedGreetingId] = useState(
+    GREETING_ROSTER[0].id,
+  );
+  const greetingEligibilityCheckedRef = useRef(false);
   const mainRef = useRef<HTMLElement>(null);
   const projection = useMemo(() => calculateUiProjection(data.plan), [data.plan]);
   const activeLabel = active === "settings"
@@ -1777,6 +1805,30 @@ export function MorrowwardApp() {
     window.scrollTo({ top: 0, behavior: reduceMotion ? "auto" : "smooth" });
     window.requestAnimationFrame(() => mainRef.current?.focus({ preventScroll: true }));
   };
+
+  const rememberGreetingSeen = useCallback(() => {
+    try {
+      markGreetingWelcomeSeen(window.localStorage, selectedGreetingId);
+    } catch {
+      // The in-memory guard still prevents a repeat during this session.
+    }
+  }, [selectedGreetingId]);
+
+  const dismissGreeting = useCallback(() => {
+    rememberGreetingSeen();
+    setGreetingOpen(false);
+  }, [rememberGreetingSeen]);
+
+  const resetGreeting = useCallback(() => {
+    try {
+      clearGreetingWelcomeState(window.localStorage);
+    } catch {
+      // IndexedDB reset still succeeds if localStorage is unavailable.
+    }
+    greetingEligibilityCheckedRef.current = false;
+    setSelectedGreetingId(GREETING_ROSTER[0].id);
+    setGreetingOpen(false);
+  }, []);
 
   const loadBrief = useCallback(async () => {
     setBriefLoading(true);
@@ -1822,6 +1874,36 @@ export function MorrowwardApp() {
     return () => window.clearTimeout(timer);
   }, [hydrated, data.onboarded, loadBrief]);
 
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!data.onboarded) {
+      greetingEligibilityCheckedRef.current = false;
+      return;
+    }
+    if (greetingEligibilityCheckedRef.current) return;
+    greetingEligibilityCheckedRef.current = true;
+
+    let state = {
+      greetingId: GREETING_ROSTER[0].id,
+      seen: false,
+    };
+    try {
+      const random = new Uint32Array(1);
+      window.crypto.getRandomValues(random);
+      state = getOrCreateGreetingWelcomeState(
+        window.localStorage,
+        random[0] / 2 ** 32,
+      );
+    } catch {
+      // A bounded session-only welcome remains available without localStorage.
+    }
+    setSelectedGreetingId(state.greetingId);
+    if (state.seen) return;
+
+    const timer = window.setTimeout(() => setGreetingOpen(true), 700);
+    return () => window.clearTimeout(timer);
+  }, [hydrated, data.onboarded]);
+
   if (!hydrated) {
     return <div className="app-shell loading-shell" data-theme="horizon"><Brand /><span className="loading-pulse" /><p>Looking toward your horizon…</p></div>;
   }
@@ -1845,11 +1927,27 @@ export function MorrowwardApp() {
         {active === "plan" && <PlanView data={data} setData={setData} projection={projection} />}
         {active === "practice" && <PracticeView data={data} setData={setData} />}
         {active === "learn" && <LearnView data={data} />}
-        {active === "mission" && <MissionView />}
-        {active === "settings" && <SettingsView data={data} setData={setData} persistence={persistence} persistNow={persistNow} />}
+        {active === "mission" && <MissionView greetingId={selectedGreetingId} onNavigate={navigate} />}
+        {active === "settings" && <SettingsView data={data} setData={setData} persistence={persistence} persistNow={persistNow} onResetGreeting={resetGreeting} />}
       </main>
       <AppFooter onNavigate={navigate} />
       <MobileNav active={active} onNavigate={navigate} />
+      <HistoricalGreetingDialog
+        open={greetingOpen}
+        greeting={greetingById(selectedGreetingId)}
+        onDismiss={dismissGreeting}
+        onComplete={rememberGreetingSeen}
+        onPractice={() => {
+          rememberGreetingSeen();
+          setGreetingOpen(false);
+          navigate("practice");
+        }}
+        onExplore={() => {
+          rememberGreetingSeen();
+          setGreetingOpen(false);
+          navigate("today");
+        }}
+      />
     </div>
   );
 }

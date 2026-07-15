@@ -3,9 +3,14 @@ import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
   DEFAULT_MANIFEST_PATH,
+  DEFAULT_XAI_JSON_TIMEOUT_MS,
   MEDIA_REVIEW_ROOT,
   XAI_API_BASE_URL,
+  assertImageMatchesRequest,
+  assertNarrationFitsVisual,
+  assertReviewPolicyMatchesCampaign,
   assertReviewedCandidateUpload,
+  assertVideoMatchesRequest,
   buildImageGenerationRequest,
   buildTtsRequest,
   buildVideoGenerationRequest,
@@ -16,12 +21,14 @@ import {
   downloadAndValidateMedia,
   loadCampaignManifest,
   pollVideoGeneration,
+  parseFfprobeMedia,
   readImageDimensions,
   requestJson,
   resolveMediaReviewPath,
   requireXaiApiKey,
   requireXaiUploadConfirmation,
   sha256Hex,
+  validateCampaignManifest,
   validateMediaBuffer,
 } from "../scripts/grok/media-lib.mjs";
 
@@ -53,6 +60,60 @@ function fakeMp4(): Buffer {
   return buffer;
 }
 
+function validReviewPolicy() {
+  return {
+    humanFinalApprovalRequired: true,
+    minimumScore: 9,
+    minimumDimensionScore: 4,
+    hardGates: ["No malformed anatomy.", "No financial promises."],
+    scorecard: [
+      { id: "craft", label: "Visual craft", maximum: 5 },
+      { id: "accessibility", label: "Accessibility", maximum: 5 },
+    ],
+  };
+}
+
+function validReviewedCandidateManifest(runDirectory: string) {
+  const imagePath = resolve(runDirectory, "images", "image-candidate-01.png");
+  const sha256 = sha256Hex(fakePng());
+  return {
+    imagePath,
+    sha256,
+    reviewManifest: {
+      transcript:
+        "Marcus Aurelius wrote, “I am rising to the work of a human being.”",
+      directQuote: "I am rising to the work of a human being.",
+      directQuoteAttribution:
+        "Quote: Meditations 5.1 · George Long translation · View source",
+      source: {
+        author: "Marcus Aurelius",
+        work: "Meditations",
+        location: "Book V, section 1",
+        translator: "George Long",
+        translationYear: 1862,
+        publicDomainExactText:
+          "I am rising to the work of a human being.",
+        usage: "The narration uses this short direct quotation.",
+        url: "https://www.gutenberg.org/files/6920/6920-h/6920-h.htm",
+      },
+      reviewPolicy: validReviewPolicy(),
+      selection: { selectedCandidateId: "image-1" },
+      candidates: [
+        {
+          id: "image-1",
+          filename: "images/image-candidate-01.png",
+          sha256,
+          review: {
+            hardGatesPassed: true,
+            scores: { craft: 5, accessibility: 4 },
+            totalScore: 9,
+          },
+        },
+      ],
+    },
+  };
+}
+
 describe("fresh Grok media helpers", () => {
   it("loads the campaign and enforces four private 2K candidates", async () => {
     const { manifest, prompts } = await loadCampaignManifest(
@@ -66,6 +127,34 @@ describe("fresh Grok media helpers", () => {
     expect(manifest.playback.autoplay).toBe(false);
     expect(manifest.narration.voiceType).toBe("built-in");
     expect(prompts.narration).toBe(manifest.metadata.transcript);
+  });
+
+  it("binds run review policy to the exact campaign policy", () => {
+    const campaignPolicy = validReviewPolicy();
+    expect(
+      assertReviewPolicyMatchesCampaign(
+        structuredClone(campaignPolicy),
+        campaignPolicy,
+      ),
+    ).toEqual(campaignPolicy);
+
+    const changedLabel = structuredClone(campaignPolicy);
+    changedLabel.scorecard[0].label = "Easier visual craft";
+    expect(() =>
+      assertReviewPolicyMatchesCampaign(changedLabel, campaignPolicy),
+    ).toThrow(/exactly match/);
+
+    const changedThreshold = structuredClone(campaignPolicy);
+    changedThreshold.minimumScore = 8;
+    expect(() =>
+      assertReviewPolicyMatchesCampaign(changedThreshold, campaignPolicy),
+    ).toThrow(/exactly match/);
+
+    const removedGate = structuredClone(campaignPolicy);
+    removedGate.hardGates = removedGate.hardGates.slice(1);
+    expect(() =>
+      assertReviewPolicyMatchesCampaign(removedGate, campaignPolicy),
+    ).toThrow(/exactly match/);
   });
 
   it("builds current official image, video, and timestamped TTS requests", async () => {
@@ -88,10 +177,22 @@ describe("fresh Grok media helpers", () => {
       ),
     ).toMatchObject({
       model: "grok-imagine-video-1.5",
-      duration: 12,
+      duration: 15,
       aspect_ratio: "16:9",
       resolution: "720p",
       image: { url: "data:image/png;base64,AAAA" },
+    });
+    expect(
+      buildVideoGenerationRequest(
+        manifest,
+        "textToVideo",
+        prompts.textToVideo,
+      ),
+    ).toMatchObject({
+      model: "grok-imagine-video",
+      duration: 15,
+      aspect_ratio: "16:9",
+      resolution: "720p",
     });
     expect(buildTtsRequest(manifest, prompts.narration)).toMatchObject({
       voice_id: "sal",
@@ -99,6 +200,95 @@ describe("fresh Grok media helpers", () => {
       output_format: { codec: "wav", sample_rate: 44_100 },
       with_timestamps: true,
     });
+  });
+
+  it("fails pre-spend validation if video output exceeds the 720p contract", async () => {
+    const { manifest } = await loadCampaignManifest(DEFAULT_MANIFEST_PATH);
+    const invalid = structuredClone(manifest);
+    invalid.video.imageToVideo.resolution = "1080p";
+
+    expect(() => validateCampaignManifest(invalid)).toThrow(
+      /imageToVideo\.resolution must be 720p/,
+    );
+  });
+
+  it("locks image requests and decoded output to the 2K 16:9 contract", async () => {
+    const { manifest } = await loadCampaignManifest(DEFAULT_MANIFEST_PATH);
+    expect(
+      assertImageMatchesRequest(
+        { width: 2048, height: 1152 },
+        manifest.image,
+      ),
+    ).toEqual({ width: 2048, height: 1152 });
+    expect(
+      assertImageMatchesRequest(
+        { width: 2816, height: 1584 },
+        manifest.image,
+      ),
+    ).toEqual({ width: 2816, height: 1584 });
+    expect(() =>
+      assertImageMatchesRequest(
+        { width: 2048, height: 2048 },
+        manifest.image,
+      ),
+    ).toThrow(/expected 16:9 output/);
+    expect(() =>
+      assertImageMatchesRequest(
+        { width: 1024, height: 576 },
+        manifest.image,
+      ),
+    ).toThrow(/expected at least 2048x1152/);
+
+    const wrongAspect = structuredClone(manifest);
+    wrongAspect.image.aspectRatio = "1:1";
+    expect(() => validateCampaignManifest(wrongAspect)).toThrow(
+      /must request 16:9 output/,
+    );
+    const weakMinimum = structuredClone(manifest);
+    weakMinimum.image.minimumEdgePixels = 999;
+    expect(() => validateCampaignManifest(weakMinimum)).toThrow(
+      /minimumEdgePixels must be an integer from 1000/,
+    );
+  });
+
+  it("validates review thresholds before any generation spend", async () => {
+    const { manifest } = await loadCampaignManifest(DEFAULT_MANIFEST_PATH);
+    const tooLowPerDimension = structuredClone(manifest);
+    tooLowPerDimension.review.minimumDimensionScore = 6;
+    expect(() => validateCampaignManifest(tooLowPerDimension)).toThrow(
+      /minimumDimensionScore.*no greater than every dimension maximum/,
+    );
+
+    const impossibleTotal = structuredClone(manifest);
+    impossibleTotal.review.minimumScore = 31;
+    expect(() => validateCampaignManifest(impossibleTotal)).toThrow(
+      /minimumScore must be an integer from 24 to 30/,
+    );
+    const ineffectiveTotal = structuredClone(manifest);
+    ineffectiveTotal.review.minimumScore = 23;
+    expect(() => validateCampaignManifest(ineffectiveTotal)).toThrow(
+      /minimumScore must be an integer from 24 to 30/,
+    );
+  });
+
+  it("keeps the direct quote, public-domain source, and transcript exact", async () => {
+    const { manifest } = await loadCampaignManifest(DEFAULT_MANIFEST_PATH);
+    const changedQuote = structuredClone(manifest);
+    changedQuote.metadata.directQuote = "I am rising to human work.";
+    expect(() => validateCampaignManifest(changedQuote)).toThrow(
+      /directQuote must exactly match source\.publicDomainExactText/,
+    );
+
+    const missingFromTranscript = structuredClone(manifest);
+    missingFromTranscript.metadata.transcript = "Small steps begin today.";
+    expect(() => validateCampaignManifest(missingFromTranscript)).toThrow(
+      /transcript must include the exact direct quote/,
+    );
+    const insecureSource = structuredClone(manifest);
+    insecureSource.metadata.source.url = "http://example.com/quote";
+    expect(() => validateCampaignManifest(insecureSource)).toThrow(
+      /source\.url must be a valid HTTPS URL/,
+    );
   });
 
   it("requires the key only from the environment", () => {
@@ -156,19 +346,8 @@ describe("fresh Grok media helpers", () => {
       "morrowward-marcus-greeting",
       "test-run",
     );
-    const imagePath = resolve(runDirectory, "images", "image-candidate-01.png");
-    const sha256 = sha256Hex(fakePng());
-    const reviewManifest = {
-      selection: { selectedCandidateId: "image-1" },
-      candidates: [
-        {
-          id: "image-1",
-          filename: "images/image-candidate-01.png",
-          sha256,
-          review: { hardGatesPassed: true },
-        },
-      ],
-    };
+    const { imagePath, sha256, reviewManifest } =
+      validReviewedCandidateManifest(runDirectory);
 
     expect(
       assertReviewedCandidateUpload(
@@ -235,6 +414,100 @@ describe("fresh Grok media helpers", () => {
         sha256,
       ),
     ).toThrow(/images directory/);
+  });
+
+  it("rejects incomplete, out-of-bounds, sub-threshold, or false review totals", () => {
+    const runDirectory = resolve(MEDIA_REVIEW_ROOT, "grok", "scored-run");
+    const { imagePath, sha256, reviewManifest } =
+      validReviewedCandidateManifest(runDirectory);
+    const withReview = (review: Record<string, unknown>) => ({
+      ...reviewManifest,
+      candidates: [
+        {
+          ...reviewManifest.candidates[0],
+          review: {
+            ...reviewManifest.candidates[0].review,
+            ...review,
+          },
+        },
+      ],
+    });
+
+    expect(() =>
+      assertReviewedCandidateUpload(
+        withReview({ scores: { craft: 5 }, totalScore: 5 }),
+        runDirectory,
+        imagePath,
+        sha256,
+      ),
+    ).toThrow(/exactly match.*missing: accessibility/);
+    expect(() =>
+      assertReviewedCandidateUpload(
+        withReview({
+          scores: { craft: 6, accessibility: 4 },
+          totalScore: 10,
+        }),
+        runDirectory,
+        imagePath,
+        sha256,
+      ),
+    ).toThrow(/craft must be an integer from 1 to 5/);
+    expect(() =>
+      assertReviewedCandidateUpload(
+        withReview({
+          scores: { craft: 5, accessibility: 3 },
+          totalScore: 8,
+        }),
+        runDirectory,
+        imagePath,
+        sha256,
+      ),
+    ).toThrow(/accessibility is below minimumDimensionScore 4/);
+    expect(() =>
+      assertReviewedCandidateUpload(
+        withReview({
+          scores: { craft: 5, accessibility: 4 },
+          totalScore: 10,
+        }),
+        runDirectory,
+        imagePath,
+        sha256,
+      ),
+    ).toThrow(/totalScore must equal.*9/);
+    expect(() =>
+      assertReviewedCandidateUpload(
+        withReview({
+          scores: { craft: 4, accessibility: 4 },
+          totalScore: 8,
+        }),
+        runDirectory,
+        imagePath,
+        sha256,
+      ),
+    ).toThrow(/total 8 is below minimumScore 9/);
+  });
+
+  it("rejects review metadata when the selected quote or transcript drifted", () => {
+    const runDirectory = resolve(MEDIA_REVIEW_ROOT, "grok", "quote-drift-run");
+    const { imagePath, sha256, reviewManifest } =
+      validReviewedCandidateManifest(runDirectory);
+
+    expect(() =>
+      assertReviewedCandidateUpload(
+        { ...reviewManifest, directQuote: "A changed quotation." },
+        runDirectory,
+        imagePath,
+        sha256,
+      ),
+    ).toThrow(/directQuote must exactly match source\.publicDomainExactText/);
+    expect(() =>
+      assertReviewedCandidateUpload(
+        { ...reviewManifest, transcript: "Small steps begin today." },
+        runDirectory,
+        imagePath,
+        sha256,
+      ),
+    ).toThrow(/transcript must include the exact direct quote/);
   });
 
   it("preserves provider MIME and rejects mismatched or non-media bytes", () => {
@@ -306,6 +579,43 @@ describe("fresh Grok media helpers", () => {
     ).rejects.not.toThrow(/xai-secret-test/);
   });
 
+  it("bounds streamed JSON responses and aborts a hung JSON request", async () => {
+    const oversizedJson = JSON.stringify({ value: "0123456789" });
+    const oversizedFetch = vi.fn(
+      async () =>
+        new Response(oversizedJson, {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+    await expect(
+      requestJson(oversizedFetch, `${XAI_API_BASE_URL}/oversized`, {
+        apiKey: "xai-test",
+        maximumBytes: Buffer.byteLength(oversizedJson) - 1,
+      }),
+    ).rejects.toThrow(/JSON response exceeds/);
+
+    let observedSignal: AbortSignal | undefined;
+    const hangingFetch = vi.fn(
+      async (_url: Parameters<typeof fetch>[0], init?: RequestInit) => {
+        observedSignal = init?.signal ?? undefined;
+        return new Promise<Response>((_resolve, reject) => {
+          observedSignal?.addEventListener("abort", () => {
+            reject(new DOMException("Aborted", "AbortError"));
+          });
+        });
+      },
+    );
+    await expect(
+      requestJson(hangingFetch, `${XAI_API_BASE_URL}/hanging`, {
+        apiKey: "xai-test",
+        timeoutMs: 5,
+      }),
+    ).rejects.toThrow(/JSON request timed out after 5ms/);
+    expect(observedSignal).toBeInstanceOf(AbortSignal);
+    expect(observedSignal?.aborted).toBe(true);
+  });
+
   it("polls pending video jobs and accepts the documented completed shape", async () => {
     const sleep = vi.fn(async () => undefined);
     const fetchMock = vi
@@ -345,13 +655,79 @@ describe("fresh Grok media helpers", () => {
     expect(sleep).toHaveBeenCalledWith(5);
   });
 
+  it("bounds each video poll request by the remaining overall deadline", async () => {
+    const clock = [1_000, 1_040];
+    let observedSignal: AbortSignal | undefined;
+    const hangingFetch = vi.fn(
+      async (_url: Parameters<typeof fetch>[0], init?: RequestInit) => {
+        observedSignal = init?.signal ?? undefined;
+        return new Promise<Response>((_resolve, reject) => {
+          observedSignal?.addEventListener("abort", () => {
+            reject(new DOMException("Aborted", "AbortError"));
+          });
+        });
+      },
+    );
+
+    await expect(
+      pollVideoGeneration(hangingFetch, "xai-test", "bounded", {
+        intervalMs: 5,
+        timeoutMs: 50,
+        now: () => clock.shift() ?? 1_040,
+      }),
+    ).rejects.toThrow(/JSON request timed out after 10ms/);
+    expect(observedSignal?.aborted).toBe(true);
+  });
+
+  it("keeps the per-request JSON ceiling during a long video poll window", async () => {
+    vi.useFakeTimers();
+    try {
+      let observedSignal: AbortSignal | undefined;
+      const hangingFetch = vi.fn(
+        async (_url: Parameters<typeof fetch>[0], init?: RequestInit) => {
+          observedSignal = init?.signal ?? undefined;
+          return new Promise<Response>((_resolve, reject) => {
+            observedSignal?.addEventListener("abort", () => {
+              reject(new DOMException("Aborted", "AbortError"));
+            });
+          });
+        },
+      );
+      const pollPromise = pollVideoGeneration(
+        hangingFetch,
+        "xai-test",
+        "per-request-cap",
+        {
+          intervalMs: 5_000,
+          timeoutMs: 2 * DEFAULT_XAI_JSON_TIMEOUT_MS,
+          now: () => 0,
+        },
+      );
+      const rejection = expect(pollPromise).rejects.toThrow(
+        new RegExp(
+          `JSON request timed out after ${DEFAULT_XAI_JSON_TIMEOUT_MS}ms`,
+        ),
+      );
+
+      await vi.advanceTimersByTimeAsync(DEFAULT_XAI_JSON_TIMEOUT_MS);
+      await rejection;
+      expect(observedSignal?.aborted).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("downloads over HTTPS and validates video MIME against magic bytes", async () => {
     const mp4 = fakeMp4();
-    const fetchMock = vi.fn(async () =>
-      new Response(new Uint8Array(mp4), {
-        status: 200,
-        headers: { "content-type": "video/mp4" },
-      }),
+    const fetchMock = vi.fn(
+      async (url: Parameters<typeof fetch>[0], init?: RequestInit) => {
+        void url;
+        void init;
+        return new Response(new Uint8Array(mp4), {
+          status: 200,
+          headers: { "content-type": "video/mp4" },
+        });
+      },
     );
     const result = await downloadAndValidateMedia(
       fetchMock,
@@ -367,6 +743,80 @@ describe("fresh Grok media helpers", () => {
         kind: "video",
       }),
     ).rejects.toThrow(/HTTPS/);
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ redirect: "follow" });
+    expect(fetchMock.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("bounds streamed downloads, rejects HTTPS redirect downgrade, and times out", async () => {
+    const mp4 = fakeMp4();
+    const streamedFetch = vi.fn(
+      async () =>
+        new Response(new Uint8Array(mp4), {
+          status: 200,
+          headers: { "content-type": "video/mp4" },
+        }),
+    );
+    await expect(
+      downloadAndValidateMedia(
+        streamedFetch,
+        "https://vidgen.x.ai/oversized.mp4",
+        { kind: "video", maximumBytes: mp4.length - 1 },
+      ),
+    ).rejects.toThrow(/exceeds the 127-byte download limit/);
+
+    const declaredOversizeFetch = vi.fn(
+      async () =>
+        new Response(new Uint8Array(mp4), {
+          status: 200,
+          headers: {
+            "content-type": "video/mp4",
+            "content-length": String(mp4.length + 1),
+          },
+        }),
+    );
+    await expect(
+      downloadAndValidateMedia(
+        declaredOversizeFetch,
+        "https://vidgen.x.ai/declared-oversized.mp4",
+        { kind: "video", maximumBytes: mp4.length },
+      ),
+    ).rejects.toThrow(/exceeds the 128-byte download limit/);
+
+    const downgradedResponse = new Response(new Uint8Array(mp4), {
+      status: 200,
+      headers: { "content-type": "video/mp4" },
+    });
+    Object.defineProperty(downgradedResponse, "url", {
+      value: "http://cdn.example.com/video.mp4",
+    });
+    await expect(
+      downloadAndValidateMedia(
+        vi.fn(async () => downgradedResponse),
+        "https://vidgen.x.ai/redirect.mp4",
+        { kind: "video" },
+      ),
+    ).rejects.toThrow(/final redirect URL must continue to use HTTPS/);
+
+    const hangingFetch = vi.fn(
+      async (
+        url: Parameters<typeof fetch>[0],
+        init?: RequestInit,
+      ): Promise<Response> => {
+        void url;
+        return new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("Aborted", "AbortError"));
+          });
+        });
+      },
+    );
+    await expect(
+      downloadAndValidateMedia(
+        hangingFetch,
+        "https://vidgen.x.ai/hanging.mp4",
+        { kind: "video", timeoutMs: 5 },
+      ),
+    ).rejects.toThrow(/timed out after 5ms/);
   });
 
   it("validates timestamped built-in narration and creates WebVTT captions", () => {
@@ -393,6 +843,43 @@ describe("fresh Grok media helpers", () => {
     expect(captions).toContain("Welcome.");
     expect(captions).toContain("Small steps.");
     expect(captions).toContain("-->");
+  });
+
+  it("keeps closing curly and straight quotes with sentence punctuation", () => {
+    const text =
+      "Thanks for using Morrowward. Dave asked for a little encouragement. Marcus Aurelius wrote, “I am rising to the work of a human being.” Small steps begin today.";
+    const characters = [...text];
+    const times = characters.map((_, index) => [
+      index * 0.05,
+      (index + 1) * 0.05,
+    ]);
+    const captions = createWebVttFromCharacterTimings(
+      text,
+      characters,
+      times,
+    );
+    const cues = captions.trim().split("\n\n").slice(1);
+
+    expect(cues).toHaveLength(4);
+    expect(cues[2]).toContain(
+      "Marcus Aurelius wrote, “I am rising to the work of a human being.”",
+    );
+    expect(cues[3]).toContain("Small steps begin today.");
+    expect(captions).not.toContain("\n” Small steps");
+
+    const straightText = 'He wrote, "Begin." Then he did.';
+    const straightCharacters = [...straightText];
+    const straightTimes = straightCharacters.map((_, index) => [
+      index * 0.05,
+      (index + 1) * 0.05,
+    ]);
+    const straightCaptions = createWebVttFromCharacterTimings(
+      straightText,
+      straightCharacters,
+      straightTimes,
+    );
+    expect(straightCaptions).toContain('\nHe wrote, "Begin."');
+    expect(straightCaptions).not.toContain('\n" Then he did.');
   });
 
   it("rejects overlapping or out-of-duration TTS character timings", () => {
@@ -440,5 +927,78 @@ describe("fresh Grok media helpers", () => {
         text,
       ),
     ).toThrow(/declared duration/);
+  });
+
+  it("validates actual 1280x720 video duration from ffprobe metadata", () => {
+    const probe = parseFfprobeMedia({
+      streams: [
+        {
+          codec_type: "video",
+          width: 1280,
+          height: 720,
+          duration: "15.033",
+        },
+        { codec_type: "audio", duration: "15.033" },
+      ],
+      format: { duration: "15.033" },
+    });
+
+    expect(
+      assertVideoMatchesRequest(probe, {
+        expectedDurationSeconds: 15,
+        requireAudio: true,
+        label: "Test greeting",
+      }),
+    ).toBe(probe);
+    expect(() =>
+      assertVideoMatchesRequest(
+        { ...probe, video: { width: 1920, height: 1080 } },
+        { expectedDurationSeconds: 15 },
+      ),
+    ).toThrow(/expected exactly 1280x720/);
+    expect(() =>
+      assertVideoMatchesRequest(
+        { ...probe, durationSeconds: 14.7 },
+        { expectedDurationSeconds: 15 },
+      ),
+    ).toThrow(/within \+\/-0\.25s/);
+    expect(() =>
+      assertVideoMatchesRequest(
+        { ...probe, hasAudio: false },
+        { expectedDurationSeconds: 15, requireAudio: true },
+      ),
+    ).toThrow(/no audio stream/);
+  });
+
+  it("rejects narration that would be truncated by the visual", () => {
+    const visual = {
+      durationSeconds: 15,
+      video: { width: 1280, height: 720 },
+      hasAudio: false,
+    };
+    const fittingNarration = {
+      durationSeconds: 12.4,
+      video: null,
+      hasAudio: true,
+    };
+
+    const fit = assertNarrationFitsVisual(visual, fittingNarration);
+    expect(fit).toMatchObject({
+      visualDurationSeconds: 15,
+      narrationDurationSeconds: 12.4,
+    });
+    expect(fit.tailHeadroomSeconds).toBeCloseTo(2.6);
+    expect(() =>
+      assertNarrationFitsVisual(visual, {
+        ...fittingNarration,
+        durationSeconds: 14.98,
+      }),
+    ).toThrow(/must fit.*tail headroom/);
+    expect(() =>
+      assertNarrationFitsVisual(visual, {
+        ...fittingNarration,
+        hasAudio: false,
+      }),
+    ).toThrow(/no audio stream/);
   });
 });

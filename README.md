@@ -52,6 +52,7 @@ The mission page connects the product to the childhood story behind it, while th
 - Financial-literacy lessons linking to primary Investor.gov and FINRA sources
 - Guided questions and bounded freeform questions for a GPT-5.6 educator
 - Educational daily brief separating facts, sentiment, uncertainty, and takeaway
+- An optional 15-second historical welcome with explicit playback, captions, transcript, primary quote source, visible AI disclosures, a permanent Mission replay, and a versioned approved-greeting roster
 - Versioned IndexedDB persistence with automatic in-memory fallback
 - Validated JSON export, import, and complete local reset
 - Installable PWA shell with useful offline fallbacks
@@ -204,6 +205,12 @@ The model never receives the local portfolio, transaction history, starting bala
 - All educational responses repeat the non-advice disclosure.
 
 The approach follows OpenAI’s recommendation to combine model safeguards with application-level validation and oversight: [OpenAI safety best practices](https://developers.openai.com/api/docs/guides/safety-best-practices).
+
+### Codex-led specialist media
+
+The Marcus Aurelius welcome demonstrates a second kind of agentic workflow. Codex on GPT-5.6 designed and ran a fresh, hackathon-local campaign pipeline, delegated image, video, and built-in narration generation to xAI models suited to those media jobs, then independently inspected the original-resolution candidates and the finished motion sequence against committed hard gates. Dave retained the final human approval gate.
+
+The shipped asset is optional and never calls xAI at runtime. A sanitized [publication manifest](public/morrowward-marcus-welcome.publication.json) binds the exact MP4, captions, and poster hashes to the transcript, public-domain quotation source, model provenance, AI-interpretation disclosures, and final approval. The reproducible generation and validation workflow lives in [`scripts/grok`](scripts/grok/README.md); raw provider responses and rejected candidates remain outside Git in ignored private review storage.
 
 ## API
 

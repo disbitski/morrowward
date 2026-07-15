@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
   DEFAULT_MANIFEST_PATH,
@@ -14,9 +14,15 @@ import {
   resolveMediaReviewPath,
   requireXaiApiKey,
   requireXaiUploadConfirmation,
-  sha256Hex,
   writeJsonAtomic,
 } from "./media-lib.mjs";
+import {
+  acquireNarrationGenerationLock,
+  assertNarrationOutputsAvailable,
+  cleanupNarrationPaths,
+  loadOrInitializeNarrationReview,
+  stageAndCommitNarrationArtifacts,
+} from "./narration-preflight.mjs";
 
 const options = parseCliArguments(process.argv.slice(2));
 requireXaiUploadConfirmation(options, "the private narration transcript");
@@ -36,83 +42,126 @@ const reviewPath = await resolveMediaReviewPath(
   resolve(outputDirectory, "review.json"),
   "Narration review manifest",
 );
+
 await mkdir(narrationDirectory, { recursive: true, mode: 0o700 });
 
-const apiKey = requireXaiApiKey();
-const voice = await assertBuiltInVoice(
-  fetch,
-  apiKey,
-  manifest.narration.voiceId,
-);
-const { payload } = await requestJson(fetch, `${XAI_API_BASE_URL}/tts`, {
-  apiKey,
-  method: "POST",
-  body: buildTtsRequest(manifest, prompts.narration),
+const { reviewManifest } = await loadOrInitializeNarrationReview({
+  reviewPath,
+  manifest,
+  prompt: prompts.narration,
 });
-const narration = decodeTtsResponse(payload, prompts.narration);
-const audioFilename = `narration${extensionForMimeType(narration.mimeType)}`;
-const captionFilename = "narration.en.vtt";
-const transcriptFilename = "narration.txt";
-const webVtt = createWebVttFromCharacterTimings(
-  prompts.narration,
-  narration.characters,
-  narration.times,
-);
-await writeFile(resolve(narrationDirectory, audioFilename), narration.buffer, {
-  mode: 0o600,
-  flag: "wx",
-});
-await writeFile(resolve(narrationDirectory, captionFilename), webVtt, {
-  mode: 0o600,
-  flag: "wx",
-});
-await writeFile(
-  resolve(narrationDirectory, transcriptFilename),
-  `${prompts.narration}\n`,
-  { mode: 0o600, flag: "wx" },
-);
+const { lockPath, reviewTemporaryPath } =
+  await assertNarrationOutputsAvailable({
+    narrationDirectory,
+    reviewPath,
+    reviewManifest,
+  });
+const generationLock = await acquireNarrationGenerationLock(lockPath);
+let pipelineError = null;
+let committedFinalPaths = [];
+let reviewWriteStarted = false;
+let reviewSaved = false;
 
-let reviewManifest;
 try {
-  reviewManifest = JSON.parse(await readFile(reviewPath, "utf8"));
-} catch {
-  reviewManifest = {
-    schemaVersion: 1,
-    campaignId: manifest.campaignId,
-    runCreatedAt: new Date().toISOString(),
-    disclosure: manifest.metadata.historicalFigureDisclosure,
-    caption: manifest.metadata.caption,
-    source: manifest.metadata.source,
-    reviewPolicy: manifest.review,
-    candidates: [],
-    videos: [],
-    selection: {
-      leadReviewer: "Codex/GPT",
-      selectedCandidateId: null,
-      rationale: null,
-      humanApproval: null,
-    },
-  };
-}
-reviewManifest.narration = {
-  audioFilename: `narration/${audioFilename}`,
-  captionFilename: `narration/${captionFilename}`,
-  transcriptFilename: `narration/${transcriptFilename}`,
-  mimeType: narration.mimeType,
-  bytes: narration.buffer.length,
-  sha256: sha256Hex(narration.buffer),
-  durationSeconds: narration.durationSeconds,
-  provider: "xAI Text to Speech",
-  voiceId: voice.voice_id,
-  voiceName: voice.name,
-  voiceType: "built-in",
-  historicalVoiceImitation: false,
-  transcript: prompts.narration,
-  disclosure:
-    "AI-generated narration using an xAI built-in voice; it is not Marcus Aurelius's voice and does not imitate a historical recording.",
-};
-await writeJsonAtomic(reviewPath, reviewManifest);
+  // Recheck while holding the run lock so no cooperating narration process can
+  // win the gap between the initial audit and the first provider request.
+  await assertNarrationOutputsAvailable({
+    narrationDirectory,
+    reviewPath,
+    reviewManifest,
+    allowExistingLock: true,
+  });
 
-console.log(`Generated private built-in-voice narration (${voice.voice_id}).`);
-console.log(`Narration directory: ${narrationDirectory}`);
-console.log("Transcript and WebVTT captions were saved beside the audio.");
+  const apiKey = requireXaiApiKey();
+  const voice = await assertBuiltInVoice(
+    fetch,
+    apiKey,
+    manifest.narration.voiceId,
+  );
+  const { payload } = await requestJson(fetch, `${XAI_API_BASE_URL}/tts`, {
+    apiKey,
+    method: "POST",
+    body: buildTtsRequest(manifest, prompts.narration),
+  });
+  const narration = decodeTtsResponse(payload, prompts.narration);
+  const webVtt = createWebVttFromCharacterTimings(
+    prompts.narration,
+    narration.characters,
+    narration.times,
+  );
+  const captionBuffer = Buffer.from(webVtt, "utf8");
+  const transcriptBuffer = Buffer.from(`${prompts.narration}\n`, "utf8");
+  const staged = await stageAndCommitNarrationArtifacts({
+    narrationDirectory,
+    audioBuffer: narration.buffer,
+    audioMimeType: narration.mimeType,
+    captionBuffer,
+    transcriptBuffer,
+    expectedWebVtt: webVtt,
+    expectedTranscript: prompts.narration,
+  });
+  committedFinalPaths = staged.finalPaths;
+
+  const audioFilename = `narration${extensionForMimeType(staged.audioMimeType)}`;
+  const captionFilename = "narration.en.vtt";
+  const transcriptFilename = "narration.txt";
+  reviewManifest.narration = {
+    audioFilename: `narration/${audioFilename}`,
+    captionFilename: `narration/${captionFilename}`,
+    transcriptFilename: `narration/${transcriptFilename}`,
+    mimeType: staged.audioMimeType,
+    captionMimeType: "text/vtt; charset=utf-8",
+    transcriptMimeType: "text/plain; charset=utf-8",
+    bytes: staged.audioBytes,
+    audioBytes: staged.audioBytes,
+    captionBytes: staged.captionBytes,
+    transcriptBytes: staged.transcriptBytes,
+    sha256: staged.audioSha256,
+    audioSha256: staged.audioSha256,
+    captionSha256: staged.captionSha256,
+    transcriptSha256: staged.transcriptSha256,
+    durationSeconds: narration.durationSeconds,
+    provider: "xAI Text to Speech",
+    voiceId: voice.voice_id,
+    voiceName: voice.name,
+    voiceType: "built-in",
+    historicalVoiceImitation: false,
+    transcript: prompts.narration,
+    disclosure:
+      "AI-generated narration using an xAI built-in voice; it is not Marcus Aurelius's voice and does not imitate a historical recording.",
+  };
+  reviewWriteStarted = true;
+  await writeJsonAtomic(reviewPath, reviewManifest);
+  reviewSaved = true;
+
+  console.log(`Generated private built-in-voice narration (${voice.voice_id}).`);
+  console.log(`Narration directory: ${narrationDirectory}`);
+  console.log("Transcript and WebVTT captions were saved beside the audio.");
+} catch (error) {
+  pipelineError = error;
+  if (!reviewSaved) {
+    try {
+      await cleanupNarrationPaths([
+        ...committedFinalPaths,
+        ...(reviewWriteStarted ? [reviewTemporaryPath] : []),
+      ]);
+    } catch (cleanupError) {
+      pipelineError = new AggregateError(
+        [error, cleanupError],
+        "Narration generation failed and private partial output could not be removed.",
+      );
+    }
+  }
+}
+
+try {
+  await generationLock.release();
+} catch (releaseError) {
+  pipelineError = pipelineError
+    ? new AggregateError(
+        [pipelineError, releaseError],
+        "Narration generation failed and its private generation lock could not be released.",
+      )
+    : releaseError;
+}
+if (pipelineError) throw pipelineError;

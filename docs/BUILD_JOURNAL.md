@@ -51,7 +51,7 @@ The product therefore focuses on a repeatable weekly habit and a future someone 
 - Verified the live educator end to end: health reported GPT-5.6 configured, a bounded request returned `mode: ai` with `model: gpt-5.6`, and the public preview URL continued to redirect anonymous visitors to Vercel Authentication.
 - Used the first live requests to find a real reliability boundary: a longer structured response safely fell back when it crossed the original 12-second timeout. Codex increased the bounded timeout to 25 seconds, added metadata-only fallback diagnostics that never log prompts, numeric context, headers, or credentials, and verified the same complex request completed with GPT-5.6 in 21.9 seconds.
 
-Latest protected preview: `https://morrowward-qui11xo7k-thedavedev.vercel.app`
+Latest protected preview: `https://morrowward-n2yjetgif-thedavedev.vercel.app`
 
 ### Hands-on feedback turned a starter portfolio into Market Journey
 
@@ -131,6 +131,31 @@ An independent adversarial review then tightened the implementation before relea
 At the documented build-time rate, the web-search tool costs $10 per 1,000 calls ($0.01 per call) plus GPT-5.6 model and search-content tokens. Normal operation makes the expected search-tool portion roughly one cent per successful daily snapshot; the 12-hour failure backoff bounds repeated search-tool attempts to roughly two cents per day before tokens during a persistent outage. This is not described as a hard cap because API pricing and usage reporting can change.
 
 Final local verification for this pass reached **136 passing unit/integration tests across 12 files**, clean ESLint and TypeScript checks, a clean vinext production build, a clean Next/Vercel production build, four rendered-worker checks, and all six Playwright journeys across desktop and mobile Chrome. The browser suite confirms the removed header badge stays absent, the theme controls remain available, the automatic Practice snapshot experience has no manual refresh button, all four themes have no serious/critical automated accessibility violations, and the PWA still reloads offline. A Production environment smoke test remains intentionally pending until the server-only key, cron secret, and shared KV/Upstash pair are configured there.
+
+### Codex-led specialist media became an approved welcome
+
+After Dave explicitly approved the third-party xAI uploads, Codex used only the scripts, manifests, prompts, and review gates written fresh inside this repository during the hackathon. Earlier dashboard assets and media-generation code were not copied. The Space/Horizon palette and the team's prior creative lessons informed the direction, while Git records the new implementation and decisions in the hackathon window.
+
+The first controlled run:
+
+- generated four new 2816×1584 Marcus Aurelius-inspired stills with `grok-imagine-image-quality`;
+- inspected every image at original resolution and rejected two for subtle hand-geometry defects;
+- selected the strongest still through a recorded 29/30 Codex review while retaining human approval as a required final gate;
+- animated only the selected SHA-256-locked image with `grok-imagine-video-1.5` at 15 seconds and 720p;
+- reviewed a 30-frame motion sheet plus six full-resolution checkpoints for mouth, face, hand, architecture, line, and flicker stability;
+- generated a separate built-in xAI narrator track and timestamped WebVTT captions, never a Marcus Aurelius voice clone or impersonation;
+- discarded all provider-video audio, normalized the declared narrator to a spoken-word target, and recomposed locally with ffmpeg; and
+- re-probed the final bytes as 1280×720, 15.041667 seconds, with a 9.634853-second narration and 5.406814 seconds of tail headroom.
+
+The exact short quotation—“I am rising to the work of a human being.”—was verified in the public-domain George Long translation of *Meditations* 5.1. Dave played the complete composition and approved it at `2026-07-15T19:52:58Z` with “Looks great bro!” The approved bytes are now integrated behind an explicit play button; nothing autoplays. The player keeps a visible **AI-generated historical interpretation** badge, identifies the built-in voice as AI narration rather than Marcus Aurelius, and includes English captions, the exact transcript, primary quote source, controls, and a reduced-motion poster experience.
+
+The first-run experience now appears as a one-time celebratory overlay after the Horizon Reveal: **Congratulations—you started your journey. Every future begins with one small step.** When the video ends, Morrowward brings **Practice your first $10 week** into view, with the dashboard as the secondary path. Escape, close, skip, focus trapping, keyboard navigation, mobile sizing, and complete reset are covered. Our Why keeps a permanent replay card. A versioned roster selects one approved greeting once and preserves that assignment; Marcus is intentionally the only live entry until another figure passes the same review and human-approval gates.
+
+A committed sanitized publication record binds the shipped MP4 (`4a254a…`), WebVTT (`b2e5b4…`), poster (`1d980a…`), and publication metadata (`9828fb…`) to the transcript, quotation source, disclosures, generation models, and human approval. Raw provider responses, request identifiers, rejected candidates, and private review paths remain ignored. The web app has no xAI runtime dependency. Its service worker treats this media as optional, cannot let a media warmup delay core installation, versions the isolated cache by every publication hash, preserves valid network range responses, and can synthesize offline MP4 byte ranges from the approved cached file.
+
+Independent adversarial review substantially hardened the fresh pipeline before publication. Campaign review rules must exactly match the committed manifest; malformed or weakened gates fail closed. JSON responses have abort deadlines and streamed size limits. Paid commands validate output viability and hold private exclusive locks before reading the API key. Image, video, narration, and composition outputs use private temporary files, atomic commits, and rollback cleanup. Every composition source is path-, size-, and SHA-256-locked, generated-video audio is discarded, and an approved composition cannot be overwritten silently. Caption generation now retains closing quotation marks with the sentence they belong to.
+
+Final verification for this media pass reached **199 passing unit/integration tests**, clean ESLint and TypeScript checks, clean vinext and Next/Vercel production builds, rendered-worker validation, and the full desktop/mobile Playwright suite. This is a concrete example of GPT-5.6/Codex coordinating specialist models for their strongest media jobs, independently reviewing their output, hardening the orchestration code, and preserving a human final decision.
 
 ## July 16 — Practice, education, and AI
 

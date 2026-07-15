@@ -1,7 +1,8 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
   DEFAULT_MANIFEST_PATH,
+  assertVideoMatchesRequest,
   assertReviewedCandidateUpload,
   buildVideoGenerationRequest,
   downloadAndValidateMedia,
@@ -10,12 +11,21 @@ import {
   loadCampaignManifest,
   parseCliArguments,
   pollVideoGeneration,
+  probeMediaFile,
   resolveMediaReviewPath,
   requireXaiApiKey,
   requireXaiUploadConfirmation,
   startVideoGeneration,
   writeJsonAtomic,
 } from "./media-lib.mjs";
+import {
+  acquireVideoGenerationLock,
+  assertFfprobeAvailable,
+  assertVideoOutputsAvailable,
+  loadOrInitializeVideoReview,
+  parseVideoTimingOptions,
+  stageAndCommitVideo,
+} from "./video-preflight.mjs";
 
 const options = parseCliArguments(process.argv.slice(2));
 requireXaiUploadConfirmation(
@@ -31,6 +41,7 @@ const mode = modeOption === "image-to-video" ? "imageToVideo" : "textToVideo";
 if (mode === "imageToVideo" && typeof options.image !== "string") {
   throw new Error("image-to-video requires --image /path/to/review-candidate.");
 }
+const timing = parseVideoTimingOptions(options);
 
 const { manifest, prompts } = await loadCampaignManifest(manifestLocation);
 const outputDirectory = await resolveMediaReviewPath(
@@ -47,21 +58,26 @@ const reviewPath = await resolveMediaReviewPath(
   "Video review manifest",
 );
 
+await mkdir(videoDirectory, {
+  recursive: true,
+  mode: 0o700,
+});
+
+const { reviewManifest } = await loadOrInitializeVideoReview({
+  reviewPath,
+  manifest,
+  prompt: prompts[mode],
+  mode,
+  allowInitialize: mode === "textToVideo",
+});
+
 let imageDataUri;
 let sourceImage = null;
-let reviewManifest = null;
 if (mode === "imageToVideo") {
   const selectedImagePath = await resolveMediaReviewPath(
     options.image,
     "Image-to-video source image",
   );
-  try {
-    reviewManifest = JSON.parse(await readFile(reviewPath, "utf8"));
-  } catch (error) {
-    throw new Error(
-      `Image-to-video requires this run's valid review.json: ${error.message}`,
-    );
-  }
   const image = await imageFileToDataUri(selectedImagePath);
   const selectedCandidate = assertReviewedCandidateUpload(
     reviewManifest,
@@ -77,82 +93,122 @@ if (mode === "imageToVideo") {
     sha256: image.sha256,
   };
 }
-await mkdir(videoDirectory, {
-  recursive: true,
-  mode: 0o700,
-});
+
 const requestBody = buildVideoGenerationRequest(
   manifest,
   mode,
   prompts[mode],
   imageDataUri,
 );
-const apiKey = requireXaiApiKey();
-const requestId = await startVideoGeneration(fetch, apiKey, requestBody);
-console.log(`Started ${modeOption}; polling request ${requestId}.`);
-const result = await pollVideoGeneration(fetch, apiKey, requestId, {
-  intervalMs: Number(options["poll-ms"] ?? 5_000),
-  timeoutMs: Number(options["timeout-ms"] ?? 15 * 60_000),
+const { lockPath } = await assertVideoOutputsAvailable({
+  videoDirectory,
+  reviewPath,
+  reviewManifest,
+  modeOption,
 });
-const downloaded = await downloadAndValidateMedia(fetch, result.video.url, {
-  kind: "video",
-  minimumBytes: manifest.video.minimumBytes,
-});
-const filename = `${modeOption}${extensionForMimeType(downloaded.mimeType)}`;
-const relativeFilename = `videos/${filename}`;
-await writeFile(resolve(outputDirectory, relativeFilename), downloaded.buffer, {
-  mode: 0o600,
-  flag: "wx",
-});
+await assertFfprobeAvailable();
+const generationLock = await acquireVideoGenerationLock(lockPath);
+let pipelineError = null;
+let finalizedVideoPath = null;
+let reviewSaved = false;
 
-if (!reviewManifest) {
-  try {
-    reviewManifest = JSON.parse(await readFile(reviewPath, "utf8"));
-  } catch {
-    reviewManifest = {
-      schemaVersion: 1,
-      campaignId: manifest.campaignId,
-      runCreatedAt: new Date().toISOString(),
-      disclosure: manifest.metadata.historicalFigureDisclosure,
-      caption: manifest.metadata.caption,
-      source: manifest.metadata.source,
-      reviewPolicy: manifest.review,
-      candidates: [],
-      videos: [],
-      narration: null,
-      selection: {
-        leadReviewer: "Codex/GPT",
-        selectedCandidateId: null,
-        rationale: null,
-        humanApproval: null,
-      },
-    };
+try {
+  // Recheck after holding the mode lock so another cooperating process cannot
+  // win the gap between the initial collision audit and the paid request.
+  await assertVideoOutputsAvailable({
+    videoDirectory,
+    reviewPath,
+    reviewManifest,
+    modeOption,
+    allowExistingLock: true,
+  });
+
+  const apiKey = requireXaiApiKey();
+  const requestId = await startVideoGeneration(fetch, apiKey, requestBody);
+  console.log(`Started ${modeOption}; polling request ${requestId}.`);
+  const result = await pollVideoGeneration(fetch, apiKey, requestId, timing);
+  const downloaded = await downloadAndValidateMedia(fetch, result.video.url, {
+    kind: "video",
+    minimumBytes: manifest.video.minimumBytes,
+  });
+  const filename = `${modeOption}${extensionForMimeType(downloaded.mimeType)}`;
+  const relativeFilename = `videos/${filename}`;
+  const videoPath = resolve(outputDirectory, relativeFilename);
+  const requestedVideo = manifest.video[mode];
+  const { probe: videoProbe } = await stageAndCommitVideo({
+    videoPath,
+    buffer: downloaded.buffer,
+    probeAndValidate: async (temporaryPath) => {
+      const probe = await probeMediaFile(temporaryPath);
+      return assertVideoMatchesRequest(probe, {
+        expectedDurationSeconds: requestedVideo.durationSeconds,
+        label: `${modeOption} output`,
+      });
+    },
+  });
+  finalizedVideoPath = videoPath;
+
+  reviewManifest.videos.push({
+    id: modeOption,
+    filename: relativeFilename,
+    mimeType: downloaded.mimeType,
+    bytes: downloaded.buffer.length,
+    sha256: downloaded.sha256,
+    requestId,
+    providerModel: manifest.video[mode].model,
+    requestedDurationSeconds: requestedVideo.durationSeconds,
+    requestedResolution: requestedVideo.resolution,
+    width: videoProbe.video.width,
+    height: videoProbe.video.height,
+    durationSeconds: videoProbe.durationSeconds,
+    sourceImage,
+    aiInterpretationBadge: manifest.metadata.aiInterpretationBadge,
+    disclosure: manifest.metadata.historicalFigureDisclosure,
+    caption: manifest.metadata.caption,
+    voiceDisclosure: manifest.metadata.voiceDisclosure,
+    directQuote: manifest.metadata.directQuote,
+    directQuoteAttribution: manifest.metadata.directQuoteAttribution,
+    transcript: manifest.metadata.transcript,
+    playback: manifest.playback,
+    review: {
+      hardGatesPassed: null,
+      hardGateNotes: [],
+      scores: {},
+      observations: [],
+      status: "pending-frame-audio-and-motion-review",
+    },
+  });
+  await writeJsonAtomic(reviewPath, reviewManifest);
+  reviewSaved = true;
+
+  console.log(`Validated ${downloaded.mimeType} video: ${videoPath}`);
+  console.log(
+    "The candidate remains private and requires frame, motion, and audio review.",
+  );
+} catch (error) {
+  pipelineError = error;
+  if (finalizedVideoPath && !reviewSaved) {
+    try {
+      await unlink(finalizedVideoPath);
+    } catch (cleanupError) {
+      if (cleanupError?.code !== "ENOENT") {
+        pipelineError = new AggregateError(
+          [error, cleanupError],
+          `Video generation failed and its untracked final file could not be removed: ${finalizedVideoPath}`,
+        );
+      }
+    }
   }
 }
-reviewManifest.videos ??= [];
-reviewManifest.videos.push({
-  id: modeOption,
-  filename: relativeFilename,
-  mimeType: downloaded.mimeType,
-  bytes: downloaded.buffer.length,
-  sha256: downloaded.sha256,
-  requestId,
-  providerModel: manifest.video[mode].model,
-  durationSeconds: result.video.duration ?? manifest.video[mode].durationSeconds,
-  sourceImage,
-  disclosure: manifest.metadata.historicalFigureDisclosure,
-  caption: manifest.metadata.caption,
-  transcript: manifest.metadata.transcript,
-  playback: manifest.playback,
-  review: {
-    hardGatesPassed: null,
-    hardGateNotes: [],
-    scores: {},
-    observations: [],
-    status: "pending-frame-audio-and-motion-review",
-  },
-});
-await writeJsonAtomic(reviewPath, reviewManifest);
 
-console.log(`Validated ${downloaded.mimeType} video: ${resolve(outputDirectory, relativeFilename)}`);
-console.log("The candidate remains private and requires frame, motion, and audio review.");
+try {
+  await generationLock.release();
+} catch (releaseError) {
+  pipelineError = pipelineError
+    ? new AggregateError(
+        [pipelineError, releaseError],
+        "Video generation failed and its private generation lock could not be released.",
+      )
+    : releaseError;
+}
+if (pipelineError) throw pipelineError;

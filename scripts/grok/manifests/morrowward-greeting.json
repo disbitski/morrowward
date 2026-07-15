@@ -20,14 +20,14 @@
     "imageToVideo": {
       "model": "grok-imagine-video-1.5",
       "promptFile": "../prompts/image-to-video-greeting.txt",
-      "durationSeconds": 12,
+      "durationSeconds": 15,
       "aspectRatio": "16:9",
       "resolution": "720p"
     },
     "textToVideo": {
       "model": "grok-imagine-video",
       "promptFile": "../prompts/text-to-video-greeting.txt",
-      "durationSeconds": 10,
+      "durationSeconds": 15,
       "aspectRatio": "16:9",
       "resolution": "720p"
     }
@@ -42,10 +42,13 @@
     "speed": 1
   },
   "metadata": {
+    "aiInterpretationBadge": "AI-GENERATED HISTORICAL INTERPRETATION",
     "historicalFigureDisclosure": "AI-generated historical interpretation of Marcus Aurelius. This is not an authentic likeness, archival recording, endorsement, or recreation of his voice.",
     "caption": "Marcus Aurelius — Roman emperor, 161–180 CE. A really cool historical dude. AI-generated historical interpretation with a built-in AI narrator.",
-    "transcript": "Thanks for using Morrowward. Dave asked for a little encouragement: Marcus Aurelius wrote, “I am rising to the work of a human being.” Small steps begin today.",
+    "voiceDisclosure": "Built-in AI narrator — not Marcus Aurelius’s voice.",
+    "transcript": "Thanks for using Morrowward. Dave asked for a little encouragement. Marcus Aurelius wrote, “I am rising to the work of a human being.” Small steps begin today.",
     "directQuote": "I am rising to the work of a human being.",
+    "directQuoteAttribution": "Quote: Meditations 5.1 · George Long translation · View source",
     "source": {
       "author": "Marcus Aurelius",
       "work": "Meditations",
@@ -69,13 +72,14 @@
   "review": {
     "lead": "Codex/GPT original-resolution and frame-sequence review",
     "humanFinalApprovalRequired": true,
-    "minimumScore": 24,
+    "minimumScore": 26,
+    "minimumDimensionScore": 4,
     "hardGates": [
       "Provider MIME and decoded magic bytes agree; file opens at expected resolution.",
       "Exactly one adult person with one head, two arms, and two correctly attached natural hands.",
       "No pseudo-text, logos, watermarks, unexpected symbols, extra people, duplicated objects, or impossible geometry.",
       "No financial return promise, individualized advice, urgency, endorsement, or implication that recovery is guaranteed.",
-      "Historical interpretation disclosure, paraphrase label, source citation, caption, transcript, and captions remain attached.",
+      "Historical interpretation disclosure, direct-quote attribution, source citation, caption, transcript, built-in narrator disclosure, and captions remain attached.",
       "Visual figure does not lip-sync or appear to speak; narration uses a verified xAI built-in voice, never a clone or impersonation.",
       "Video has a stable poster frame, no flashes, no aggressive motion, and remains understandable without audio or autoplay."
     ],

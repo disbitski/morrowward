@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "assetId": "morrowward-marcus-welcome",
+  "revision": "2026-07-15-r1",
+  "status": "approved",
+  "assets": [
+    {
+      "role": "video",
+      "filename": "morrowward-marcus-welcome.mp4",
+      "publicPath": "/morrowward-marcus-welcome.mp4",
+      "mediaType": "video/mp4",
+      "bytes": 4104160,
+      "sha256": "4a254a2983237eec3bffa97d601413884924c8ff42b585aad6f2560a1a627728"
+    },
+    {
+      "role": "captions",
+      "filename": "morrowward-marcus-welcome.en.vtt",
+      "publicPath": "/morrowward-marcus-welcome.en.vtt",
+      "mediaType": "text/vtt; charset=utf-8",
+      "language": "en",
+      "bytes": 295,
+      "sha256": "b2e5b45dd0c8584bab44ad281bb78223ff5ec04387a72c48deb6b897f8be97a3"
+    },
+    {
+      "role": "poster",
+      "filename": "morrowward-marcus-welcome-poster.jpg",
+      "publicPath": "/morrowward-marcus-welcome-poster.jpg",
+      "mediaType": "image/jpeg",
+      "width": 1280,
+      "height": 720,
+      "bytes": 83611,
+      "sha256": "1d980a1fd25d3bc199dea81778b367ddab905a6e3c12748d1e9bc4b3cc527764"
+    }
+  ],
+  "content": {
+    "transcript": "Thanks for using Morrowward. Dave asked for a little encouragement. Marcus Aurelius wrote, “I am rising to the work of a human being.” Small steps begin today.",
+    "directQuote": "I am rising to the work of a human being.",
+    "attribution": "Marcus Aurelius, Meditations, Book V, section 1; George Long translation (1862)",
+    "source": {
+      "publisher": "Project Gutenberg",
+      "url": "https://www.gutenberg.org/files/6920/6920-h/6920-h.htm",
+      "usage": "The narration attributes and uses this short public-domain quotation; all surrounding words are original Morrowward copy."
+    }
+  },
+  "disclosures": {
+    "interpretation": "AI-generated historical interpretation of Marcus Aurelius. This is not an authentic likeness, archival recording, or endorsement.",
+    "voice": "AI-generated narration using an xAI built-in voice. It is not Marcus Aurelius’s voice and does not imitate a historical recording.",
+    "playback": "Optional media with user-initiated playback, English captions, a transcript, and a reduced-motion poster experience."
+  },
+  "generation": {
+    "provider": "xAI",
+    "image": {
+      "model": "grok-imagine-image-quality",
+      "resolution": "2k",
+      "aspectRatio": "16:9"
+    },
+    "video": {
+      "model": "grok-imagine-video-1.5",
+      "workflow": "image-to-video",
+      "durationSeconds": 15,
+      "resolution": "720p",
+      "aspectRatio": "16:9"
+    },
+    "narration": {
+      "service": "xAI Text to Speech",
+      "voiceId": "sal",
+      "voiceType": "built-in",
+      "language": "en"
+    }
+  },
+  "approval": {
+    "status": "approved",
+    "approvedBy": "Dave Isbitski",
+    "approvedAt": "2026-07-15T19:52:58Z",
+    "basis": [
+      "Codex/GPT original-resolution and frame-sequence review passed every hard gate and scored 29 of 30.",
+      "Human final review of the composed 15-second greeting: “Looks great bro!”"
+    ]
+  }
+}

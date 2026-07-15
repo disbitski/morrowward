@@ -19,7 +19,10 @@ async function openSettings(page: Page) {
   await page.getByRole("button", { name: "Settings", exact: true }).click();
 }
 
-async function onboard(page: Page) {
+async function onboard(
+  page: Page,
+  options: { leaveGreetingOpen?: boolean } = {},
+) {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /Small steps/i })).toBeVisible();
   await page.getByTestId("experience-new").click();
@@ -32,7 +35,71 @@ async function onboard(page: Page) {
   await page.getByTestId("plan-weekly-contribution").fill("25");
   await page.getByTestId("onboarding-complete").click();
   await expect(page.getByRole("heading", { name: /future is still in motion/i })).toBeVisible();
+  const greeting = page.getByTestId("historical-greeting-dialog");
+  await expect(greeting).toBeVisible();
+  if (!options.leaveGreetingOpen) {
+    await greeting.getByRole("button", { name: /^Skip welcome$/i }).click();
+    await expect(greeting).not.toBeVisible();
+  }
 }
+
+async function openMission(page: Page) {
+  const desktop = page.getByTestId("nav-mission");
+  if (await desktop.isVisible()) {
+    await desktop.click();
+    return;
+  }
+  await page.getByRole("button", { name: "Open menu" }).click();
+  await page
+    .getByRole("navigation", { name: "Mobile menu" })
+    .getByRole("button", { name: /Our why/i })
+    .click();
+}
+
+test("one-time historical welcome never autoplays and guides the next practice step", async ({ page }) => {
+  await onboard(page, { leaveGreetingOpen: true });
+  const dialog = page.getByTestId("historical-greeting-dialog");
+  await expect(
+    dialog.getByRole("heading", { name: /Congratulations—you started your journey/i }),
+  ).toBeFocused();
+  await expect(dialog.getByText(/AI-generated historical interpretation/i).first()).toBeVisible();
+  await expect(dialog.getByText(/not Marcus Aurelius’s voice/i)).toBeVisible();
+
+  const video = dialog.locator("video");
+  await expect(video).not.toHaveAttribute("autoplay", /.*/u);
+  await expect(video.locator('track[kind="captions"]')).toHaveAttribute(
+    "src",
+    "/morrowward-marcus-welcome.en.vtt",
+  );
+  await dialog.getByTestId("historical-greeting-play").click();
+  await expect(video).toHaveAttribute("controls", "");
+
+  await video.dispatchEvent("ended");
+  const practice = dialog.getByTestId("historical-greeting-practice");
+  await expect(practice).toBeVisible();
+  await expect(practice).toBeInViewport();
+  await practice.click();
+  await expect(page.getByRole("heading", { name: /Learn the motion/i })).toBeVisible();
+  expect(
+    await page.evaluate(() =>
+      JSON.parse(
+        window.localStorage.getItem("morrowward.historical-greeting.v1") ??
+          "{}",
+      ),
+    ),
+  ).toMatchObject({ greetingId: "marcus-aurelius-v1", seen: true });
+
+  await page.reload();
+  await page.waitForTimeout(900);
+  await expect(page.getByTestId("historical-greeting-dialog")).toHaveCount(0);
+
+  await openMission(page);
+  await expect(page.getByTestId("historical-greeting-replay")).toBeVisible();
+  await page.getByTestId("historical-greeting-replay").click();
+  await expect(page.getByTestId("historical-greeting-dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("historical-greeting-dialog")).toHaveCount(0);
+});
 
 test("golden path stays educational, local, and fully simulated", async ({ page }, testInfo) => {
   await onboard(page);
@@ -108,6 +175,13 @@ test("golden path stays educational, local, and fully simulated", async ({ page 
   await page.getByTestId("settings-reset").click();
   await page.getByTestId("settings-reset").click();
   await expect(page.getByRole("heading", { name: /Small steps/i })).toBeVisible();
+  await expect
+    .poll(() =>
+      page.evaluate(() =>
+        window.localStorage.getItem("morrowward.historical-greeting.v1"),
+      ),
+    )
+    .toBeNull();
 });
 
 test("practice failures stay labeled and the asset dialog restores focus", async ({ page }) => {

@@ -1,11 +1,10 @@
-import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import {
   DEFAULT_MANIFEST_PATH,
   XAI_API_BASE_URL,
+  assertImageMatchesRequest,
   buildImageGenerationRequest,
   decodeImageGenerationResponse,
-  extensionForMimeType,
   loadCampaignManifest,
   parseCliArguments,
   readImageDimensions,
@@ -14,8 +13,17 @@ import {
   requireXaiApiKey,
   requireXaiUploadConfirmation,
   sha256Hex,
+  validateMediaBuffer,
   writeJsonAtomic,
 } from "./media-lib.mjs";
+import {
+  acquireImageGenerationLock,
+  assertImageOutputsAvailable,
+  cleanupImagePaths,
+  cleanupPrivateImageRun,
+  initializePrivateImageRun,
+  stageAndCommitImageCandidates,
+} from "./image-preflight.mjs";
 
 function runId() {
   return new Date().toISOString().replace(/[:.]/g, "-");
@@ -41,8 +49,40 @@ const reviewPath = await resolveMediaReviewPath(
   resolve(runDirectory, "review.json"),
   "Image review manifest",
 );
-const apiKey = requireXaiApiKey();
 const requestBody = buildImageGenerationRequest(manifest, prompts.image);
+await initializePrivateImageRun({ runDirectory, imageDirectory });
+let imagePreflight;
+try {
+  imagePreflight = await assertImageOutputsAvailable({
+    runDirectory,
+    imageDirectory,
+    reviewPath,
+    candidateCount: manifest.image.candidateCount,
+  });
+} catch (error) {
+  await cleanupPrivateImageRun({ runDirectory, imageDirectory });
+  throw error;
+}
+let generationLock;
+try {
+  generationLock = await acquireImageGenerationLock(imagePreflight.lockPath);
+} catch (error) {
+  await cleanupPrivateImageRun({ runDirectory, imageDirectory });
+  throw error;
+}
+let pipelineError = null;
+let committedFinalPaths = [];
+let reviewSaved = false;
+
+try {
+await assertImageOutputsAvailable({
+  runDirectory,
+  imageDirectory,
+  reviewPath,
+  candidateCount: manifest.image.candidateCount,
+  allowExistingLock: true,
+});
+const apiKey = requireXaiApiKey();
 
 const { payload } = await requestJson(
   fetch,
@@ -53,44 +93,42 @@ const decodedImages = decodeImageGenerationResponse(
   payload,
   manifest.image.candidateCount,
 );
-const validatedImages = decodedImages.map((candidate, index) => {
-  const dimensions = readImageDimensions(candidate.buffer, candidate.mimeType);
-  if (
-    Math.min(dimensions.width, dimensions.height) <
-    manifest.image.minimumEdgePixels
-  ) {
-    throw new Error(
-      `Candidate ${index + 1} is ${dimensions.width}x${dimensions.height}; expected a minimum edge of ${manifest.image.minimumEdgePixels}px.`,
+const stagedImages = await stageAndCommitImageCandidates({
+  imageDirectory,
+  candidates: decodedImages,
+  validateCandidate: ({ buffer, mimeType, index }) => {
+    validateMediaBuffer(buffer, mimeType, { kind: "image" });
+    if (sha256Hex(buffer) !== sha256Hex(decodedImages[index].buffer)) {
+      throw new Error(`Candidate ${index + 1} staged bytes changed.`);
+    }
+    const dimensions = readImageDimensions(buffer, mimeType);
+    assertImageMatchesRequest(
+      dimensions,
+      manifest.image,
+      `Candidate ${index + 1}`,
     );
-  }
-  return { ...candidate, dimensions };
+    return dimensions;
+  },
 });
+committedFinalPaths = stagedImages.finalPaths;
 
-await mkdir(imageDirectory, { recursive: true, mode: 0o700 });
-
-const candidates = [];
-for (let index = 0; index < validatedImages.length; index += 1) {
-  const candidate = validatedImages[index];
-  const filename = `image-candidate-${String(index + 1).padStart(2, "0")}${extensionForMimeType(candidate.mimeType)}`;
-  const path = resolve(imageDirectory, filename);
-  await writeFile(path, candidate.buffer, { mode: 0o600, flag: "wx" });
-  candidates.push({
+const candidates = stagedImages.artifacts.map((candidate, index) => ({
     id: `image-${index + 1}`,
-    filename: `images/${filename}`,
+    filename: `images/${candidate.filename}`,
     mimeType: candidate.mimeType,
     bytes: candidate.buffer.length,
     sha256: sha256Hex(candidate.buffer),
-    width: candidate.dimensions.width,
-    height: candidate.dimensions.height,
+    width: candidate.validation.width,
+    height: candidate.validation.height,
     review: {
       hardGatesPassed: null,
       hardGateNotes: [],
       scores: {},
+      totalScore: null,
       observations: [],
       status: "pending-original-resolution-review",
     },
-  });
-}
+  }));
 
 const reviewManifest = {
   schemaVersion: 1,
@@ -106,8 +144,13 @@ const reviewManifest = {
       responseFormat: "b64_json",
     },
   },
+  aiInterpretationBadge: manifest.metadata.aiInterpretationBadge,
   disclosure: manifest.metadata.historicalFigureDisclosure,
   caption: manifest.metadata.caption,
+  voiceDisclosure: manifest.metadata.voiceDisclosure,
+  transcript: manifest.metadata.transcript,
+  directQuote: manifest.metadata.directQuote,
+  directQuoteAttribution: manifest.metadata.directQuoteAttribution,
   source: manifest.metadata.source,
   prompt: prompts.image,
   reviewPolicy: manifest.review,
@@ -122,7 +165,47 @@ const reviewManifest = {
   },
 };
 await writeJsonAtomic(reviewPath, reviewManifest);
+reviewSaved = true;
 
 console.log(`Generated ${candidates.length} private review candidates.`);
 console.log(`Review directory: ${runDirectory}`);
 console.log("No candidate has been selected or copied into the repository.");
+} catch (error) {
+  pipelineError = error;
+  if (!reviewSaved) {
+    try {
+      await cleanupImagePaths([
+        ...committedFinalPaths,
+        imagePreflight.reviewTemporaryPath,
+      ]);
+    } catch (cleanupError) {
+      pipelineError = new AggregateError(
+        [error, cleanupError],
+        "Image generation failed and private partial output could not be removed.",
+      );
+    }
+  }
+}
+
+try {
+  await generationLock.release();
+} catch (releaseError) {
+  pipelineError = pipelineError
+    ? new AggregateError(
+        [pipelineError, releaseError],
+        "Image generation failed and its private run lock could not be released.",
+      )
+    : releaseError;
+}
+
+if (pipelineError && !reviewSaved) {
+  try {
+    await cleanupPrivateImageRun({ runDirectory, imageDirectory });
+  } catch (cleanupError) {
+    pipelineError = new AggregateError(
+      [pipelineError, cleanupError],
+      "Image generation failed and its empty private run could not be removed.",
+    );
+  }
+}
+if (pipelineError) throw pipelineError;

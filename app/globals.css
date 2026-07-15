@@ -960,6 +960,49 @@ textarea:focus-visible,
 .roadmap-panel strong { font-size: 11px; }
 .roadmap-panel small { color: var(--muted); font-size: 10px; }
 
+/* Historical greeting */
+.historical-greeting-backdrop { position: fixed; z-index: 180; inset: 0; display: grid; place-items: center; padding: clamp(12px, 3vw, 34px); background: color-mix(in srgb, #000 76%, transparent); backdrop-filter: blur(16px); }
+.historical-greeting-dialog { position: relative; width: min(850px, 100%); max-height: calc(100dvh - clamp(24px, 6vw, 68px)); overflow: auto; border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line)); border-radius: 27px; padding: clamp(20px, 3vw, 31px); background: var(--surface-raised); color: var(--ink); box-shadow: 0 35px 110px color-mix(in srgb, #000 55%, transparent); }
+.historical-greeting-dialog::before { content: ""; position: absolute; inset: 0 0 auto; height: 170px; border-radius: inherit; background: radial-gradient(circle at 18% 0%, color-mix(in srgb, var(--accent) 19%, transparent), transparent 61%); pointer-events: none; }
+.historical-greeting-close { position: absolute; z-index: 3; top: 17px; right: 17px; display: grid; width: 41px; height: 41px; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: color-mix(in srgb, var(--surface-raised) 88%, transparent); color: var(--muted); cursor: pointer; backdrop-filter: blur(9px); }
+.historical-greeting-close:hover { border-color: var(--line-strong); color: var(--ink); }
+.historical-greeting-heading { position: relative; z-index: 1; padding-right: 48px; }
+.historical-greeting-celebration { display: inline-flex; align-items: center; gap: 7px; color: var(--accent); font-size: 10px; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.historical-greeting-heading h2 { max-width: 690px; margin: 10px 0 8px; color: var(--ink-strong); font: 770 clamp(28px, 4vw, 43px)/1.05 var(--font-display); letter-spacing: -.045em; }
+.historical-greeting-heading h2:focus-visible { outline: none; }
+.historical-greeting-heading p { max-width: 680px; margin: 0 0 21px; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.historical-greeting-media { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border: 1px solid var(--line); border-radius: 20px; background: #070808; box-shadow: 0 22px 55px color-mix(in srgb, #000 25%, transparent); }
+.historical-greeting-media video { display: block; width: 100%; height: 100%; object-fit: cover; background: #070808; }
+.historical-greeting-badge { display: inline-flex; align-items: center; border: 1px solid rgba(255, 255, 255, .34); border-radius: 999px; padding: 6px 9px; background: rgba(0, 0, 0, .7); color: #fff; font-size: 9px; font-weight: 900; letter-spacing: .08em; line-height: 1.2; text-transform: uppercase; backdrop-filter: blur(8px); }
+.historical-greeting-media > .historical-greeting-badge { position: absolute; z-index: 2; top: 13px; left: 13px; max-width: calc(100% - 72px); }
+.historical-greeting-play { position: absolute; z-index: 2; inset: 0; display: grid; place-content: center; justify-items: center; gap: 11px; border: 0; background: linear-gradient(180deg, transparent 24%, rgba(0, 0, 0, .56)); color: #fff; cursor: pointer; font-size: 12px; font-weight: 850; text-shadow: 0 2px 12px #000; }
+.historical-greeting-play > span { display: grid; width: 60px; height: 60px; place-items: center; border: 1px solid rgba(255, 255, 255, .66); border-radius: 50%; padding-left: 3px; background: color-mix(in srgb, var(--accent) 88%, #000); color: var(--accent-ink); box-shadow: 0 10px 35px rgba(0, 0, 0, .43); transition: transform 160ms ease, background-color 160ms ease; }
+.historical-greeting-play:hover > span { transform: scale(1.06); background: var(--accent-hover); }
+.historical-greeting-provenance { display: grid; grid-template-columns: 1fr 1fr; gap: 7px 24px; margin-top: 17px; border-bottom: 1px solid var(--line); padding-bottom: 16px; }
+.historical-greeting-provenance p { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.55; }
+.historical-greeting-provenance p:first-child { color: var(--ink); }
+.historical-greeting-provenance p:nth-child(2) { display: flex; align-items: center; gap: 6px; color: var(--accent); font-weight: 780; }
+.historical-greeting-provenance p:nth-child(3),
+.historical-greeting-provenance .historical-greeting-transcript,
+.historical-greeting-provenance a { grid-column: 1 / -1; }
+.historical-greeting-provenance .historical-greeting-transcript { border-left: 2px solid var(--line-strong); padding-left: 11px; }
+.historical-greeting-provenance a { display: inline-flex; width: fit-content; align-items: center; gap: 5px; color: var(--accent); font-size: 10px; font-weight: 780; text-decoration: none; }
+.historical-greeting-provenance a:hover { text-decoration: underline; }
+.historical-greeting-status { min-height: 17px; margin: 11px 0 0; color: var(--muted); font-size: 10px; }
+.historical-greeting-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-top: 4px; }
+.historical-greeting-actions .historical-greeting-skip { min-height: 38px; color: var(--muted); }
+.historical-greeting-replay { display: grid; grid-template-columns: minmax(310px, .92fr) minmax(0, 1fr); align-items: center; gap: clamp(25px, 5vw, 60px); overflow: hidden; border: 1px solid color-mix(in srgb, var(--accent) 31%, var(--line)); border-radius: 23px; padding: clamp(18px, 3vw, 31px); background: var(--surface); }
+.historical-greeting-replay-art { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 17px; background: #070808; box-shadow: 0 20px 55px color-mix(in srgb, #000 25%, transparent); }
+.historical-greeting-replay-art img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; }
+.historical-greeting-replay-art .historical-greeting-badge { position: absolute; left: 10px; bottom: 10px; max-width: calc(100% - 20px); }
+.historical-greeting-replay-copy h2 { margin: 7px 0 10px; color: var(--ink-strong); font: 750 clamp(25px, 3vw, 35px)/1.08 var(--font-display); letter-spacing: -.04em; }
+.historical-greeting-replay-copy p { margin: 0 0 7px; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.historical-greeting-replay-copy .button { margin-top: 13px; }
+.historical-greeting-replay-copy > a { display: flex; width: fit-content; align-items: center; gap: 5px; margin-top: 12px; color: var(--accent); font-size: 10px; font-weight: 780; text-decoration: none; }
+.historical-greeting-replay-copy > a:hover { text-decoration: underline; }
+
+.app-shell[data-theme="space"] :is(.historical-greeting-dialog, .historical-greeting-replay) { background: radial-gradient(circle at 100% 0%, rgba(255, 122, 24, .11), transparent 42%), linear-gradient(145deg, rgba(18, 21, 27, .99), rgba(5, 6, 8, .99)); }
+
 /* Settings */
 .settings-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
 .setting-card { display: grid; min-height: 250px; grid-template-columns: auto 1fr; align-items: start; gap: 15px; padding: 25px; }
@@ -1000,6 +1043,7 @@ textarea:focus-visible,
   .mission-hero { gap: 45px; }
   .values-grid { grid-template-columns: repeat(2, 1fr); }
   .roadmap-panel { grid-template-columns: 1fr; gap: 25px; }
+  .historical-greeting-replay { grid-template-columns: 1fr; }
   .app-footer { grid-template-columns: 1fr 2fr; }
   .app-footer nav { grid-column: 1 / -1; }
 }
@@ -1102,6 +1146,19 @@ textarea:focus-visible,
   .mission-photo { width: 95%; }
   .mission-statement { grid-template-columns: 1fr; padding: 27px; }
   .values-grid, .roadmap-panel ul { grid-template-columns: 1fr; }
+  .historical-greeting-backdrop { align-items: end; padding: 8px; }
+  .historical-greeting-dialog { max-height: calc(100dvh - 16px); border-radius: 22px; padding: 19px; }
+  .historical-greeting-heading { padding-right: 39px; }
+  .historical-greeting-heading h2 { font-size: 30px; }
+  .historical-greeting-media { border-radius: 15px; }
+  .historical-greeting-play > span { width: 51px; height: 51px; }
+  .historical-greeting-provenance { grid-template-columns: 1fr; }
+  .historical-greeting-provenance p:nth-child(3),
+  .historical-greeting-provenance .historical-greeting-transcript,
+  .historical-greeting-provenance a { grid-column: auto; }
+  .historical-greeting-actions { align-items: stretch; flex-direction: column; }
+  .historical-greeting-actions .button { width: 100%; justify-content: center; }
+  .historical-greeting-replay { grid-template-columns: 1fr; padding: 17px; }
   .settings-grid { gap: 10px; }
   .setting-card { min-height: 0; padding: 21px; }
   .theme-picker:not(.compact) { display: grid; grid-template-columns: repeat(2, 1fr); }

@@ -11,8 +11,8 @@ Generation sends private work-in-progress data to the third-party xAI API: image
 ## What it creates
 
 - four private 2K, 16:9 image candidates from one controlled prompt;
-- one optional 12-second image-to-video greeting from a selected local candidate;
-- one optional 10-second text-to-video comparison;
+- one optional 15-second, 720p image-to-video greeting from a selected local candidate;
+- one optional 15-second, 720p text-to-video comparison;
 - lossless narration from a verified xAI **built-in** voice, plus transcript and WebVTT captions;
 - an optional MP4 composed with the built-in narration replacing any model-generated audio;
 - a structured `review.json` for Codex/GPT-led original-resolution review and human final approval.
@@ -86,14 +86,16 @@ npm run media:grok:compose -- \
   --run .media-review/grok/morrowward-marcus-greeting/<run>
 ```
 
-Composition requires `ffmpeg`. It discards any generated video audio and uses only the declared built-in narrator. The WebVTT file remains a sidecar so the application can expose real captions.
+Composition requires `ffmpeg`. It discards any generated video audio, uses only the declared built-in narrator, and normalizes that narration to a spoken-word target of -16 LUFS with a -1.5 dBTP ceiling before padding the silent tail. The WebVTT file remains a sidecar so the application can expose real captions.
 
 ## Validation and data handling
 
 - Image generation uses `b64_json`; the script verifies the provider MIME type against decoded magic bytes, validates dimensions, hashes each file, and preserves the matching extension.
+- Paid generation commands complete output-path, collision, permission, and exclusive-lock preflight before reading the API key or calling xAI. Candidate files are staged privately and committed atomically; a partial failure removes the run instead of leaving publishable-looking output.
 - Every custom `--run` or `--output` path must remain inside this repository's gitignored `.media-review/` directory; existing symbolic-link path components are rejected.
-- Video generation starts asynchronously, polls bounded by a timeout, downloads only over HTTPS, validates MIME against magic bytes, checks a minimum size, and hashes the result.
+- JSON API responses are streamed behind a 60-second per-request timeout and a 100 MiB ceiling large enough for the four requested base64 2K images. Video generation starts asynchronously, cannot poll beyond its overall deadline, downloads only over HTTPS, validates MIME against magic bytes, checks a minimum size, and hashes the result.
 - TTS first confirms that the configured voice appears in `GET /v1/tts/voices`. It requests WAV with character timestamps, validates that timings are monotonic, non-overlapping, and within the declared duration, and derives WebVTT captions from those timings.
+- Review policy must exactly match the committed campaign manifest. Composition accepts only SHA-256-locked source video, narration, captions, and transcript; writes locked private temporary files; commits the MP4 and VTT together; and refuses to replace a human-approved composition.
 - API keys are never stored in output metadata. Provider request IDs and temporary URLs stay only inside the ignored review directory; downloaded video URLs are not retained.
 - xAI pricing and model availability can change. Review the xAI console before generating a new batch.
 
