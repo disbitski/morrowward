@@ -301,6 +301,39 @@ describe.sequential("Morrowward API contracts and safeguards", () => {
     expect(result.ok && result.response.meta.mode).toBe("fallback");
   });
 
+  it("keeps an AI market-timing next step inside the synthetic lab", async () => {
+    const generated = {
+      title: "A few days can matter",
+      summary: "Strong market days cannot be identified in advance.",
+      keyPoints: ["Large moves can cluster near volatile periods."],
+      assumptions: ["This is an educational illustration."],
+      tryNext: [
+        "Use a historical period and remove its five weakest days.",
+      ],
+    };
+    const fetchImpl = vi.fn<typeof fetch>().mockResolvedValue(
+      Response.json({ output_text: JSON.stringify(generated) }),
+    );
+    const input = EducationExplainRequestSchema.parse({
+      question: "Why can missing a few strong days matter?",
+      topic: "market-timing",
+    });
+    const result = await answerEducationQuestion(input, {
+      apiKey: "test-key",
+      fetchImpl,
+      now: FIXED_NOW,
+      requestId: "request-market-timing",
+    });
+
+    expect(result.ok && result.response.meta.mode).toBe("ai");
+    expect(result.ok && result.response.nextStep).toBe(
+      "Compare a simulated all-days path with the same path missing its strongest days.",
+    );
+    expect(result.ok && JSON.stringify(result.response)).not.toMatch(
+      /historical period|weakest days/iu,
+    );
+  });
+
   it("falls back without leaking details when the model request fails", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const fetchImpl = vi
