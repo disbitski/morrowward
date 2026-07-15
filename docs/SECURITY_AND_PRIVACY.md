@@ -28,6 +28,12 @@ Morrowward is an educational simulator. Its safest path is also its default path
 - Daily AI briefs can use an optional date-keyed Vercel KV or Upstash REST cache. Configure either the complete `KV_REST_API_URL` + `KV_REST_API_TOKEN` pair or the complete `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` pair; the KV pair takes precedence when both are complete. Saved briefs are schema-validated, expire after 48 hours, and store operations time out after 1.5 seconds. Missing, slow, unavailable, or malformed store data degrades to the labeled in-process/deterministic brief.
 - Vercel Cron uses authenticated `GET /api/v1/briefs/generate` with `CRON_SECRET`. Manual generation uses an authenticated JSON `POST` and may use either `CRON_SECRET` or `ADMIN_API_TOKEN`.
 
+## Dependency status at the feature-complete milestone
+
+- `npm audit --omit=dev` reports **0 known production vulnerabilities**.
+- The full development tree reports 12 transitive advisories (1 low, 4 moderate, 6 high, and 1 critical) in build/test tooling. npm's complete automatic remediation path requires breaking or out-of-range upgrades, so those upgrades are intentionally deferred to a dedicated post-hackathon dependency pass rather than forced into the release candidate.
+- The project therefore does not claim a vulnerability-free development toolchain; the verified statement is limited to the installed production dependency graph.
+
 ## Operational checklist
 
 Before public launch:
