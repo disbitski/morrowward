@@ -44,6 +44,16 @@ try {
   await desktopPage.getByRole("heading", { name: /Hope gets stronger/i }).waitFor();
   await finishAnimations(desktopPage);
   await desktopPage.screenshot({ path: fileURLToPath(new URL("mission-story-desktop.png", outputDirectory)) });
+
+  await desktopPage.getByTestId("theme-space").click();
+  await desktopPage.getByTestId("nav-practice").click();
+  const marketJourney = desktopPage.getByTestId("market-journey");
+  await marketJourney.waitFor();
+  await desktopPage.getByTestId("market-risk-higher").click();
+  await desktopPage.getByTestId("market-sequence-late-bear").click();
+  await marketJourney.scrollIntoViewIfNeeded();
+  await finishAnimations(desktopPage);
+  await marketJourney.screenshot({ path: fileURLToPath(new URL("market-journey-space-desktop.png", outputDirectory)) });
   await desktop.close();
 
   const mobile = await browser.newContext({
@@ -57,6 +67,16 @@ try {
   await mobilePage.getByRole("heading", { name: /Learn the motion/i }).waitFor();
   await finishAnimations(mobilePage);
   await mobilePage.screenshot({ path: fileURLToPath(new URL("practice-mobile.png", outputDirectory)) });
+
+  await mobilePage.getByRole("button", { name: "Settings", exact: true }).click();
+  const mobileAppearance = mobilePage.locator(".setting-card").filter({ hasText: "Choose a theme" });
+  await mobileAppearance.getByTestId("theme-space").click();
+  await mobilePage.getByTestId("mobile-nav-practice").click();
+  await mobilePage.getByTestId("market-risk-higher").click();
+  await mobilePage.getByTestId("market-sequence-late-bear").click();
+  await mobilePage.getByTestId("market-journey-chart").scrollIntoViewIfNeeded();
+  await finishAnimations(mobilePage);
+  await mobilePage.screenshot({ path: fileURLToPath(new URL("market-journey-space-mobile.png", outputDirectory)) });
   await mobile.close();
 } finally {
   await browser.close();

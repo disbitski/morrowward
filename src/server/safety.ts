@@ -19,6 +19,7 @@ const INJECTION_PATTERNS: RegExp[] = [
 
 const PERSONAL_RECOMMENDATION_PATTERNS: RegExp[] = [
   /\bshould i (?:buy|sell|hold|invest|trade|allocate|put|borrow|withdraw)\b/iu,
+  /\bshould i (?:(?:stay|remain) invested|(?:stay|remain) in (?:the )?market)\b|\bshould i (?:leave|exit) (?:the )?market\b|\bshould i (?:move|go) to cash\b/iu,
   /\b(?:would|is) (?:buying|selling|holding|investing in) .{1,80}? be (?:right|good|best|smart|safe) for (?:me|my\b)/iu,
   /\b(?:can|could|would) you recommend (?:a |an |the |what |whether )?(?:stock|etf|crypto|coin|investment|allocation|portfolio|purchase|trade)\b/iu,
   /\bis .{1,80}? (?:a )?(?:right|good|best|smart|safe) allocation for (?:me|my\b)/iu,
@@ -54,6 +55,7 @@ const TAX_PATTERNS: RegExp[] = [
 
 const UNSAFE_GENERATED_PATTERNS: RegExp[] = [
   /\b(?:you|the user) (?:should|must|need to|have to) (?:buy|sell|hold|invest|trade|borrow|withdraw)\b/iu,
+  /\b(?:you|the user) (?:should|must|need to|have to) (?:(?:stay|remain) invested|(?:stay|remain) in (?:the )?market|(?:move|go) to cash)\b/iu,
   /\b(?:i|we) recommend(?: that)? (?:you )?(?:buy|sell|hold|invest|put|putting|allocate|allocating)\b/iu,
   /\b(?:buy|sell|trade) (?:it |this |that )?(?:now|immediately|today)\b/iu,
   /\bguaranteed (?:return|profit|gain|growth|income)\b/iu,

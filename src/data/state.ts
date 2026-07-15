@@ -23,7 +23,7 @@ export const STATE_EXPORT_FORMAT = "morrowward-state" as const;
 export const MAX_IMPORT_BYTES = 1_000_000;
 
 export type ExperienceLevel = "new" | "familiar" | "advanced";
-export type ThemeId = "dawn" | "horizon" | "alchemy";
+export type ThemeId = "dawn" | "horizon" | "alchemy" | "space";
 
 export interface LocalProfile {
   experienceLevel: ExperienceLevel;
@@ -143,7 +143,7 @@ const habitLogSchema = z
 const profileSchema = z
   .object({
     experienceLevel: z.enum(["new", "familiar", "advanced"]),
-    theme: z.enum(["dawn", "horizon", "alchemy"]),
+    theme: z.enum(["dawn", "horizon", "alchemy", "space"]),
     onboardingComplete: z.boolean(),
   })
   .strict();

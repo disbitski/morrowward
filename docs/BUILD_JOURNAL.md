@@ -53,6 +53,27 @@ The product therefore focuses on a repeatable weekly habit and a future someone 
 
 Latest protected preview: `https://morrowward-kf3ev2lpj-thedavedev.vercel.app`
 
+### Hands-on feedback turned a starter portfolio into Market Journey
+
+The first real product session exposed an important gap: Practice mode taught the mechanics of adding simulated cash and making a fractional purchase, but it stopped at the starter portfolio. It did not yet show what a weekly habit could feel like through years of uneven markets. Dave brought a lesson learned over decades of investing: long-term participation can matter because a small number of unusually strong trading days may have an outsized effect, yet those days cannot be known in advance.
+
+Codex converted that feedback into a bounded, deterministic Market Journey lab:
+
+- Added 1-, 5-, 10-, and 20-year synthetic journeys with 3%, 6%, and 9% editable long-term drift assumptions.
+- Separated the return assumption from market bumpiness so greater volatility does not automatically earn a better destination; sequence can still change the realized result.
+- Added full-cycle, late-decline, and strong-recovery sequences; the late-decline path can end without regaining its prior peak.
+- Modeled five simulated trading days per week and 52 end-of-week contributions per year, then exposed weekly chart points for a responsive interface.
+- Kept market-path CAGR distinct from an XIRR-style, cash-flow-aware annualized result.
+- Measured maximum drawdown at visible weekly checkpoints on the unitized synthetic market path so new deposits cannot disguise a decline.
+- Compared the same path with all simulated days included versus its strongest five and ten days removed after the fact. The interface labels this as a counterfactual sequence lesson, not timing advice.
+- Added explicit statements that regular contributions do not guarantee profit, time does not remove risk, and recovery may not occur during the selected horizon.
+
+The same feedback pass added a fourth **Space** theme, adapted from the prior Space dashboard without its branding: deep black space, white star glow, rocket-fire orange, warm planetary light, and restrained gradients. The persisted theme, onboarding preview, browser chrome color, charts, responsive layouts, and reduced-motion behavior all use the same accessible token system.
+
+This is the collaboration loop the project was meant to support: build a complete idea, use it, notice what the lesson still cannot teach, and turn lived experience into a safer, testable interaction.
+
+The hardening pass finished with 90 deterministic unit/integration tests, lint, TypeScript, both production builds, and rendered-worker checks passing. Four Playwright journeys passed across desktop Chrome and a Pixel 7 viewport. The browser suite exercises the Market Journey controls and unrecovered late-decline state, runs serious/critical accessibility checks on the Practice page in all four themes, and re-verifies offline reload. That broader theme matrix found two pre-existing near-threshold Dawn contrast values plus an invalid definition-list structure in the new metrics; both were corrected before the final screenshots were captured.
+
 ## July 15 — Foundation and core experience
 
 Planned milestone: themes, onboarding, projection engine, Horizon Reveal, local state, dashboard, disclosures, tests, and first protected preview.

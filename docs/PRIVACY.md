@@ -1,6 +1,6 @@
 # Morrowward privacy disclosure
 
-Morrowward is local-first and does not require an account. Plan inputs, simulated cash, practice holdings, and transaction history are stored in the user's browser. Exported backups leave the browser only when the user explicitly saves or imports a file.
+Morrowward is local-first and does not require an account. Plan inputs, simulated cash, practice holdings, and transaction history are stored in the user's browser. Market Journey calculations use those local plan values and ephemeral display controls; they do not request external market data or send the resulting synthetic path anywhere. Exported backups leave the browser only when the user explicitly saves or imports a file.
 
 When the optional educator is used, Morrowward sends the question, selected experience level, requested education topic, and—if a client supplies it—only the bounded illustrative fields accepted by the API contract: years remaining, weekly contribution, illustrative return, and illustrative inflation. It does not send names, email addresses, birthdates, brokerage credentials, actual holdings, transaction history, starting balance, or Dave's personal story.
 

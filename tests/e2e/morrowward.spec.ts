@@ -52,6 +52,14 @@ test("golden path stays educational, local, and fully simulated", async ({ page 
   await page.getByTestId("practice-buy").click();
   await expect(page.getByText(/TSLA simulated purchase/i)).toBeVisible();
   await expect(page.getByText(/nothing was traded/i)).toBeVisible();
+  await expect(page.getByTestId("market-journey")).toBeVisible();
+  await page.getByTestId("market-horizon-5").click();
+  await page.getByTestId("market-growth-900").click();
+  await page.getByTestId("market-risk-higher").click();
+  await page.getByTestId("market-sequence-late-bear").click();
+  await expect(page.getByTestId("market-recovery-status")).toContainText(/not regained in this horizon/i);
+  await expect(page.getByRole("heading", { name: /Days you can’t predict/i })).toBeVisible();
+  await expect(page.getByText("All simulated days included")).toBeVisible();
 
   await openView(page, "learn");
   await page.getByTestId("educator-chip-0").click();
@@ -61,6 +69,10 @@ test("golden path stays educational, local, and fully simulated", async ({ page 
 
   await openSettings(page);
   await expect(page.getByRole("heading", { name: /Your plan belongs to you/i })).toBeVisible();
+  const appearanceCard = page.locator(".setting-card").filter({ hasText: "Choose a theme" });
+  await appearanceCard.getByTestId("theme-space").click();
+  await expect(page.locator(".app-shell")).toHaveAttribute("data-theme", "space");
+  await expect(page.locator('meta[name="theme-color"][data-morrowward]')).toHaveAttribute("content", "#050608");
   const downloadEvent = page.waitForEvent("download");
   await page.getByTestId("settings-export").click();
   const download = await downloadEvent;
@@ -84,6 +96,7 @@ test("golden path stays educational, local, and fully simulated", async ({ page 
 });
 
 test("PWA reloads offline and has no serious automated accessibility violations", async ({ context, page }) => {
+  test.setTimeout(60_000);
   await onboard(page);
   await expect(page.locator('link[rel="manifest"]')).toHaveAttribute("href", /manifest\.json$/u);
   const manifest = await page.evaluate(async () => {
@@ -99,25 +112,31 @@ test("PWA reloads offline and has no serious automated accessibility violations"
   await page.reload();
   await expect(page.getByRole("heading", { name: /future is still in motion/i })).toBeVisible();
   await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
-  await page.locator(".view-stack").evaluate(async (element) => {
-    await Promise.all(element.getAnimations().map((animation) => animation.finished));
-  });
-
   await page.addScriptTag({ content: axe.source });
-  const violations = await page.evaluate(async () => {
-    const result = await window.axe.run(document, {
-      runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] },
+  for (const theme of ["dawn", "horizon", "alchemy", "space"] as const) {
+    await openSettings(page);
+    const appearanceCard = page.locator(".setting-card").filter({ hasText: "Choose a theme" });
+    await appearanceCard.getByTestId(`theme-${theme}`).click();
+    await openView(page, "practice");
+    await expect(page.getByTestId("market-journey")).toBeVisible();
+    await page.locator(".view-stack").evaluate(async (element) => {
+      await Promise.all(element.getAnimations().map((animation) => animation.finished));
     });
-    return result.violations
-      .filter((item) => item.impact === "serious" || item.impact === "critical")
-      .map((item) => ({
-        id: item.id,
-        impact: item.impact,
-        help: item.help,
-        nodes: item.nodes.map((node) => ({ target: node.target, html: node.html, summary: node.failureSummary })),
-      }));
-  });
-  expect(violations).toEqual([]);
+    const violations = await page.evaluate(async () => {
+      const result = await window.axe.run(document, {
+        runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] },
+      });
+      return result.violations
+        .filter((item) => item.impact === "serious" || item.impact === "critical")
+        .map((item) => ({
+          id: item.id,
+          impact: item.impact,
+          help: item.help,
+          nodes: item.nodes.map((node) => ({ target: node.target, html: node.html, summary: node.failureSummary })),
+        }));
+    });
+    expect(violations, `${theme} theme accessibility violations`).toEqual([]);
+  }
 
   await context.setOffline(true);
   await page.reload();

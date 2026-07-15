@@ -93,8 +93,9 @@ import {
   type PersistNow,
   type PersistedStateAdapter,
 } from "../hooks/usePersistedState";
+import { MarketJourney } from "./MarketJourney";
 
-type Theme = "dawn" | "horizon" | "alchemy";
+type Theme = "dawn" | "horizon" | "alchemy" | "space";
 type Experience = "new" | "familiar" | "advanced";
 type View = "today" | "plan" | "practice" | "learn" | "mission" | "settings";
 
@@ -243,6 +244,14 @@ const EDUCATION_TOPICS: Array<{
     icon: LineChart,
   },
   {
+    title: "Time in the market",
+    kicker: "Days you cannot predict",
+    description: "See why missing only a few unusually strong days can materially change a long-run result—and why those days are unknowable in advance.",
+    source: "Fidelity research",
+    href: "https://www.fidelity.com/learning-center/trading-investing/should-i-sell-my-stocks-now",
+    icon: Clock,
+  },
+  {
     title: "Options basics",
     kicker: "Advanced lesson",
     description: "Learn the language of contracts, expiration, and the Greeks before considering real-world use.",
@@ -264,6 +273,7 @@ const GUIDED_QUESTIONS = [
   "How does compounding work here?",
   "What does inflation-adjusted mean?",
   "Why can returns vary so much?",
+  "Why can missing a few strong days matter?",
   "Explain diversification simply.",
 ];
 
@@ -625,6 +635,7 @@ function ThemePicker({ theme, onChange, compact = false }: { theme: Theme; onCha
     { id: "dawn", label: "Dawn", icon: Sun },
     { id: "horizon", label: "Horizon", icon: Moon },
     { id: "alchemy", label: "Alchemy", icon: FlaskConical },
+    { id: "space", label: "Space", icon: Rocket },
   ];
   return (
     <div className={compact ? "theme-picker compact" : "theme-picker"} role="group" aria-label="Choose a color theme">
@@ -826,6 +837,7 @@ function Onboarding({ data, setData }: { data: AppData; setData: (data: AppData)
                   ["dawn", "Dawn", "Warm, bright, grounded", Sun],
                   ["horizon", "Horizon", "Deep blue, calm, expansive", Moon],
                   ["alchemy", "Alchemy", "Charcoal, violet, luminous", FlaskConical],
+                  ["space", "Space", "Star glow, rocket fire, infinite", Rocket],
                 ] as Array<[Theme, string, string, LucideIcon]>).map(([id, title, copy, Icon]) => (
                   <button
                     key={id}
@@ -1267,6 +1279,12 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
           })}
         </div>
       </section>
+      <MarketJourney
+        startingBalanceCents={data.plan.startingCents}
+        weeklyContributionCents={data.plan.weeklyCents}
+        initialReturnBps={data.plan.returnBps}
+        experienceLevel={data.experience}
+      />
       {data.practice.transactions.length > 0 && <section className="panel activity-panel"><div className="panel-heading"><div><span className="section-kicker">Practice receipt</span><h2>Recent activity</h2></div><ShieldCheck size={20} /></div><div className="activity-list">{[...data.practice.transactions].reverse().slice(0, 5).map((item) => <div key={item.id}><span className={item.type === "deposit" ? "activity-icon deposit" : "activity-icon"}>{item.type === "deposit" ? <Plus size={16} /> : <FlaskConical size={16} />}</span><div><strong>{item.type === "deposit" ? "Weekly practice deposit" : `${item.symbol} simulated purchase`}</strong><small>{new Date(item.occurredAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</small></div><b>{item.type === "deposit" ? "+" : "−"}{formatMoney(item.type === "deposit" ? item.amountCents : item.spentCents)}</b></div>)}</div></section>}
     </div>
   );
@@ -1541,7 +1559,14 @@ export function MorrowwardApp() {
       themeMeta.dataset.morrowward = "true";
       document.head.append(themeMeta);
     }
-    themeMeta.content = data.theme === "dawn" ? "#f4efe4" : data.theme === "alchemy" ? "#17131f" : "#081421";
+    themeMeta.content = data.theme === "dawn"
+      ? "#f4efe4"
+      : data.theme === "alchemy"
+        ? "#17131f"
+        : data.theme === "space"
+          ? "#050608"
+          : "#081421";
+    document.body.style.backgroundColor = themeMeta.content;
   }, [data.theme]);
 
   useEffect(() => {

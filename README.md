@@ -2,7 +2,7 @@
 
 > **Small steps. A future you can see.**
 
-Morrowward is a local-first financial future simulator for adults who want to understand how time, consistent contributions, compounding, inflation, and risk interact. It combines a deterministic long-term projection engine, a no-real-money practice portfolio, a financial-literacy center, and a bounded GPT-5.6 educator.
+Morrowward is a local-first financial future simulator for adults who want to understand how time, consistent contributions, compounding, inflation, and risk interact. It combines a deterministic long-term projection engine, a synthetic Market Journey lab, a no-real-money practice portfolio, a financial-literacy center, and a bounded GPT-5.6 educator.
 
 Built for the OpenAI Build Week **Apps for Your Life** category.
 
@@ -22,6 +22,8 @@ Morrowward carries that lesson into financial literacy: a modest action repeated
 
 ![Morrowward Horizon theme dashboard showing the long-term illustration](docs/screenshots/today-horizon-desktop.png)
 
+![Morrowward Market Journey lab in the Space theme showing a synthetic late-decline path](docs/screenshots/market-journey-space-desktop.png)
+
 The mission page connects the product to the childhood story behind it, while the mobile experience keeps simulated investing clearly separated from real money.
 
 | Mission story | Mobile practice mode |
@@ -31,10 +33,13 @@ The mission page connects the product to the childhood story behind it, while th
 ## What works
 
 - Beginner-first onboarding with **New**, **Familiar**, and **Advanced** depth
-- **Dawn**, **Horizon**, and **Alchemy** visual themes
+- **Dawn**, **Horizon**, **Alchemy**, and **Space** visual themes
 - Editable age, horizon, starting balance, weekly contribution, return, and inflation inputs
 - 3%, 6%, and 9% default illustrative projection scenarios
 - Nominal value, inflation-adjusted value, contributions, and estimated growth
+- A deterministic Market Journey lab with 1-, 5-, 10-, and 20-year views, independent return and market-swing controls, and bull/bear/recovery learning paths
+- Separate market CAGR and contribution-aware money-weighted return, plus maximum drawdown and recovery context
+- A “days you cannot predict” comparison showing the same synthetic path with all days versus its strongest simulated days removed
 - Weekly habit streaks and milestones
 - Simulated cash and precise fractional practice purchases for VTI, BND, AAPL, TSLA, BTC, and ETH
 - Clearly labeled deterministic sample quotes—never live trading data
@@ -102,7 +107,7 @@ UPSTASH_REDIS_REST_TOKEN=your_token
 
 If both complete pairs are present, the `KV_REST_API_*` pair takes precedence. Briefs are validated before storage and after retrieval, keyed by UTC calendar date, and expire after 48 hours. Store operations time out after 1.5 seconds and fail closed to the in-process/deterministic brief, so Redis/KV is an optional durability enhancement rather than an availability dependency. Without a durable store, a generated AI brief is not guaranteed to survive a serverless cold start.
 
-The app owner plans to configure a dedicated prepaid OpenAI API project with auto-recharge disabled and a $10 budget. That dashboard setting is operational protection, not an absolute code-enforced cap because usage reporting can be delayed.
+The preview uses a dedicated prepaid OpenAI API project with auto-recharge disabled and a $10 project budget. That dashboard setting is operational protection, not an absolute code-enforced cap because usage reporting can be delayed.
 
 ## Repeatable sample demo
 
@@ -120,13 +125,13 @@ No live market conditions are needed. A clean browser begins with these local de
 | Inflation illustration | 3% |
 | Simulated starting cash | $1,000 |
 
-Complete onboarding, add the weekly simulated contribution, practice a fractional purchase, then ask: **“Why does starting earlier matter more than finding the perfect investment?”**
+Complete onboarding, add the weekly simulated contribution, practice a fractional purchase, explore the 10-year Market Journey, then ask: **“Why can missing a few strong days matter?”**
 
 ## Architecture
 
 ```text
 Browser / installed PWA
-├── deterministic projection + practice engine
+├── deterministic projection + synthetic market-path + practice engines
 ├── versioned IndexedDB state (plan, preferences, simulation only)
 ├── export / import / reset
 └── bounded API calls with minimal context
@@ -138,6 +143,10 @@ Browser / installed PWA
 ### Finance domain
 
 Money crosses the domain boundary as integer cents and rates as integer basis points. Fractional practice holdings use integer micro-units. Projection math converts an effective annual rate into an effective weekly rate, applies end-of-week contributions, rounds stored monetary values to cents, and checks JavaScript safe-integer limits.
+
+The Market Journey is a second deterministic teaching model, not a forecast or a replay of a named asset. It keeps the long-term return assumption separate from market bumpiness, generates a reproducible synthetic daily path with weekly contribution checkpoints, and does not force the path to finish at the selected assumption. The interface distinguishes the unitized market path’s CAGR from the contribution-aware money-weighted return and measures drawdown at visible weekly market checkpoints so deposits cannot hide a decline. A late-downturn path intentionally demonstrates that recovery is not guaranteed by the selected horizon.
+
+Historical adjusted-price replay is a roadmap item. It will require licensed or properly attributed source data, careful dividend/split handling, and an equally clear statement that past performance does not predict future results.
 
 The pure domain layer is shared by projections, practice transactions, portfolio valuation, habit milestones, persistence validation, and tests.
 
@@ -154,7 +163,7 @@ The server calls the OpenAI Responses API using:
 - `model: "gpt-5.6"`
 - `store: false`
 - strict `text.format` JSON Schema outputs
-- a 12-second timeout and bounded output tokens
+- a 25-second timeout and bounded output tokens
 - Zod validation after JSON parsing
 - prompt-injection checks and generated-content safety checks
 - minimal optional context: years, weekly contribution, illustrative return, and illustrative inflation
@@ -244,7 +253,7 @@ npm run test:e2e
 npm run build:vercel
 ```
 
-`npm run test:e2e` starts the built vinext production bundle on port 4189 and runs the golden path, offline PWA behavior, keyboard checks, and automated accessibility checks in both desktop Chrome and a Pixel 7 mobile viewport. Run `npm run build` first. Use `npm run test:e2e:list` to inspect the browser-test matrix without launching it.
+`npm run test:e2e` starts the built vinext production bundle on port 4189 and runs the golden path, Market Journey controls, all four themes, offline PWA behavior, keyboard checks, and automated accessibility checks in both desktop Chrome and a Pixel 7 mobile viewport. Run `npm run build` first. Use `npm run test:e2e:list` to inspect the browser-test matrix without launching it.
 
 The automated suite covers:
 
@@ -253,6 +262,7 @@ The automated suite covers:
 - Negative, fractional, and upper-bound illustrative rates
 - Inflation-adjusted values and safe-integer overflow
 - Projection invariants with property-based testing
+- Deterministic market regimes, DCA cash-flow consistency, drawdown/recovery behavior, independent volatility, and strongest-day counterfactuals
 - Simulated deposit, fractional purchase, overspending, valuation, and allocation
 - Weekly streak and milestone behavior
 - IndexedDB refresh, memory fallback, migration, malformed import, export/restore, and reset
@@ -274,6 +284,10 @@ Morrowward summarizes concepts in original language and links outward for canoni
 - [Investor.gov introduction to investing](https://www.investor.gov/introduction-investing)
 - [Investor.gov asset allocation and diversification](https://www.investor.gov/introduction-investing/getting-started/asset-allocation)
 - [Investor.gov dollar-cost averaging glossary](https://www.investor.gov/introduction-investing/investing-basics/glossary/dollar-cost-averaging)
+- [Investor.gov bulletin on performance claims and hypothetical results](https://www.investor.gov/introduction-investing/general-resources/news-alerts/alerts-bulletins/investor-bulletins-47)
+- [Fidelity: the impact of missing a few strong market days](https://www.fidelity.com/learning-center/trading-investing/should-i-sell-my-stocks-now)
+- [Charles Schwab: market volatility and missing top days](https://www.schwab.com/learn/story/ups-and-downs-stock-market-volatility)
+- [J.P. Morgan Asset Management: strong and weak market days can occur close together](https://am.jpmorgan.com/us/en/asset-management/adv/insights/retirement-insights/navigating-market-volatility-retirement-guide/)
 - [FINRA options basics](https://www.finra.org/investors/insights/options-z-basics-greeks)
 - [FINRA crypto assets overview](https://www.finra.org/investors/investing/investment-products/crypto-assets/overview)
 

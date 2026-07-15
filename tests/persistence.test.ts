@@ -38,6 +38,7 @@ describe("versioned state", () => {
   it("round-trips a validated export", () => {
     const state = createDefaultState(NOW);
     state.profile.experienceLevel = "advanced";
+    state.profile.theme = "space";
     const serialized = serializeStateExport(state, LATER);
     expect(parseStateExport(serialized, LATER)).toEqual(state);
   });

@@ -117,6 +117,12 @@ describe.sequential("Morrowward API contracts and safeguards", () => {
     expect(
       supportBoundaryFor("Build me a retirement portfolio with VTI and BND"),
     ).toBe("regulated-advice");
+    expect(supportBoundaryFor("Should I stay invested?")).toBe(
+      "regulated-advice",
+    );
+    expect(supportBoundaryFor("Should I stay in the market?")).toBe(
+      "regulated-advice",
+    );
     expect(
       supportBoundaryFor("Which asset mix fits my goals?"),
     ).toBe("regulated-advice");
@@ -156,6 +162,23 @@ describe.sequential("Morrowward API contracts and safeguards", () => {
         summary: "Use a balanced portfolio allocation.",
       }),
     ).toBe(true);
+    expect(
+      isGeneratedFinancialAdviceUnsafe({
+        ...base,
+        summary: "You should stay in the market no matter what happens.",
+      }),
+    ).toBe(true);
+  });
+
+  it("explains market-timing uncertainty without recommending a position", () => {
+    const explanation = fallbackExplanation(
+      EducationExplainRequestSchema.parse({
+        question: "Why can missing a few strong days matter?",
+      }),
+    );
+    expect(explanation.title).toMatch(/few days/i);
+    expect(explanation.summary).toMatch(/cannot be identified in advance/i);
+    expect(JSON.stringify(explanation)).not.toMatch(/you should stay invested/iu);
   });
 
   it("detects and redacts obvious sensitive identifiers", () => {

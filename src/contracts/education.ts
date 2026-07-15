@@ -13,6 +13,7 @@ export const EDUCATION_TOPICS = [
   "crypto",
   "options",
   "dollar-cost-averaging",
+  "market-timing",
 ] as const;
 
 function normalizePlainText(value: string): string {
