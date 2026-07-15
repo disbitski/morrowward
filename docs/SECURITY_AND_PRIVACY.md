@@ -9,6 +9,7 @@ Morrowward is an educational simulator. Its safest path is also its default path
 - Export files contain the same local simulation state and should be treated as private by the user.
 - If IndexedDB is unavailable, the app visibly reports that changes are session-only.
 - Market Journey is calculated in the browser from bounded plan values and ephemeral display controls. Its synthetic path, drawdown, CAGR, money-weighted return, and strongest-day comparison do not call an external market-data service or leave the device.
+- Practice quote/history requests contain only an allowlisted symbol and optional fixed `history=1y` selector. They never include the local plan, simulated cash, holdings, or transaction history.
 - The educator receives only a sanitized question, experience level, and four bounded illustrative values: years remaining, weekly contribution, return, and inflation. It never receives starting balances or practice holdings.
 
 ## AI boundary
@@ -28,6 +29,9 @@ Morrowward is an educational simulator. Its safest path is also its default path
 - Vercel and vinext/worker targets return anti-framing, MIME-sniffing, referrer, permissions, opener, and Content Security Policy headers.
 - Daily AI briefs can use an optional date-keyed Vercel KV or Upstash REST cache. Configure either the complete `KV_REST_API_URL` + `KV_REST_API_TOKEN` pair or the complete `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` pair; the KV pair takes precedence when both are complete. Saved briefs are schema-validated, expire after 48 hours, and store operations time out after 1.5 seconds. Missing, slow, unavailable, or malformed store data degrades to the labeled in-process/deterministic brief.
 - Vercel Cron uses authenticated `GET /api/v1/briefs/generate` with `CRON_SECRET`. Manual generation uses an authenticated JSON `POST` and may use either `CRON_SECRET` or `ADMIN_API_TOKEN`.
+- Optional Twelve Data access fails closed unless a server-only key, declared `live`/`delayed` mode, and `MARKET_DATA_PUBLIC_DISPLAY_ALLOWED=true` are all present. The last value is an operator attestation that appropriate external-display rights have been obtained. Keys are sent in an authorization header, never a URL or browser response.
+- Quote calls use an eleven-symbol allowlist, four-second upstream timeout, five-minute quote cache, bounded one-symbol history, and synthetic per-symbol fallback. Source, freshness, change basis, and sample/provider mode remain in the validated response.
+- xAI is not a runtime product dependency. Local media scripts require both `XAI_API_KEY` and an explicit `--confirm-xai-upload` flag before prompts, narration, or a selected image can leave the workspace. Raw candidates are ignored by Git, and no personal financial data is part of the media campaign.
 
 ## Dependency status at the feature-complete milestone
 
@@ -45,9 +49,10 @@ Before public launch:
 4. Set a long random `CRON_SECRET` before enabling the daily Vercel cron.
 5. Configure KV/Redis if AI-generated briefs must persist across serverless instances.
 6. Enable a platform-level request/spend circuit breaker for unexpected public traffic.
-7. Run `npm audit --omit=dev`, both production builds, the full unit/integration suite, and `npm run test:e2e` for the Playwright desktop/mobile suite.
-8. Confirm no secrets or private reference files exist in the Git history.
-9. Keep the repository and preview deployments private through July 19, 2026; make both the production site and full repository history public on July 20 for judging.
+7. Leave the external market provider disabled unless the configured account has the necessary public-display and exchange rights; verify mode and freshness labels in production.
+8. Run `npm audit --omit=dev`, both production builds, the full unit/integration suite, and `npm run test:e2e` for the Playwright desktop/mobile suite.
+9. Confirm no secrets, raw media candidates, or private reference files exist in the Git history.
+10. Keep the repository and preview deployments private through July 19, 2026; make both the production site and full repository history public on July 20 for judging.
 
 ## Reporting
 

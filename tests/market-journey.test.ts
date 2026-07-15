@@ -234,6 +234,22 @@ describe("deterministic educational market journey", () => {
     ).toBe(true);
   });
 
+  it("never creates fractional units without debiting a one-cent contribution", () => {
+    const result = simulateMarketJourney({
+      ...BASE_INPUT,
+      years: 1,
+      startingBalanceCents: 0,
+      weeklyContributionCents: 1,
+      annualReturnBps: 1,
+    });
+
+    expect(result.points.slice(1).every((point) => point.cashCents === 0)).toBe(
+      true,
+    );
+    expect(result.points.at(-1)?.cumulativeContributionsCents).toBe(52);
+    expect(result.points.at(-1)?.unitsMicro).toBeGreaterThan(0);
+  });
+
   it("never creates fractional units without debiting low-cent cash", () => {
     const result = simulateMarketJourney({
       ...BASE_INPUT,

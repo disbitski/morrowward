@@ -80,6 +80,34 @@ The Market Journey and Space work landed in milestone commit `f744de5`. A live p
 
 Planned milestone: themes, onboarding, projection engine, Horizon Reveal, local state, dashboard, disclosures, tests, and first protected preview.
 
+### Hands-on feedback expanded Practice into an explainable market sandbox
+
+Dave's next product session produced four concrete questions: can the final URL stay stable, can Practice refresh recent prices, can the universe include five additional public companies, and can every asset explain what it is, its historical context, category, and risk? He also proposed optional motivational media made by a specialized Grok workflow while Codex remained the coordinating system.
+
+Codex split the pass into bounded market-contract, UI, media-pipeline, and integration/review workstreams, then consolidated them in the primary GPT-5.6 Sol session. The implementation:
+
+- Expanded Practice from six to eleven assets: VTI, BND, AAPL, TSLA, SPCX, NVDA, MRVL, MU, AVGO, BTC, and ETH.
+- Verified SPCX against SpaceX's June 2026 investor-relations release and SEC filing, recorded the June 12 public-trading start, and added a symbol-identity guard because an unrelated ETF previously used SPCX before changing to SPCK.
+- Migrated saved data from schema v1 to v2 while preserving every existing cash balance, holding, and transaction and adding the five new holdings at zero.
+- Added a refreshable educational-price panel whose UI shows source, observation time, freshness, change basis, methodology, and per-symbol fallback status; the validated API also carries the declared market-data mode.
+- Added keyboard-accessible asset-detail dialogs with focus return, plain-language identity/category/risk context, on-demand bounded one-year charts, source links, and limited-history labels.
+- Kept the provider optional. The server calls Twelve Data only when a key, licensed `live`/`delayed` mode, and explicit public-display-rights attestation are all present. A key alone is insufficient. The public demo therefore remains useful with deterministic synthetic values.
+- Made synthetic history visually and semantically explicit: its heading says **synthetic sample path**, the 1-year change says **Sample 1Y**, and the disclosure says it is not actual historical performance.
+
+The first desktop/mobile browser run found a near-threshold Dawn contrast defect in the selected-asset button. Codex changed the semantic foreground token and reran the complete four-theme accessibility matrix; all four desktop/mobile Playwright journeys then passed, including refresh, all eleven asset cards, SPCX details, the synthetic-history disclosure, fractional purchase, offline reload, and automated serious/critical WCAG checks.
+
+### Fresh specialist-media pipeline, with an explicit consent stop
+
+The Grok workflow was implemented from scratch inside `scripts/grok/`; no earlier script, prompt file, or asset was copied. It validates a campaign, requests four 2K candidates, polls image-to-video or text-to-video jobs, creates narration with a built-in synthetic voice, writes WebVTT captions, composes with ffmpeg, validates MIME signatures and transcript drift, hashes outputs, and keeps raw candidates in ignored `.media-review/` storage.
+
+Codex added a deliberate `--confirm-xai-upload` gate because running the scripts sends Morrowward prompts/narration—and later a selected generated still—to the third-party xAI API. No media request was made before Dave's explicit informed approval. The proposed Marcus Aurelius greeting is labeled an AI-generated historical interpretation, uses no cloned voice, does not autoplay, and attributes its short quotation to the public-domain George Long translation of *Meditations* 5.1.
+
+### Stable deployment decision
+
+Vercel's changing commit preview URLs are expected: each identifies an immutable deployment. Morrowward will publish the stable production alias `https://morrowward.vercel.app` on July 20 and use that address in the README and Devpost. Future production deployments can change behind the same public URL; protected previews remain private during the build.
+
+This pass reached 122 deterministic unit/integration tests, clean ESLint and TypeScript checks, both production builds, and six passing Playwright journeys across desktop Chrome and Pixel 7. The browser suite now covers refresh and history failures, Escape/backdrop closing, and trigger-focus restoration in addition to the golden path and offline/accessibility matrix. A sandbox-only Turbopack port restriction was rerun in the approved local build environment and compiled successfully; it was not a product-code failure.
+
 ## July 16 — Practice, education, and AI
 
 Planned milestone: weekly simulation, practice portfolio, Education Center, GPT-5.6 educator, daily brief, provenance, and AI safety tests.

@@ -46,8 +46,22 @@ test("golden path stays educational, local, and fully simulated", async ({ page 
 
   await openView(page, "practice");
   await expect(page.getByRole("heading", { name: /Learn the motion/i })).toBeVisible();
+  await expect(page.getByTestId(/^practice-market-asset-/)).toHaveCount(11);
+  await page.getByTestId("refresh-practice-prices").click();
+  await expect(page.getByTestId("refresh-practice-prices")).toBeEnabled();
+  await page.getByTestId("practice-asset-info-SPCX").click();
+  const assetDetail = page.getByTestId("practice-asset-detail");
+  await expect(assetDetail).toBeVisible();
+  const detailWidth = await assetDetail.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(detailWidth.scrollWidth).toBeLessThanOrEqual(detailWidth.clientWidth);
+  await expect(page.getByRole("heading", { name: /Space Exploration Technologies/i })).toBeVisible();
+  await expect(page.getByText(/Synthetic teaching data—not actual historical performance/i)).toBeVisible();
+  await page.getByRole("button", { name: /Close SPCX details/i }).click();
   await page.getByTestId("practice-deposit").click();
-  await page.getByTestId("asset-TSLA").click();
+  await page.getByTestId("select-practice-asset-TSLA").click();
   await page.getByTestId("practice-buy-amount").fill("10");
   await page.getByTestId("practice-buy").click();
   await expect(page.getByText(/TSLA simulated purchase/i)).toBeVisible();
@@ -93,6 +107,45 @@ test("golden path stays educational, local, and fully simulated", async ({ page 
   await page.getByTestId("settings-reset").click();
   await page.getByTestId("settings-reset").click();
   await expect(page.getByRole("heading", { name: /Small steps/i })).toBeVisible();
+});
+
+test("practice failures stay labeled and the asset dialog restores focus", async ({ page }) => {
+  let historyRequests = 0;
+  await page.route("**/api/v1/quotes**", async (route) => {
+    if (route.request().url().includes("history=1y")) historyRequests += 1;
+    await route.fulfill({
+      status: 503,
+      contentType: "application/json",
+      body: JSON.stringify({ error: "deliberate browser-test outage" }),
+    });
+  });
+
+  await onboard(page);
+  await openView(page, "practice");
+  await expect(page.getByRole("alert").filter({ hasText: /Prices could not be refreshed/i })).toBeVisible();
+  await expect(page.getByTestId(/^practice-market-asset-/)).toHaveCount(11);
+  await expect(page.getByText("Sample", { exact: true }).first()).toBeVisible();
+
+  const detailTrigger = page.getByTestId("practice-asset-info-SPCX");
+  await detailTrigger.click();
+  const detail = page.getByTestId("practice-asset-detail");
+  await expect(detail).toBeVisible();
+  await expect(page.getByRole("button", { name: /Close SPCX details/i })).toBeFocused();
+  await expect(page.getByText(/Historical context could not be loaded/i)).toBeVisible();
+  const beforeRetry = historyRequests;
+  await page.getByRole("button", { name: /Try history again/i }).click();
+  await expect.poll(() => historyRequests).toBeGreaterThan(beforeRetry);
+  await expect(page.getByText(/Historical context could not be loaded/i)).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(detail).not.toBeVisible();
+  await expect(detailTrigger).toBeFocused();
+
+  await detailTrigger.click();
+  await expect(detail).toBeVisible();
+  await page.mouse.click(5, 5);
+  await expect(detail).not.toBeVisible();
+  await expect(detailTrigger).toBeFocused();
 });
 
 test("PWA reloads offline and has no serious automated accessibility violations", async ({ context, page }) => {

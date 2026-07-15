@@ -11,7 +11,10 @@ import {
   fallbackExplanation,
 } from "../src/server/education";
 import { getCachedDailyBrief, resetBriefCacheForTests } from "../src/server/briefs";
-import { parseQuoteSymbols } from "../src/server/quotes";
+import {
+  parseQuoteSymbols,
+  resetQuoteCacheForTests,
+} from "../src/server/quotes";
 import {
   hasPromptInjection,
   isGeneratedFinancialAdviceUnsafe,
@@ -43,6 +46,7 @@ describe.sequential("Morrowward API contracts and safeguards", () => {
   beforeEach(() => {
     setRateLimiterForTests();
     resetBriefCacheForTests();
+    resetQuoteCacheForTests();
     vi.stubEnv("OPENAI_API_KEY", "");
     vi.stubEnv("CRON_SECRET", "");
     vi.stubEnv("ADMIN_API_TOKEN", "");
@@ -50,6 +54,9 @@ describe.sequential("Morrowward API contracts and safeguards", () => {
     vi.stubEnv("KV_REST_API_TOKEN", "");
     vi.stubEnv("UPSTASH_REDIS_REST_URL", "");
     vi.stubEnv("UPSTASH_REDIS_REST_TOKEN", "");
+    vi.stubEnv("TWELVE_DATA_API_KEY", "");
+    vi.stubEnv("TWELVE_DATA_DISPLAY_MODE", "");
+    vi.stubEnv("MARKET_DATA_PUBLIC_DISPLAY_ALLOWED", "");
   });
 
   afterEach(() => {
@@ -492,7 +499,7 @@ describe.sequential("Morrowward API contracts and safeguards", () => {
     expect(body.answer).toContain("cannot tell you what to buy");
   });
 
-  it("enforces the six-symbol quote allowlist and returns provenance", async () => {
+  it("enforces the bounded quote allowlist and returns provenance", async () => {
     expect(parseQuoteSymbols("vti,BTC")).toEqual({
       ok: true,
       symbols: ["VTI", "BTC"],
@@ -510,8 +517,31 @@ describe.sequential("Morrowward API contracts and safeguards", () => {
     ]);
     expect(body.allowlist).toEqual(QUOTE_SYMBOLS);
     expect(body.quotes[0]).toMatchObject({
-      freshness: { status: "delayed-sample", isLive: false },
+      mode: "sample",
+      freshness: { status: "sample", isLive: false },
       source: { kind: "deterministic-educational-sample" },
+    });
+  });
+
+  it("bounds one-year history to a single allowlisted asset", async () => {
+    const rejected = await quotesRoute(
+      new Request(
+        "https://morrowward.test/api/v1/quotes?symbols=VTI,BND&history=1y",
+      ),
+    );
+    expect(rejected.status).toBe(400);
+
+    const response = await quotesRoute(
+      new Request(
+        "https://morrowward.test/api/v1/quotes?symbols=SPCX&history=1y",
+      ),
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({
+      quotes: [{
+        symbol: "SPCX",
+        history: { range: "1y", limited: true, mode: "sample" },
+      }],
     });
   });
 
@@ -637,7 +667,13 @@ describe.sequential("Morrowward API contracts and safeguards", () => {
     expect(JSON.parse(raw)).toMatchObject({
       status: "ok",
       ai: { configured: true, model: "gpt-5.6" },
-      quotes: { mode: "deterministic-delayed-sample", live: false },
+      quotes: {
+        provider: null,
+        configured: false,
+        mode: "sample",
+        publicDisplayAllowed: false,
+        fallbackAvailable: true,
+      },
     });
   });
 });

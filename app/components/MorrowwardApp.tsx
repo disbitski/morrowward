@@ -5,13 +5,11 @@ import {
   ArrowRight,
   Bitcoin,
   BookOpen,
-  Building,
   Calendar,
   Check,
   ChevronRight,
   CircleAlert,
   Clock,
-  Coins,
   Compass,
   Database,
   Download,
@@ -45,7 +43,6 @@ import {
   UserRound,
   WalletCards,
   X,
-  Zap,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -59,6 +56,7 @@ import {
 } from "react";
 import {
   MICRO_UNITS_PER_ASSET,
+  PRACTICE_ASSETS,
   buySimulatedAsset,
   calculateHabitProgress,
   calculateProjection,
@@ -86,7 +84,10 @@ import {
   validateState,
   type MorrowwardState,
 } from "../../src/data";
-import { QuotesResponseSchema } from "../../src/contracts";
+import {
+  QuotesResponseSchema,
+  type EducationalQuote as MarketEducationalQuote,
+} from "../../src/contracts";
 import {
   usePersistedState,
   type PersistenceStatus,
@@ -94,6 +95,11 @@ import {
   type PersistedStateAdapter,
 } from "../hooks/usePersistedState";
 import { MarketJourney } from "./MarketJourney";
+import {
+  PracticeMarketPanel,
+  type PracticeMarketAsset,
+  type PracticeRefreshStatus,
+} from "./PracticeMarketPanel";
 
 type Theme = "dawn" | "horizon" | "alchemy" | "space";
 type Experience = "new" | "familiar" | "advanced";
@@ -109,7 +115,7 @@ type Plan = {
 };
 
 export type AppData = {
-  schemaVersion: 1;
+  schemaVersion: typeof CURRENT_STATE_VERSION;
   onboarded: boolean;
   experience: Experience;
   theme: Theme;
@@ -165,9 +171,11 @@ type Asset = {
   symbol: PracticeAssetSymbol;
   name: string;
   kind: "ETF" | "Stock" | "Crypto";
-  icon: LucideIcon;
-  note: string;
 };
+
+type MarketQuoteMap = Partial<
+  Record<PracticeAssetSymbol, MarketEducationalQuote>
+>;
 
 const STORAGE_KEY = "morrowward.app.v1";
 
@@ -175,14 +183,16 @@ function samplePriceCents(symbol: PracticeAssetSymbol): number {
   return Math.round(EDUCATIONAL_QUOTES[symbol].price * 100);
 }
 
-const ASSETS: Asset[] = [
-  { symbol: "VTI", name: "Total US Market", kind: "ETF", icon: Landmark, note: "Broad-market ETF" },
-  { symbol: "BND", name: "Total Bond Market", kind: "ETF", icon: ShieldCheck, note: "Broad bond ETF" },
-  { symbol: "AAPL", name: "Apple", kind: "Stock", icon: Building, note: "Individual company" },
-  { symbol: "TSLA", name: "Tesla", kind: "Stock", icon: Zap, note: "Individual company" },
-  { symbol: "BTC", name: "Bitcoin", kind: "Crypto", icon: Bitcoin, note: "Crypto asset" },
-  { symbol: "ETH", name: "Ethereum", kind: "Crypto", icon: Coins, note: "Crypto asset" },
-];
+const ASSETS: Asset[] = PRACTICE_ASSETS.map((asset) => ({
+  symbol: asset.symbol,
+  name: asset.name,
+  kind:
+    asset.kind === "etf"
+      ? "ETF"
+      : asset.kind === "stock"
+        ? "Stock"
+        : "Crypto",
+}));
 
 const FALLBACK_BRIEF: Brief = {
   headline: "A calm plan can outlast a noisy market",
@@ -290,6 +300,18 @@ const DEMO_QUOTES = Object.fromEntries(
   ]),
 ) as EducationalQuoteMap;
 
+const DEMO_MARKET_QUOTES = { ...EDUCATIONAL_QUOTES } as MarketQuoteMap;
+
+export function quotesResponseToMarketQuotes(
+  payload: unknown,
+): MarketQuoteMap | null {
+  const parsed = QuotesResponseSchema.safeParse(payload);
+  if (!parsed.success) return null;
+  return Object.fromEntries(
+    parsed.data.quotes.map((quote) => [quote.symbol, quote]),
+  ) as MarketQuoteMap;
+}
+
 export function quotesResponseToMap(payload: unknown): EducationalQuoteMap | null {
   const parsed = QuotesResponseSchema.safeParse(payload);
   if (!parsed.success) return null;
@@ -299,18 +321,114 @@ export function quotesResponseToMap(payload: unknown): EducationalQuoteMap | nul
       {
         symbol: quote.symbol,
         priceCents: Math.round(quote.price * 100),
-        asOf: quote.asOf,
+        asOf: quote.observedAt,
         source: quote.source.name,
-        status: "delayed" as const,
+        status:
+          quote.freshness.isLive || quote.freshness.status === "fresh"
+            ? ("fresh" as const)
+            : ("delayed" as const),
       },
     ]),
   ) as EducationalQuoteMap;
 }
 
+function quoteChangeMethod(quote: MarketEducationalQuote): string {
+  if (quote.mode === "sample") {
+    return "A fixed synthetic teaching value bundled with Morrowward; it is not a market observation.";
+  }
+  if (quote.changeBasis === "rolling-24h") {
+    return "The displayed short-term change uses the provider's rolling 24-hour comparison.";
+  }
+  if (quote.changeBasis === "previous-close") {
+    return "The displayed short-term change compares the observation with the previous market close.";
+  }
+  return "The provider did not supply a usable short-term comparison.";
+}
+
+export function marketQuotesToPracticeAssets(
+  quotes: MarketQuoteMap,
+): PracticeMarketAsset[] {
+  return PRACTICE_ASSETS.map((asset) => {
+    const quote = quotes[asset.symbol] ?? EDUCATIONAL_QUOTES[asset.symbol];
+    const history = quote.history;
+    const syntheticHistory = history?.mode === "sample";
+    const historyMethodology = history
+      ? syntheticHistory
+        ? "A deterministic Morrowward teaching path. It is not a replay of this asset's market history."
+        : `Adjusted closing-price observations from ${history.source.name}; dividends and investor cash flows are not modeled as a total return.`
+      : undefined;
+    const freshness = quote.freshness.isLive
+      ? ("live" as const)
+      : quote.freshness.status;
+    const publicTradingNote = quote.profile.publicTradingSince
+      ? ` Public trading began ${new Date(`${quote.profile.publicTradingSince}T00:00:00.000Z`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })}, so available history is limited.`
+      : "";
+    const whatItIs =
+      asset.kind === "etf"
+        ? `${quote.profile.summary} An ETF pools assets and trades in shares; owning one is not the same as owning every holding directly.`
+        : asset.kind === "stock"
+          ? `${quote.profile.summary} A share represents fractional ownership in one public company.${publicTradingNote}`
+          : `${quote.profile.summary} It is not a company share or a bank deposit, and its market can trade around the clock.`;
+
+    return {
+      symbol: asset.symbol,
+      name: quote.name,
+      category: quote.profile.category,
+      shortDescription: `${quote.profile.summary}${publicTradingNote}`,
+      whatItIs,
+      educationalRisk: {
+        level: quote.profile.educationalRisk,
+        summary: quote.profile.summary,
+        methodology:
+          "A qualitative teaching label based on diversification, concentration, and typical price variability—not a suitability score or complete risk analysis.",
+      },
+      quote: {
+        priceCents: Math.round(quote.price * 100),
+        change1dBps:
+          quote.changePercent === null
+            ? null
+            : Math.round(quote.changePercent * 100),
+        change1dLabel:
+          quote.mode === "sample"
+            ? "Sample 1D"
+            : quote.changeBasis === "rolling-24h"
+              ? "24H"
+              : "1D",
+        change1yBps: history
+          ? Math.round(history.priceChangePercent * 100)
+          : null,
+        change1yLabel: syntheticHistory ? "Sample 1Y" : "1Y",
+        asOf: quote.observedAt,
+        sourceName: quote.source.name,
+        sourceUrl: quote.source.url,
+        freshness,
+        freshnessNote: quote.freshness.label,
+        methodology: quoteChangeMethod(quote),
+      },
+      history: history
+        ? {
+            periodLabel: "1-year",
+            kind: syntheticHistory ? "synthetic" : "historical",
+            limited: history.limited,
+            points: history.points.map((point) => ({
+              timestamp: `${point.date}T00:00:00.000Z`,
+              priceCents: Math.round(point.close * 100),
+            })),
+            sourceName: history.source.name,
+            sourceUrl: history.source.url,
+            asOf: `${history.endDate}T00:00:00.000Z`,
+            methodology: historyMethodology,
+          }
+        : null,
+      selectable: true,
+    };
+  });
+}
+
 export function stateToAppData(input: MorrowwardState): AppData {
   const state = validateState(input);
   return {
-    schemaVersion: 1,
+    schemaVersion: CURRENT_STATE_VERSION,
     onboarded: state.profile.onboardingComplete,
     experience: state.profile.experienceLevel,
     theme: state.profile.theme,
@@ -1159,30 +1277,101 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
   const [buyCents, setBuyCents] = useState(Math.max(100, Math.min(data.plan.weeklyCents, data.practice.cashCents)));
   const [message, setMessage] = useState("");
   const [quotes, setQuotes] = useState<EducationalQuoteMap>(DEMO_QUOTES);
-  const [quoteSource, setQuoteSource] = useState("Bundled deterministic delayed sample");
+  const [marketQuotes, setMarketQuotes] =
+    useState<MarketQuoteMap>(DEMO_MARKET_QUOTES);
+  const [refreshStatus, setRefreshStatus] =
+    useState<PracticeRefreshStatus>("idle");
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<string | null>(null);
   const selectedAsset = ASSETS.find((asset) => asset.symbol === selected) ?? ASSETS[0];
   const selectedQuote = quotes[selected] ?? DEMO_QUOTES[selected]!;
+  const practiceMarketAssets = useMemo(
+    () => marketQuotesToPracticeAssets(marketQuotes),
+    [marketQuotes],
+  );
+  const quoteSource = useMemo(() => {
+    const activeQuotes = Object.values(marketQuotes);
+    const sources = new Set(activeQuotes.map((quote) => quote.source.name));
+    const modes = new Set(activeQuotes.map((quote) => quote.mode));
+    if (modes.size === 1 && modes.has("sample")) {
+      return "Synthetic sample values are active; they are not market observations";
+    }
+    if (sources.size === 1) {
+      return `${[...sources][0]} educational observations are active; freshness is shown on every asset`;
+    }
+    return "Mixed provider and synthetic fallback values are active; each asset shows its own provenance";
+  }, [marketQuotes]);
   const habit = practiceStatus(data);
   const valuation = valuePracticePortfolio(data.practice, quotes);
   const holdingsValue = valuation.investedValueCents;
 
-  useEffect(() => {
-    const controller = new AbortController();
-    void fetch("/api/v1/quotes", {
-      headers: { Accept: "application/json" },
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Quotes unavailable");
-        const mapped = quotesResponseToMap(await response.json());
-        if (!mapped) throw new Error("Quotes invalid");
-        setQuotes({ ...DEMO_QUOTES, ...mapped });
-        const first = Object.values(mapped)[0];
-        setQuoteSource(first ? `${first.source} · as of ${new Date(first.asOf).toLocaleString()}` : "Deterministic delayed sample");
-      })
-      .catch(() => undefined);
-    return () => controller.abort();
+  const refreshPrices = useCallback(async () => {
+    setRefreshStatus("loading");
+    setRefreshError(null);
+    try {
+      const response = await fetch("/api/v1/quotes", {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error("Quotes unavailable");
+      const payload: unknown = await response.json();
+      const parsed = QuotesResponseSchema.safeParse(payload);
+      const market = quotesResponseToMarketQuotes(payload);
+      const valuationQuotes = quotesResponseToMap(payload);
+      if (!parsed.success || !market || !valuationQuotes) {
+        throw new Error("Quotes invalid");
+      }
+      setMarketQuotes((current) => {
+        const next = { ...DEMO_MARKET_QUOTES, ...market };
+        for (const symbol of Object.keys(next) as PracticeAssetSymbol[]) {
+          const previous = current[symbol];
+          const incoming = next[symbol];
+          if (
+            previous?.history &&
+            incoming &&
+            !incoming.history &&
+            previous.mode === incoming.mode &&
+            previous.source.kind === incoming.source.kind
+          ) {
+            next[symbol] = { ...incoming, history: previous.history };
+          }
+        }
+        return next;
+      });
+      setQuotes({ ...DEMO_QUOTES, ...valuationQuotes });
+      setLastRefreshedAt(parsed.data.generatedAt);
+      setRefreshStatus("success");
+    } catch {
+      setRefreshError(
+        "Saved practice values remain available. No trading decision should rely on this page.",
+      );
+      setRefreshStatus("error");
+    }
   }, []);
+
+  const loadOneYearHistory = useCallback(async (rawSymbol: string) => {
+    const asset = ASSETS.find((candidate) => candidate.symbol === rawSymbol);
+    if (!asset) throw new Error("Unknown practice asset");
+    const response = await fetch(
+      `/api/v1/quotes?symbols=${encodeURIComponent(asset.symbol)}&history=1y`,
+      { headers: { Accept: "application/json" }, cache: "no-store" },
+    );
+    if (!response.ok) throw new Error("History unavailable");
+    const payload: unknown = await response.json();
+    const market = quotesResponseToMarketQuotes(payload);
+    const valuationQuotes = quotesResponseToMap(payload);
+    const quote = market?.[asset.symbol];
+    if (!quote?.history || !valuationQuotes) {
+      throw new Error("History invalid");
+    }
+    setMarketQuotes((current) => ({ ...current, [asset.symbol]: quote }));
+    setQuotes((current) => ({ ...current, ...valuationQuotes }));
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => void refreshPrices(), 0);
+    return () => window.clearTimeout(timer);
+  }, [refreshPrices]);
 
   const deposit = () => {
     if (habit.weeklyAdded) return;
@@ -1237,12 +1426,27 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
 
   return (
     <div className="view-stack">
-      <div className="page-intro"><div><span className="section-kicker">Practice mode</span><h1>Learn the motion before risking money.</h1><p>Every dollar, share, price, and result on this page is simulated.</p></div><span className="simulation-badge"><FlaskConical size={16} /> 100% simulation</span></div>
+      <div className="page-intro"><div><span className="section-kicker">Practice mode</span><h1>Learn the motion before risking money.</h1><p>Cash, holdings, purchases, and results are simulated. Price inputs are educational and always labeled as provider observations or synthetic samples.</p></div><span className="simulation-badge"><FlaskConical size={16} /> 100% simulation</span></div>
       <section className="practice-summary">
         <article><span><WalletCards size={19} /> Simulated cash</span><strong>{formatMoney(data.practice.cashCents)}</strong><small>available to practice</small></article>
-        <article><span><LineChart size={19} /> Practice holdings</span><strong>{formatMoney(Math.round(holdingsValue))}</strong><small>using illustrative prices</small></article>
+        <article><span><LineChart size={19} /> Practice holdings</span><strong>{formatMoney(Math.round(holdingsValue))}</strong><small>using labeled educational prices</small></article>
         <article><span><Leaf size={19} /> Learning streak</span><strong>{habit.streak} weeks</strong><small>consistency over outcomes</small></article>
       </section>
+      <PracticeMarketPanel
+        assets={practiceMarketAssets}
+        selectedSymbol={selected}
+        onSelect={(symbol) => {
+          const asset = ASSETS.find((candidate) => candidate.symbol === symbol);
+          if (asset) setSelected(asset.symbol);
+        }}
+        onRefresh={refreshPrices}
+        onRequestHistory={loadOneYearHistory}
+        refreshStatus={refreshStatus}
+        refreshError={refreshError}
+        lastRefreshedAt={lastRefreshedAt}
+        title="Explore eleven practice assets"
+        description="Compare broad funds, public companies, and crypto assets. Refresh checks the configured educational source; every value keeps its own freshness and provenance label. Inclusion is not endorsement."
+      />
       <section className="practice-layout">
         <article className="panel habit-flow">
           <div className="panel-heading"><div><span className="section-kicker">This week’s habit</span><h2>Three small moves</h2></div><span className="step-count">{habit.purchaseDone ? "3" : habit.weeklyAdded ? "2" : "1"} / 3</span></div>
@@ -1266,18 +1470,8 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
           ) : (
             <div className="empty-holdings"><span><Leaf size={25} /></span><h3>Your first practice position will appear here.</h3><p>No pressure. The goal is to understand the steps.</p></div>
           )}
-          <div className="price-note"><Clock size={15} aria-hidden="true" /><span><strong>Illustrative prices</strong>{quoteSource}. These are not live trading quotes and should never inform a real trade.</span></div>
+          <div className="price-note"><Clock size={15} aria-hidden="true" /><span><strong>Educational price inputs</strong>{quoteSource}. These values power only this simulated portfolio and should never be used to place a real trade.</span></div>
         </aside>
-      </section>
-      <section aria-labelledby="asset-title">
-        <div className="section-heading"><div><span className="section-kicker">Six ways to learn</span><h2 id="asset-title">Choose a practice asset</h2></div><p>These examples span broad funds, individual companies, and crypto assets. Inclusion is not endorsement.</p></div>
-        <div className="asset-grid">
-          {ASSETS.map((asset) => {
-            const Icon = asset.icon;
-            const quote = quotes[asset.symbol] ?? DEMO_QUOTES[asset.symbol]!;
-            return <button data-testid={`asset-${asset.symbol}`} type="button" key={asset.symbol} className={selected === asset.symbol ? "asset-card selected" : "asset-card"} onClick={() => setSelected(asset.symbol)} aria-pressed={selected === asset.symbol}><span className="asset-icon"><Icon size={20} aria-hidden="true" /></span><span><strong>{asset.symbol}</strong><small>{asset.name}</small></span><span><b>{formatMoney(quote.priceCents)}</b><small>{asset.note}</small></span><i><Check size={14} aria-hidden="true" /></i></button>;
-          })}
-        </div>
       </section>
       <MarketJourney
         startingBalanceCents={data.plan.startingCents}

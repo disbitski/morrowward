@@ -1,35 +1,108 @@
 import { describe, expect, it } from "vitest";
 import {
+  marketQuotesToPracticeAssets,
   parseBrief,
   parseEducatorReply,
   quotesResponseToMap,
+  quotesResponseToMarketQuotes,
 } from "../app/components/MorrowwardApp";
 
 describe("UI API adapters", () => {
   it("maps a validated educational quote response into integer cents", () => {
-    const mapped = quotesResponseToMap({
+    const payload = {
       quotes: [{
         symbol: "VTI",
         name: "Vanguard Total Stock Market ETF",
         assetType: "etf",
         currency: "USD",
         price: 287.345,
+        change: 1.25,
         changePercent: 0,
+        changeBasis: "previous-close",
         asOf: "2026-07-14T20:00:00.000Z",
-        source: { name: "Morrowward delayed educational sample", kind: "deterministic-educational-sample" },
-        freshness: { status: "delayed-sample", label: "Delayed educational sample", isLive: false },
+        observedAt: "2026-07-14T20:00:00.000Z",
+        observedAtKind: "sample",
+        mode: "sample",
+        marketStatus: "unknown",
+        source: {
+          name: "Morrowward synthetic educational sample",
+          kind: "deterministic-educational-sample",
+          url: "https://github.com/disbitski/morrowward",
+        },
+        freshness: {
+          status: "sample",
+          label: "Synthetic educational sample",
+          isLive: false,
+          ageSeconds: null,
+        },
+        profile: {
+          category: "Broad U.S. equity ETF",
+          educationalRisk: "medium",
+          summary: "A broad educational fund example.",
+          learnMoreUrl: "https://investor.vanguard.com/investment-products/etfs/profile/vti",
+        },
+        history: {
+          range: "1y",
+          interval: "1week",
+          points: [
+            { date: "2025-07-14", close: 250 },
+            { date: "2026-07-14", close: 287.345 },
+          ],
+          priceChangePercent: 14.938,
+          startDate: "2025-07-14",
+          endDate: "2026-07-14",
+          limited: false,
+          mode: "sample",
+          source: {
+            name: "Morrowward synthetic educational sample",
+            kind: "deterministic-educational-sample",
+            url: "https://github.com/disbitski/morrowward",
+          },
+        },
       }],
       allowlist: ["VTI"],
       generatedAt: "2026-07-15T12:00:00.000Z",
+      provider: {
+        name: null,
+        configured: false,
+        status: "not-configured",
+        succeededSymbols: [],
+        fallbackSymbols: ["VTI"],
+      },
       disclosure: "Educational sample only.",
-    });
+    };
+    const mapped = quotesResponseToMap(payload);
 
     expect(mapped?.VTI).toEqual({
       symbol: "VTI",
       priceCents: 28735,
       asOf: "2026-07-14T20:00:00.000Z",
-      source: "Morrowward delayed educational sample",
+      source: "Morrowward synthetic educational sample",
       status: "delayed",
+    });
+
+    const market = quotesResponseToMarketQuotes(payload);
+    expect(market).not.toBeNull();
+    const panelAssets = marketQuotesToPracticeAssets(market ?? {});
+    expect(panelAssets).toHaveLength(11);
+    expect(panelAssets[0]).toMatchObject({
+      symbol: "VTI",
+      category: "Broad U.S. equity ETF",
+      educationalRisk: { level: "medium" },
+      quote: {
+        priceCents: 28735,
+        change1dLabel: "Sample 1D",
+        change1yBps: 1494,
+        change1yLabel: "Sample 1Y",
+        freshness: "sample",
+      },
+      history: {
+        kind: "synthetic",
+        points: [
+          { timestamp: "2025-07-14T00:00:00.000Z", priceCents: 25000 },
+          { timestamp: "2026-07-14T00:00:00.000Z", priceCents: 28735 },
+        ],
+      },
     });
   });
 

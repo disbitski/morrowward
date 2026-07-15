@@ -11,6 +11,18 @@ async function finishAnimations(page) {
   });
 }
 
+async function finishElementAnimations(locator) {
+  await locator.evaluate(async (element) => {
+    await Promise.all(element.getAnimations({ subtree: true }).map((animation) => animation.finished));
+  });
+}
+
+async function setStickyHeaderVisible(page, visible) {
+  await page.locator(".app-header").evaluate((element, shouldShow) => {
+    element.style.visibility = shouldShow ? "" : "hidden";
+  }, visible);
+}
+
 async function onboard(page) {
   await page.goto(baseURL);
   await page.getByRole("heading", { name: /Small steps/i }).waitFor();
@@ -47,6 +59,19 @@ try {
 
   await desktopPage.getByTestId("theme-space").click();
   await desktopPage.getByTestId("nav-practice").click();
+  const practiceMarket = desktopPage.getByTestId("practice-market-panel");
+  await practiceMarket.waitFor();
+  await practiceMarket.scrollIntoViewIfNeeded();
+  await finishAnimations(desktopPage);
+  await setStickyHeaderVisible(desktopPage, false);
+  await practiceMarket.screenshot({ path: fileURLToPath(new URL("practice-market-space-desktop.png", outputDirectory)) });
+  await setStickyHeaderVisible(desktopPage, true);
+  await desktopPage.getByTestId("practice-asset-info-SPCX").click();
+  await desktopPage.getByText(/Synthetic teaching data—not actual historical performance/i).waitFor();
+  const desktopDetail = desktopPage.getByTestId("practice-asset-detail");
+  await finishElementAnimations(desktopDetail);
+  await desktopDetail.screenshot({ path: fileURLToPath(new URL("spcx-detail-space-desktop.png", outputDirectory)) });
+  await desktopPage.getByRole("button", { name: /Close SPCX details/i }).click();
   const marketJourney = desktopPage.getByTestId("market-journey");
   await marketJourney.waitFor();
   await desktopPage.getByTestId("market-risk-higher").click();
@@ -67,6 +92,11 @@ try {
   await mobilePage.getByRole("heading", { name: /Learn the motion/i }).waitFor();
   await finishAnimations(mobilePage);
   await mobilePage.screenshot({ path: fileURLToPath(new URL("practice-mobile.png", outputDirectory)) });
+  await mobilePage.getByTestId("practice-asset-info-SPCX").click();
+  await mobilePage.getByText(/Synthetic teaching data—not actual historical performance/i).waitFor();
+  await finishElementAnimations(mobilePage.getByTestId("practice-asset-detail"));
+  await mobilePage.screenshot({ path: fileURLToPath(new URL("spcx-detail-mobile.png", outputDirectory)) });
+  await mobilePage.getByRole("button", { name: /Close SPCX details/i }).click();
 
   await mobilePage.getByRole("button", { name: "Settings", exact: true }).click();
   const mobileAppearance = mobilePage.locator(".setting-card").filter({ hasText: "Choose a theme" });

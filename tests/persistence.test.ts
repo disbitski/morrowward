@@ -10,6 +10,7 @@ import {
   parseStateExport,
   serializeStateExport,
 } from "../src/data";
+import { buySimulatedAsset, createPracticePortfolio } from "../src/domain";
 
 const NOW = "2026-07-15T12:00:00.000Z";
 const LATER = "2026-07-15T13:00:00.000Z";
@@ -60,7 +61,7 @@ describe("versioned state", () => {
       NOW,
     );
 
-    expect(migrated.schemaVersion).toBe(1);
+    expect(migrated.schemaVersion).toBe(CURRENT_STATE_VERSION);
     expect(migrated.plan.annualInflationBps).toBe(250);
     expect(migrated.habitLog.completedWeekKeys).toEqual([
       "2026-W28",
@@ -86,7 +87,103 @@ describe("versioned state", () => {
         },
       },
     });
-    expect(parseStateExport(serialized, NOW).schemaVersion).toBe(1);
+    expect(parseStateExport(serialized, NOW).schemaVersion).toBe(
+      CURRENT_STATE_VERSION,
+    );
+  });
+
+  it("migrates version-one portfolios by adding new assets at zero", () => {
+    const current = createDefaultState(NOW);
+    const firstBuy = buySimulatedAsset(createPracticePortfolio(100_000), {
+      symbol: "VTI",
+      amountCents: 12_500,
+      priceCents: 100_000,
+      occurredAt: NOW,
+      transactionId: "v1-vti",
+    }).portfolio;
+    const legacyPortfolio = buySimulatedAsset(firstBuy, {
+      symbol: "BTC",
+      amountCents: 12_500,
+      priceCents: 500_000,
+      occurredAt: LATER,
+      transactionId: "v1-btc",
+    }).portfolio;
+    const migrated = migrateState({
+      ...current,
+      schemaVersion: 1,
+      practicePortfolio: {
+        cashCents: legacyPortfolio.cashCents,
+        holdingsMicro: {
+          VTI: legacyPortfolio.holdingsMicro.VTI,
+          BND: 0,
+          AAPL: 0,
+          TSLA: 0,
+          BTC: legacyPortfolio.holdingsMicro.BTC,
+          ETH: 0,
+        },
+        transactions: legacyPortfolio.transactions,
+      },
+    });
+
+    expect(migrated.schemaVersion).toBe(CURRENT_STATE_VERSION);
+    expect(migrated.practicePortfolio.holdingsMicro).toMatchObject({
+      VTI: 125_000,
+      BTC: 25_000,
+      SPCX: 0,
+      NVDA: 0,
+      MRVL: 0,
+      MU: 0,
+      AVGO: 0,
+    });
+  });
+
+  it("rejects imports whose simulated holdings or buy math contradict the ledger", () => {
+    const inconsistentHolding = createDefaultState(NOW);
+    inconsistentHolding.practicePortfolio.holdingsMicro.VTI = 1;
+    expect(() => migrateState(inconsistentHolding, NOW)).toThrow(
+      /holding units must match/i,
+    );
+
+    const validBuy = buySimulatedAsset(createPracticePortfolio(100_000), {
+      symbol: "VTI",
+      amountCents: 10_000,
+      priceCents: 20_000,
+      occurredAt: NOW,
+      transactionId: "tamper-check",
+    }).portfolio;
+    const inconsistentMath = createDefaultState(NOW);
+    inconsistentMath.practicePortfolio = validBuy;
+    const buy = inconsistentMath.practicePortfolio.transactions[0];
+    if (buy.type !== "buy") throw new Error("Expected a buy transaction.");
+    buy.unitsMicro += 1;
+    inconsistentMath.practicePortfolio.holdingsMicro.VTI += 1;
+    expect(() => migrateState(inconsistentMath, NOW)).toThrow(
+      /buy units and spend must match/i,
+    );
+
+    const impossibleRequest = createDefaultState(NOW);
+    impossibleRequest.practicePortfolio = {
+      cashCents: 0,
+      holdingsMicro: {
+        ...impossibleRequest.practicePortfolio.holdingsMicro,
+        VTI: 1,
+      },
+      transactions: [
+        {
+          id: "requested-more-than-cash",
+          type: "buy",
+          occurredAt: NOW,
+          symbol: "VTI",
+          requestedAmountCents: 3,
+          spentCents: 2,
+          priceCents: 2_000_000,
+          unitsMicro: 1,
+        },
+      ],
+    };
+    expect(() => migrateState(impossibleRequest, NOW)).toThrow(
+      /cannot request more simulated cash/i,
+    );
   });
 
   it("rejects malformed JSON, unknown fields, mismatched versions, and huge files", () => {
@@ -100,7 +197,7 @@ describe("versioned state", () => {
       parseStateExport(
         JSON.stringify({
           format: STATE_EXPORT_FORMAT,
-          schemaVersion: 1,
+          schemaVersion: CURRENT_STATE_VERSION,
           exportedAt: NOW,
           data: stateWithPii,
         }),

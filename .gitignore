@@ -47,6 +47,7 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+/.media-review/
 
 # local exports and browser artifacts
 /downloads/

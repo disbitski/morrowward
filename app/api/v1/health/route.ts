@@ -1,6 +1,7 @@
 import { OPENAI_MODEL } from "../../../../src/server/openai";
 import { hasDurableBriefStore } from "../../../../src/server/brief-store";
 import { jsonResponse, noStoreHeaders } from "../../../../src/server/http";
+import { marketDataHealth } from "../../../../src/server/quotes";
 
 export const dynamic = "force-dynamic";
 
@@ -14,10 +15,7 @@ export async function GET(): Promise<Response> {
         configured: Boolean(process.env.OPENAI_API_KEY?.trim()),
         model: OPENAI_MODEL,
       },
-      quotes: {
-        mode: "deterministic-delayed-sample",
-        live: false,
-      },
+      quotes: marketDataHealth(),
       briefs: {
         durableStoreConfigured: hasDurableBriefStore(),
         fallbackAvailable: true,

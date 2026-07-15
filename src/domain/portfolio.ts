@@ -10,16 +10,127 @@ import {
 } from "./money";
 
 export const PRACTICE_ASSETS = [
-  { symbol: "VTI", name: "Vanguard Total Stock Market ETF", kind: "etf" },
-  { symbol: "BND", name: "Vanguard Total Bond Market ETF", kind: "etf" },
-  { symbol: "AAPL", name: "Apple", kind: "stock" },
-  { symbol: "TSLA", name: "Tesla", kind: "stock" },
-  { symbol: "BTC", name: "Bitcoin", kind: "crypto" },
-  { symbol: "ETH", name: "Ethereum", kind: "crypto" },
+  {
+    symbol: "VTI",
+    name: "Vanguard Total Stock Market ETF",
+    kind: "etf",
+    category: "Broad U.S. equity ETF",
+    educationalRisk: "medium",
+    summary:
+      "An exchange-traded fund designed to represent a broad cross-section of the U.S. stock market.",
+    learnMoreUrl:
+      "https://investor.vanguard.com/investment-products/etfs/profile/vti",
+  },
+  {
+    symbol: "BND",
+    name: "Vanguard Total Bond Market ETF",
+    kind: "etf",
+    category: "Broad U.S. bond ETF",
+    educationalRisk: "lower",
+    summary:
+      "An exchange-traded fund designed to represent a broad basket of U.S. investment-grade bonds.",
+    learnMoreUrl:
+      "https://investor.vanguard.com/investment-products/etfs/profile/bnd",
+  },
+  {
+    symbol: "AAPL",
+    name: "Apple Inc.",
+    kind: "stock",
+    category: "Technology",
+    educationalRisk: "higher",
+    summary:
+      "An individual company stock; its result depends much more on one business than a broad-market fund does.",
+    learnMoreUrl: "https://investor.apple.com/",
+  },
+  {
+    symbol: "TSLA",
+    name: "Tesla, Inc.",
+    kind: "stock",
+    category: "Automotive and energy",
+    educationalRisk: "higher",
+    summary:
+      "An individual company stock with concentrated business and market-price risk.",
+    learnMoreUrl: "https://ir.tesla.com/",
+  },
+  {
+    symbol: "SPCX",
+    name: "Space Exploration Technologies Corp.",
+    kind: "stock",
+    category: "Aerospace and communications",
+    educationalRisk: "higher",
+    summary:
+      "A newly public individual company stock with limited trading history and concentrated company risk.",
+    learnMoreUrl: "https://ir.spacex.com/",
+    publicTradingSince: "2026-06-12",
+  },
+  {
+    symbol: "NVDA",
+    name: "NVIDIA Corporation",
+    kind: "stock",
+    category: "Semiconductors and computing",
+    educationalRisk: "higher",
+    summary:
+      "An individual semiconductor company stock with concentrated business and market-price risk.",
+    learnMoreUrl: "https://investor.nvidia.com/",
+  },
+  {
+    symbol: "MRVL",
+    name: "Marvell Technology, Inc.",
+    kind: "stock",
+    category: "Semiconductors and data infrastructure",
+    educationalRisk: "higher",
+    summary:
+      "An individual semiconductor company stock with concentrated business and market-price risk.",
+    learnMoreUrl: "https://investor.marvell.com/",
+  },
+  {
+    symbol: "MU",
+    name: "Micron Technology, Inc.",
+    kind: "stock",
+    category: "Memory and storage semiconductors",
+    educationalRisk: "higher",
+    summary:
+      "An individual semiconductor company stock with concentrated and cyclical business risk.",
+    learnMoreUrl: "https://investors.micron.com/",
+  },
+  {
+    symbol: "AVGO",
+    name: "Broadcom Inc.",
+    kind: "stock",
+    category: "Semiconductors and infrastructure software",
+    educationalRisk: "higher",
+    summary:
+      "An individual technology company stock with concentrated business and market-price risk.",
+    learnMoreUrl: "https://investors.broadcom.com/",
+  },
+  {
+    symbol: "BTC",
+    name: "Bitcoin",
+    kind: "crypto",
+    category: "Crypto asset",
+    educationalRisk: "very-high",
+    summary:
+      "A crypto asset whose price can move sharply and whose ownership, custody, and regulatory risks differ from stocks and funds.",
+    learnMoreUrl:
+      "https://www.investor.gov/introduction-investing/investing-basics/investment-products/crypto-assets",
+  },
+  {
+    symbol: "ETH",
+    name: "Ether",
+    kind: "crypto",
+    category: "Crypto asset",
+    educationalRisk: "very-high",
+    summary:
+      "A crypto asset whose price can move sharply and whose ownership, custody, and regulatory risks differ from stocks and funds.",
+    learnMoreUrl:
+      "https://www.investor.gov/introduction-investing/investing-basics/investment-products/crypto-assets",
+  },
 ] as const;
 
 export type PracticeAssetSymbol = (typeof PRACTICE_ASSETS)[number]["symbol"];
 export type PracticeAssetKind = (typeof PRACTICE_ASSETS)[number]["kind"];
+export type PracticeAssetEducationalRisk =
+  (typeof PRACTICE_ASSETS)[number]["educationalRisk"];
 
 export const PRACTICE_ASSET_SYMBOLS = PRACTICE_ASSETS.map(
   (asset) => asset.symbol,
@@ -90,6 +201,11 @@ export function emptyPracticeHoldings(): PracticeHoldings {
     BND: 0,
     AAPL: 0,
     TSLA: 0,
+    SPCX: 0,
+    NVDA: 0,
+    MRVL: 0,
+    MU: 0,
+    AVGO: 0,
     BTC: 0,
     ETH: 0,
   };
@@ -140,6 +256,9 @@ export function validatePracticePortfolio(portfolio: PracticePortfolio): void {
     );
   }
   const transactionIds = new Set<string>();
+  const boughtUnits = emptyPracticeHoldings();
+  let totalDeposits = BigInt(0);
+  let totalSpent = BigInt(0);
   portfolio.transactions.forEach((transaction, index) => {
     if (!transaction || typeof transaction !== "object") {
       throw new DomainValidationError(
@@ -168,6 +287,7 @@ export function validatePracticePortfolio(portfolio: PracticePortfolio): void {
         `transactions.${index}.amountCents`,
         { min: 1, max: MAX_SAFE_CENTS },
       );
+      totalDeposits += BigInt(transaction.amountCents);
       return;
     }
     if (transaction.type !== "buy" || !isPracticeSymbol(transaction.symbol)) {
@@ -196,7 +316,85 @@ export function validatePracticePortfolio(portfolio: PracticePortfolio): void {
       `transactions.${index}.unitsMicro`,
       { min: 1, max: Number.MAX_SAFE_INTEGER },
     );
+
+    const expectedUnits = multiplyDivideFloor(
+      transaction.requestedAmountCents,
+      MICRO_UNITS_PER_ASSET,
+      transaction.priceCents,
+    );
+    const expectedSpent = multiplyDivideCeil(
+      expectedUnits,
+      transaction.priceCents,
+      MICRO_UNITS_PER_ASSET,
+    );
+    if (
+      transaction.unitsMicro !== expectedUnits ||
+      transaction.spentCents !== expectedSpent
+    ) {
+      throw new DomainValidationError(
+        `transactions.${index}`,
+        "buy units and spend must match its requested amount and price.",
+      );
+    }
+    boughtUnits[transaction.symbol] = safeAdd(
+      boughtUnits[transaction.symbol],
+      transaction.unitsMicro,
+      `holdingsMicro.${transaction.symbol}`,
+    );
+    totalSpent += BigInt(transaction.spentCents);
   });
+
+  for (const symbol of PRACTICE_ASSET_SYMBOLS) {
+    if (portfolio.holdingsMicro[symbol] !== boughtUnits[symbol]) {
+      throw new DomainValidationError(
+        `holdingsMicro.${symbol}`,
+        "holding units must match the simulated buy ledger.",
+      );
+    }
+  }
+
+  // Initial practice cash is intentionally not a transaction. Derive it from
+  // the final balance and immutable ledger, then replay the ledger so imports
+  // cannot claim impossible cash or purchases made before funds existed.
+  const initialCash = BigInt(portfolio.cashCents) - totalDeposits + totalSpent;
+  if (initialCash < BigInt(0) || initialCash > BigInt(MAX_SAFE_CENTS)) {
+    throw new DomainValidationError(
+      "cashCents",
+      "cash must reconcile with the simulated transaction ledger.",
+    );
+  }
+  let replayCash = initialCash;
+  portfolio.transactions.forEach((transaction, index) => {
+    if (transaction.type === "deposit") {
+      replayCash += BigInt(transaction.amountCents);
+      if (replayCash > BigInt(MAX_SAFE_CENTS)) {
+        throw new DomainValidationError(
+          `transactions.${index}.amountCents`,
+          "deposit would exceed the supported simulated cash limit.",
+        );
+      }
+      return;
+    }
+    if (replayCash < BigInt(transaction.requestedAmountCents)) {
+      throw new DomainValidationError(
+        `transactions.${index}.requestedAmountCents`,
+        "buy cannot request more simulated cash than was available.",
+      );
+    }
+    if (replayCash < BigInt(transaction.spentCents)) {
+      throw new DomainValidationError(
+        `transactions.${index}.spentCents`,
+        "buy cannot spend more simulated cash than was available.",
+      );
+    }
+    replayCash -= BigInt(transaction.spentCents);
+  });
+  if (replayCash !== BigInt(portfolio.cashCents)) {
+    throw new DomainValidationError(
+      "cashCents",
+      "cash must reconcile with the simulated transaction ledger.",
+    );
+  }
 }
 
 function transactionMetadata(

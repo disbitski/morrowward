@@ -15,7 +15,7 @@ The provided facts are a deterministic delayed demo dataset, not live market dat
 const SAMPLE_AS_OF = "2026-07-14T20:00:00.000Z";
 const FACT_DETAILS = [
   {
-    fact: "The practice universe contains two ETFs, two individual stocks, and two cryptoassets.",
+    fact: "The practice universe contains two broad ETFs, seven individual stocks, and two cryptoassets.",
     source: "Morrowward delayed educational sample",
     asOf: SAMPLE_AS_OF,
     freshness: "delayed-sample" as const,

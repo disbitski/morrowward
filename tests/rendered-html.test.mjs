@@ -90,6 +90,8 @@ test("health endpoint describes the privacy and degraded-data mode", async () =>
   const body = await response.json();
   assert.equal(body.status, "ok");
   assert.equal(body.ai.model, "gpt-5.6");
-  assert.equal(body.quotes.live, false);
+  assert.equal(body.quotes.mode, "sample");
+  assert.equal(body.quotes.configured, false);
+  assert.equal(body.quotes.fallbackAvailable, true);
   assert.match(body.privacy, /local-first/i);
 });

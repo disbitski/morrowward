@@ -1,6 +1,10 @@
 import { QUOTE_SYMBOLS } from "../../../../src/contracts";
 import { apiError, jsonResponse } from "../../../../src/server/http";
-import { getEducationalQuotes, parseQuoteSymbols } from "../../../../src/server/quotes";
+import {
+  getMarketQuotes,
+  parseQuoteHistory,
+  parseQuoteSymbols,
+} from "../../../../src/server/quotes";
 import { enforceRateLimit } from "../../../../src/server/rate-limit";
 
 export const dynamic = "force-dynamic";
@@ -12,12 +16,13 @@ export async function GET(request: Request): Promise<Response> {
   });
   if (!rateLimit.ok) return rateLimit.response;
 
-  const rawSymbols = new URL(request.url).searchParams.get("symbols");
+  const searchParams = new URL(request.url).searchParams;
+  const rawSymbols = searchParams.get("symbols");
   if (rawSymbols && rawSymbols.length > 128) {
     return apiError(
       400,
       "invalid_request",
-      `Use at most six symbols from: ${QUOTE_SYMBOLS.join(", ")}.`,
+      `Use at most ${QUOTE_SYMBOLS.length} symbols from: ${QUOTE_SYMBOLS.join(", ")}.`,
       { headers: rateLimit.headers },
     );
   }
@@ -35,7 +40,39 @@ export async function GET(request: Request): Promise<Response> {
     );
   }
 
+  const historySelection = parseQuoteHistory(
+    searchParams.get("history"),
+    selection.symbols,
+  );
+  if (!historySelection.ok) {
+    return apiError(
+      400,
+      "invalid_request",
+      historySelection.reason === "requires_one_symbol"
+        ? "Request history=1y with exactly one allowlisted symbol."
+        : "The only supported history range is history=1y.",
+      {
+        headers: rateLimit.headers,
+        issues: [{
+          path: "history",
+          message:
+            historySelection.reason === "requires_one_symbol"
+              ? "One symbol is required for bounded history"
+              : "Unsupported history range",
+        }],
+      },
+    );
+  }
+
   const headers = new Headers(rateLimit.headers);
-  headers.set("cache-control", "public, max-age=300, stale-while-revalidate=86400");
-  return jsonResponse(getEducationalQuotes(selection.symbols), { headers });
+  headers.set(
+    "cache-control",
+    historySelection.includeHistory
+      ? "public, max-age=0, s-maxage=21600, stale-while-revalidate=86400"
+      : "public, max-age=0, s-maxage=300, stale-while-revalidate=900",
+  );
+  const response = await getMarketQuotes(selection.symbols, {
+    includeHistory: historySelection.includeHistory,
+  });
+  return jsonResponse(response, { headers });
 }

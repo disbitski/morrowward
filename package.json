@@ -15,6 +15,11 @@
     "test:e2e": "playwright test",
     "test:e2e:list": "playwright test --list",
     "screenshots": "node scripts/capture-screenshots.mjs",
+    "media:grok:check": "node scripts/grok/validate-campaign.mjs",
+    "media:grok:images": "node scripts/grok/generate-images.mjs",
+    "media:grok:video": "node scripts/grok/generate-video.mjs",
+    "media:grok:narration": "node scripts/grok/generate-narration.mjs",
+    "media:grok:compose": "node scripts/grok/compose-video.mjs",
     "test:render": "npm run build && node --test tests/rendered-html.test.mjs",
     "check": "npm run lint && npm run test && npm run build",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next"

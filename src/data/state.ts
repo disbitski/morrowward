@@ -18,7 +18,7 @@ import {
   type ProjectionInput,
 } from "../domain";
 
-export const CURRENT_STATE_VERSION = 1 as const;
+export const CURRENT_STATE_VERSION = 2 as const;
 export const STATE_EXPORT_FORMAT = "morrowward-state" as const;
 export const MAX_IMPORT_BYTES = 1_000_000;
 
@@ -89,6 +89,18 @@ const holdingsShape = Object.fromEntries(
   PRACTICE_ASSET_SYMBOLS.map((symbol) => [symbol, centsSchema]),
 ) as Record<(typeof PRACTICE_ASSET_SYMBOLS)[number], typeof centsSchema>;
 
+const VERSION_ONE_ASSET_SYMBOLS = [
+  "VTI",
+  "BND",
+  "AAPL",
+  "TSLA",
+  "BTC",
+  "ETH",
+] as const;
+const versionOneHoldingsShape = Object.fromEntries(
+  VERSION_ONE_ASSET_SYMBOLS.map((symbol) => [symbol, centsSchema]),
+) as Record<(typeof VERSION_ONE_ASSET_SYMBOLS)[number], typeof centsSchema>;
+
 const depositTransactionSchema = z
   .object({
     id: transactionIdSchema,
@@ -111,12 +123,53 @@ const buyTransactionSchema = z
   })
   .strict();
 
+const versionOneBuyTransactionSchema = z
+  .object({
+    id: transactionIdSchema,
+    type: z.literal("buy"),
+    occurredAt: isoDateTimeSchema,
+    symbol: z.enum(VERSION_ONE_ASSET_SYMBOLS),
+    requestedAmountCents: centsSchema.min(1),
+    spentCents: centsSchema.min(1),
+    priceCents: centsSchema.min(1),
+    unitsMicro: centsSchema.min(1),
+  })
+  .strict();
+
 const portfolioSchema = z
   .object({
     cashCents: centsSchema,
     holdingsMicro: z.object(holdingsShape).strict(),
     transactions: z
       .array(z.discriminatedUnion("type", [depositTransactionSchema, buyTransactionSchema]))
+      .max(20_000),
+  })
+  .strict()
+  .superRefine((portfolio, context) => {
+    const ids = new Set<string>();
+    portfolio.transactions.forEach((transaction, index) => {
+      if (ids.has(transaction.id)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["transactions", index, "id"],
+          message: "transaction IDs must be unique",
+        });
+      }
+      ids.add(transaction.id);
+    });
+  });
+
+const versionOnePortfolioSchema = z
+  .object({
+    cashCents: centsSchema,
+    holdingsMicro: z.object(versionOneHoldingsShape).strict(),
+    transactions: z
+      .array(
+        z.discriminatedUnion("type", [
+          depositTransactionSchema,
+          versionOneBuyTransactionSchema,
+        ]),
+      )
       .max(20_000),
   })
   .strict()
@@ -159,6 +212,17 @@ export const morrowwardStateSchema = z
   })
   .strict();
 
+const versionOneStateSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    profile: profileSchema,
+    plan: planSchema,
+    practicePortfolio: versionOnePortfolioSchema,
+    habitLog: habitLogSchema,
+    updatedAt: isoDateTimeSchema,
+  })
+  .strict();
+
 const legacyPlanSchema = z
   .object({
     currentAge: safeInteger,
@@ -181,7 +245,7 @@ const legacyStateSchema = z
     schemaVersion: z.literal(0),
     profile: profileSchema.optional(),
     plan: legacyPlanSchema,
-    practicePortfolio: portfolioSchema.optional(),
+    practicePortfolio: versionOnePortfolioSchema.optional(),
     habitLog: habitLogSchema.optional(),
     completedWeekKeys: z.array(z.string()).optional(),
     updatedAt: isoDateTimeSchema.optional(),
@@ -209,6 +273,21 @@ function zodError(error: z.ZodError, message: string): StateValidationError {
 
 function cloneState(state: MorrowwardState): MorrowwardState {
   return JSON.parse(JSON.stringify(state)) as MorrowwardState;
+}
+
+function expandVersionOnePortfolio(
+  portfolio: z.infer<typeof versionOnePortfolioSchema> | undefined,
+  defaults: PracticePortfolio,
+): PracticePortfolio {
+  if (!portfolio) return defaults;
+  return {
+    cashCents: portfolio.cashCents,
+    holdingsMicro: {
+      ...defaults.holdingsMicro,
+      ...portfolio.holdingsMicro,
+    },
+    transactions: portfolio.transactions as PracticePortfolio["transactions"],
+  };
 }
 
 export function createDefaultState(
@@ -271,6 +350,26 @@ export function migrateState(
   const version = (input as { schemaVersion?: unknown }).schemaVersion;
   if (version === CURRENT_STATE_VERSION) return validateState(input);
 
+  if (version === 1) {
+    const parsed = versionOneStateSchema.safeParse(input);
+    if (!parsed.success) {
+      throw zodError(parsed.error, "The version-one Morrowward state is invalid.");
+    }
+    const defaults = createDefaultState(now);
+    const previous = parsed.data;
+    return validateState({
+      schemaVersion: CURRENT_STATE_VERSION,
+      profile: previous.profile,
+      plan: previous.plan,
+      practicePortfolio: expandVersionOnePortfolio(
+        previous.practicePortfolio,
+        defaults.practicePortfolio,
+      ),
+      habitLog: previous.habitLog,
+      updatedAt: previous.updatedAt,
+    });
+  }
+
   if (version === 0) {
     const parsed = legacyStateSchema.safeParse(input);
     if (!parsed.success) {
@@ -290,9 +389,10 @@ export function migrateState(
         annualInflationBps:
           legacy.plan.annualInflationBps ?? legacy.plan.inflationBps ?? 300,
       },
-      practicePortfolio:
-        (legacy.practicePortfolio as PracticePortfolio | undefined) ??
+      practicePortfolio: expandVersionOnePortfolio(
+        legacy.practicePortfolio,
         defaults.practicePortfolio,
+      ),
       habitLog:
         legacy.habitLog ?? {
           completedWeekKeys: legacy.completedWeekKeys ?? [],
