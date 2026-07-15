@@ -39,6 +39,17 @@ The product therefore focuses on a repeatable weekly habit and a future someone 
 - Created a bespoke Morrowward social card and code-rendered install icons after the visual direction stabilized.
 - Established passing domain, property, persistence, API, and AI-safety coverage before final UI integration and browser QA.
 
+### Ahead-of-schedule feature-complete milestone
+
+- Recorded the feature-complete root commit as `f7f645f` and pushed it to the private `disbitski/morrowward` repository.
+- Reconstructed the staged repository in a clean temporary directory, ran a fresh `npm ci`, and passed lint, all 71 deterministic tests, and the vinext production build without relying on untracked workspace files.
+- Passed four Playwright journeys across desktop Chrome and a Pixel 7 viewport, covering the full golden path, keyboard navigation, export/import/reset, serious/critical WCAG checks, service-worker control, and offline reload.
+- Passed the Next.js/Vercel production build, four rendered-worker checks, and a production dependency audit with zero known production vulnerabilities.
+- Deployed the exact committed archive to a Vercel **Preview** environment and verified Vercel Authentication on both its generated URL and branch alias. Anonymous requests redirect to login, while authenticated checks return the expected application shell and `/api/v1/health` response.
+- Removed the first-deployment production alias and its deployment after Vercel assigned it unexpectedly. `morrowward.vercel.app` now returns `DEPLOYMENT_NOT_FOUND`; only the protected preview remains.
+
+Protected preview: `https://morrowward-gqwbcdxjm-thedavedev.vercel.app`
+
 ## July 15 — Foundation and core experience
 
 Planned milestone: themes, onboarding, projection engine, Horizon Reveal, local state, dashboard, disclosures, tests, and first protected preview.

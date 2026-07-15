@@ -2,16 +2,18 @@
 
 ## Project
 
-- [ ] Repository and preview deployments remain private through July 19, 2026.
+- [x] Repository and preview deployments remain private through July 19, 2026.
 - [ ] On July 20, make `disbitski/morrowward` and the production deployment public before recording/submitting.
 - [ ] Production URL is public and unrestricted.
 - [ ] `disbitski/morrowward` is public with its full history and MIT license.
-- [ ] A clean clone passes setup, tests, and production build using only the README.
-- [ ] No credentials, personal portfolio data, or private reference folders appear in Git history.
-- [ ] Demo seed state works without network access or live market conditions.
-- [ ] API-offline and quote-offline fallbacks are verified.
+- [x] A clean clone passes setup, tests, and production build using only the README.
+- [x] No credentials, personal portfolio data, or private reference folders appear in Git history.
+- [x] Demo seed state works without network access or live market conditions.
+- [x] API-offline and quote-offline fallbacks are verified.
 - [ ] iPhone-sized and macOS-sized PWA flows are verified.
-- [ ] `npm run test:e2e` passes its desktop Chrome and mobile Pixel 7 projects from a production build.
+- [x] `npm run test:e2e` passes its desktop Chrome and mobile Pixel 7 projects from a production build.
+
+Protected preview verified July 14: `https://morrowward-gqwbcdxjm-thedavedev.vercel.app`. Anonymous requests redirect to Vercel Authentication. The public production alias remains unassigned until July 20.
 
 ## Devpost
 
