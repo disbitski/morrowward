@@ -108,6 +108,8 @@ Vercel's changing commit preview URLs are expected: each identifies an immutable
 
 This pass reached 122 deterministic unit/integration tests, clean ESLint and TypeScript checks, both production builds, and six passing Playwright journeys across desktop Chrome and Pixel 7. The browser suite now covers refresh and history failures, Escape/backdrop closing, and trigger-focus restoration in addition to the golden path and offline/accessibility matrix. A sandbox-only Turbopack port restriction was rerun in the approved local build environment and compiled successfully; it was not a product-code failure.
 
+Milestone commit `74f77ad` was pushed to the private `main` history and cloned from GitHub into an empty temporary directory. Following the README workflow, that clone completed `npm install`, all 122 unit/integration tests, lint, the no-spend Grok campaign check, the vinext production build, and the Vercel/Next production build. Vercel then built protected preview `https://morrowward-q0us50u15-thedavedev.vercel.app` from the milestone. Anonymous HTTP receives the expected authentication redirect; authenticated verification confirmed GPT-5.6 is configured, external market data remains deliberately disabled, SPCX returns an explicitly limited synthetic sample history, and the bounded educator returns a labeled GPT-5.6 response. The stable public production alias remains intentionally unassigned until July 20.
+
 ## July 16 — Practice, education, and AI
 
 Planned milestone: weekly simulation, practice portfolio, Education Center, GPT-5.6 educator, daily brief, provenance, and AI safety tests.

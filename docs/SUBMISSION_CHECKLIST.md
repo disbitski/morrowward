@@ -6,7 +6,7 @@
 - [ ] On July 20, make `disbitski/morrowward` and the production deployment public before recording/submitting.
 - [ ] Production URL is public and unrestricted.
 - [ ] `disbitski/morrowward` is public with its full history and MIT license.
-- [ ] After the July 15 market milestone is committed, verify a clean clone passes setup, tests, and production build using only the README.
+- [x] Commit `74f77ad` passes a clean-clone `npm install`, 122 tests, lint, Grok dry run, vinext production build, and Vercel/Next production build using the README workflow.
 - [x] No credentials, personal portfolio data, or private reference folders appear in Git history.
 - [x] Demo seed state works without network access or live market conditions.
 - [x] API-offline and quote-offline fallbacks are verified.
@@ -15,9 +15,9 @@
 - [ ] iPhone-sized and macOS-sized PWA flows are verified.
 - [x] `npm run test:e2e` passes its desktop Chrome and mobile Pixel 7 projects from a production build.
 
-Earlier protected preview verified July 14: `https://morrowward-qui11xo7k-thedavedev.vercel.app`. Anonymous requests redirect to Vercel Authentication. Its health route reports GPT-5.6 configured, and its deployed GPT-5.6 educator response was verified. A fresh protected preview of the July 15 market milestone must be recorded below after deployment. The public production alias remains unassigned until July 20.
+Earlier protected preview verified July 14: `https://morrowward-qui11xo7k-thedavedev.vercel.app`. Anonymous requests redirect to Vercel Authentication. Its health route reports GPT-5.6 configured, and its deployed GPT-5.6 educator response was verified. The July 15 market-milestone preview is recorded below. The public production alias remains unassigned until July 20.
 
-- [ ] July 15 milestone preview URL and verification evidence recorded.
+- [x] July 15 milestone protected preview verified: `https://morrowward-q0us50u15-thedavedev.vercel.app`. Anonymous access redirects to Vercel Authentication; authenticated checks report GPT-5.6 configured, provider disabled with sample fallback, limited synthetic SPCX history, and a successful bounded GPT-5.6 educator response.
 
 Final README link: `https://morrowward.vercel.app`. Commit preview URLs are expected to change; do not substitute one of them for the stable production alias in Devpost or the README.
 
