@@ -6,7 +6,7 @@
 - [x] Production was intentionally moved to a stable public-but-unannounced URL on July 16 for web/Apple integration testing; search indexing remains disabled.
 - [x] Build journal preserves the Preview-versus-Production tradeoff, sensitive-key promotion friction, stable Apple backend decision, and the explicit risk that bots could discover the public educator/chat route—prompting distributed limits and a daily AI spend circuit breaker—for the post-submission field note.
 - [ ] On July 20, make `disbitski/morrowward` public and enable production search indexing before submission.
-- [ ] Production URL is public and unrestricted.
+- [x] Production URL is public and unrestricted while remaining unannounced and excluded from indexing until July 20.
 - [ ] `disbitski/morrowward` is public with its full history and MIT license.
 - [x] Commit `74f77ad` passes a clean-clone `npm install`, 122 tests, lint, Grok dry run, vinext production build, and Vercel/Next production build using the README workflow.
 - [x] No credentials, personal portfolio data, or private reference folders appear in Git history.
@@ -64,7 +64,7 @@ Final README link: `https://morrowward.vercel.app`. Commit preview URLs are expe
 
 ## Final verification
 
-- [ ] Add the restricted `OPENAI_API_KEY` to Vercel **Production**, redeploy, verify `/api/v1/health` reports AI configured, and confirm the bounded educator returns a labeled GPT-5.6 response before public launch.
+- [x] Add the restricted `OPENAI_API_KEY` to Vercel **Production**, redeploy, verify `/api/v1/health` reports AI configured, and confirm the bounded educator returns a labeled GPT-5.6 response before public launch.
 - [x] Set a long random `CRON_SECRET`, one complete KV/Upstash REST credential pair, and `EDUCATOR_DAILY_AI_REQUEST_LIMIT=100` in **Production**; keep all secret values server-only.
 - [ ] Confirm both Production cron jobs are registered. Vercel cron is Production-only; do not expect either job to run in protected Preview deployments.
 - [ ] Invoke `GET /api/v1/quotes/generate` once with the Production cron bearer, verify the shared eleven-symbol snapshot stores validated sourced values plus explicit per-symbol fallbacks, and confirm the UI says **Real Prices Updated Every 24 Hours** with **Last updated** and **Current as of _n_ hours ago**. Verify source/freshness details remain in each asset sheet. Do not call it real-time.
