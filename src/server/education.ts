@@ -36,6 +36,17 @@ export type EducationServiceResult =
   | { ok: true; response: EducationExplainResponse }
   | { ok: false; reason: "unsafe_input" };
 
+export type EducationPreflight =
+  | { kind: "unsafe-input" }
+  | { kind: "guardrail"; response: EducationExplainResponse }
+  | {
+      kind: "model-eligible";
+      input: EducationExplainRequest;
+      topic: EducationTopic;
+      generatedAt: string;
+      requestId: string;
+    };
+
 function requestId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `mw-${Date.now().toString(36)}`;
 }
@@ -269,13 +280,13 @@ function alignExplanationToProduct(
   };
 }
 
-export async function answerEducationQuestion(
+export function preflightEducationQuestion(
   input: EducationExplainRequest,
-  options: EducationOptions = {},
-): Promise<EducationServiceResult> {
+  options: Pick<EducationOptions, "now" | "requestId"> = {},
+): EducationPreflight {
   const sanitizedQuestion = redactSensitiveIdentifiers(input.question);
   if (sanitizedQuestion.detected || hasPromptInjection(sanitizedQuestion.text)) {
-    return { ok: false, reason: "unsafe_input" };
+    return { kind: "unsafe-input" };
   }
 
   const generatedAt = (options.now ?? new Date()).toISOString();
@@ -283,7 +294,7 @@ export async function answerEducationQuestion(
   const boundary = supportBoundaryFor(input.question);
   if (boundary) {
     return {
-      ok: true,
+      kind: "guardrail",
       response: responseFromExplanation(
         boundaryExplanation(boundary, input.experienceLevel),
         { mode: "guardrail", model: null, requestId: id, generatedAt },
@@ -292,6 +303,27 @@ export async function answerEducationQuestion(
   }
 
   const topic = inferTopic(input.question, input.topic);
+  return {
+    kind: "model-eligible",
+    input,
+    topic,
+    generatedAt,
+    requestId: id,
+  };
+}
+
+export async function answerPreparedEducationQuestion(
+  preflight: EducationPreflight,
+  options: Pick<EducationOptions, "apiKey" | "fetchImpl"> = {},
+): Promise<EducationServiceResult> {
+  if (preflight.kind === "unsafe-input") {
+    return { ok: false, reason: "unsafe_input" };
+  }
+  if (preflight.kind === "guardrail") {
+    return { ok: true, response: preflight.response };
+  }
+
+  const { input, topic, generatedAt, requestId: id } = preflight;
   const result = await requestStructuredResponse({
     apiKey: options.apiKey ?? process.env.OPENAI_API_KEY,
     fetchImpl: options.fetchImpl,
@@ -338,6 +370,16 @@ export async function answerEducationQuestion(
       generatedAt,
     }),
   };
+}
+
+export async function answerEducationQuestion(
+  input: EducationExplainRequest,
+  options: EducationOptions = {},
+): Promise<EducationServiceResult> {
+  return answerPreparedEducationQuestion(
+    preflightEducationQuestion(input, options),
+    options,
+  );
 }
 
 export function supportedEducationTopics(): readonly EducationTopic[] {

@@ -244,6 +244,29 @@ Friday's target is therefore a fresh shared SwiftUI project with thin iOS and ma
 
 The local audit confirmed Xcode 26.6, Swift 6.3.3, XcodeGen 2.45.4, an iOS 26.5 runtime, and an iPhone 17 Pro simulator are ready. Simulator and unsigned local Mac builds do not require the currently absent signing identity; physical-device installation remains optional and would require selecting an Apple development team.
 
+### One public production backend, still an unannounced build
+
+Hands-on testing exposed unnecessary friction from treating protected Preview deployments as the eventual product backend. Preview URLs are intentionally immutable and change with each deployment, Vercel Cron runs only in Production, and the planned iOS/macOS companion shells need one stable Release origin. Dave and Codex therefore moved the stable Vercel Production site forward from July 20 to July 16 while preserving the original idea-protection boundary where it matters most:
+
+- The GitHub repository and full source history remain private through July 19.
+- Generated Preview deployment URLs remain protected by Vercel Authentication.
+- The stable Production URL is public but unannounced, with `noindex`/`nofollow` metadata, a restrictive `robots.txt`, and API-specific `X-Robots-Tag` headers.
+- On July 20, the repository becomes public and search indexing is deliberately enabled; the stable application URL does not change.
+
+Before opening Production, Codex independently audited every public route. That review found that bounded schemas and warm-instance limits were not enough for a public cost-bearing API because serverless instances do not share memory. The production hardening therefore reused one small Upstash Redis dependency for all shared state: durable quote/brief snapshots, the quote refresh lock, atomic per-client fixed-window limits, and a 100-provider-attempt UTC-day GPT educator circuit breaker. The free Redis plan is scoped only to Production, uses the Vercel function region, has eviction and automatic upgrades disabled, and contains no plan or portfolio data. Vercel Production refuses model-eligible educator work if OpenAI is enabled without a complete available durable store; deterministic no-key development remains available.
+
+A new long random Production-only `CRON_SECRET`, stable canonical origin, disabled-indexing flag, and bounded educator limit were added through Vercel's encrypted settings. The restricted Production OpenAI key required a fresh one-time entry because Vercel correctly prevents a Sensitive Preview value from being read back or copied by automation. A live, temporary Production Redis smoke test proved the exact atomic `EVAL` increment-and-expiry operation works; its test key was deleted immediately. A second adversarial review then moved quota reservation behind the pure local safety/guardrail classifier, so prompt injection, sensitive identifiers, personalized trading requests, and crisis/debt/tax boundaries consume no shared GPT quota while genuine provider attempts—including upstream failures—do. Per-client hashing now prefers Vercel's anti-spoofed `x-vercel-forwarded-for` header. The code and configuration closed with 239 passing tests, clean lint and TypeScript checks, and successful vinext plus Next/Vercel production builds before the staged Production deployment.
+
+This is a field-note lesson worth preserving in full. The original private-preview decision was sensible while the idea and repository were young, but privacy at the deployment layer created a second environment to maintain: separate secrets, separate storage scope, protected URLs, Preview-specific testing behavior, and no scheduled cron execution. Sensitive variables could not be promoted by reading them back, which correctly protected the key but required a fresh Production credential. Once the product needed a stable URL for documentation, repeatable demos, and two Apple companion shells, that duplication stopped buying much additional protection. The simpler boundary became:
+
+- Keep one stable Vercel Production application and backend as the engineering truth.
+- Keep its URL public but unannounced and out of search indexes during the build.
+- Keep disposable Preview deployments protected for isolated checks rather than treating them as a second product environment.
+- Keep the GitHub repository—and therefore the implementation history and discoverable project idea—private until July 20.
+- Treat public API exposure as an engineering requirement: add distributed rate limits and an explicit daily AI circuit breaker instead of relying on obscurity or a warm-process counter.
+
+The useful lesson is not that private previews were a mistake. They were the right first boundary, then became operational friction as the architecture matured. GPT-5.6/Codex helped recognize when the tradeoff changed, audited the consequences of going public, and converted that decision into tested infrastructure rather than merely flipping a visibility setting.
+
 ## July 17 — Shared iOS and macOS companion shells
 
 - Create the fresh `apple/` project and shared SwiftUI/WebKit source.
@@ -266,6 +289,6 @@ Reserved for issues discovered during recording, clean-room setup verification, 
 
 ## July 20 — Publish and submit
 
-- Make the full repository history and stable Vercel production deployment public.
+- Make the full repository history public and enable indexing on the already-stable Production deployment.
 - Recheck clean clone, public website, Apple project instructions, YouTube visibility, and every Devpost link.
 - Submit during the evening, preserving the full-day buffer before the July 21, 8:00 PM ET deadline.

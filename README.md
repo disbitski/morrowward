@@ -6,10 +6,10 @@ Morrowward is a local-first financial future simulator for adults who want to un
 
 Built for the OpenAI Build Week **Apps for Your Life** category.
 
-**Public demo (scheduled for July 20):** [morrowward.vercel.app](https://morrowward.vercel.app)
+**Stable production demo:** [morrowward.vercel.app](https://morrowward.vercel.app)
 
 > [!NOTE]
-> Release plan: the repository and preview deployments remain private through July 19, 2026. On July 20, the complete repository history and production site will be made public for judging ahead of the July 21, 2026, 8:00 PM ET deadline.
+> Release plan: the stable production site was made public-but-unannounced on July 16 so the web app and Apple companion shells could share one production backend and one test target. Search indexing remains disabled, protected previews remain private, and the GitHub repository remains private through July 19. On July 20, indexing will be enabled and the complete repository history will be made public for judging ahead of the July 21, 2026, 8:00 PM ET deadline.
 
 > [!IMPORTANT]
 > Morrowward is an educational simulation, not financial, investment, tax, or legal advice. Illustrations are not forecasts or guarantees. Users are responsible for their decisions and should consider qualified professionals for guidance about their circumstances.
@@ -117,6 +117,8 @@ UPSTASH_REDIS_REST_TOKEN=your_token
 ```
 
 If both complete pairs are present, the `KV_REST_API_*` pair takes precedence. Content is schema-validated before storage and after retrieval. Briefs use a UTC-date key; the latest quote snapshot uses one shared key. Both expire after 48 hours. Store operations time out after 1.5 seconds and fail closed to in-process/deterministic content, so Redis/KV is a durability enhancement rather than an availability dependency. Without a durable store, generated content is not guaranteed to survive a serverless cold start.
+
+The same complete Redis REST pair also enables atomic shared fixed-window rate limits across serverless instances. The educator has a conservative UTC-day AI circuit breaker that defaults to 100 provider-attempt requests and may be adjusted with `EDUCATOR_DAILY_AI_REQUEST_LIMIT` (bounded in code). Prompt injection, sensitive identifiers, personalized trading requests, and crisis/debt/tax guardrails are handled locally before this daily quota; provider failures still count after a slot is reserved. A Vercel Production deployment with OpenAI enabled refuses model-eligible educator work unless a complete durable credential pair is present. When that store is unavailable, those potentially cost-bearing requests fail closed. Preview/local deployments with no durable configuration and deterministic no-key use retain the bounded in-memory limiter.
 
 The preview uses a dedicated prepaid OpenAI API project with auto-recharge disabled and a $10 project budget. That dashboard setting is operational protection, not an absolute code-enforced cap because usage reporting can be delayed.
 
@@ -253,7 +255,7 @@ curl -X POST \
 
 `vercel.json` schedules the quote job at `15 22 * * *` (22:15 UTC), after the regular U.S. equity session. Cron schedules use UTC. Vercel cron is Production-only, delivery is best effort, and duplicate or missed delivery is possible, so the generator replaces a timestamped snapshot instead of mutating user state. See Vercel's [Cron Jobs overview](https://vercel.com/docs/cron-jobs), [quickstart](https://vercel.com/docs/cron-jobs/quickstart), and [management notes](https://vercel.com/docs/cron-jobs/manage-cron-jobs).
 
-The dependency-free limiter shares a bounded bucket map across modules in one warm server runtime. That protects local use and reduces abuse within a warm Vercel instance, but it is intentionally described as **best effort**: serverless cold starts, regions, and parallel instances do not share memory. A higher-traffic production deployment should enforce a second limit at Vercel Firewall/WAF or replace the exported `RateLimiter` with a durable Vercel Marketplace Redis/KV implementation using an atomic increment plus expiry. This MVP does not claim a global durable limit without that infrastructure.
+With a complete Redis REST pair, rate limits use an atomic `EVAL` increment-and-expiry script, so per-client windows and the educator's 100-request UTC-day circuit breaker are shared across cold starts, regions, and parallel serverless instances. Production refuses any model-eligible educator attempt when OpenAI is enabled but a complete durable pair is missing or unavailable. Locally resolved safety and professional-support boundaries do not spend the daily AI quota. Preview/local deployments with no store configured use the bounded warm-runtime memory limiter. Per-client buckets prefer Vercel's platform `x-vercel-forwarded-for`, then `x-forwarded-for`, then `x-real-ip`; raw addresses are never stored. See Vercel's [request-header reference](https://vercel.com/docs/headers/request-headers). A platform-level Firewall/WAF remains useful defense in depth for unexpected public traffic.
 
 ### Education request
 
@@ -362,10 +364,10 @@ Key decisions are documented in the build journal rather than hidden in a final 
 
 The code supports two verified build targets:
 
-- `npm run build:vercel` for the planned Vercel production deployment
+- `npm run build:vercel` for the Vercel production deployment
 - `npm run build` for the Vite/vinext Cloudflare-compatible preview build
 
-Set secrets only through the hosting provider’s encrypted environment controls. Protected previews and `disbitski/morrowward` remain private through July 19, 2026; the production deployment and full repository history become public on July 20 for judging.
+Set secrets only through the hosting provider’s encrypted environment controls. The stable Production deployment is public-but-unannounced for integration testing; `NEXT_PUBLIC_ALLOW_INDEXING=false` keeps it out of normal search indexing during this period. Protected previews and `disbitski/morrowward` remain private through July 19, 2026. On July 20, indexing is enabled and the complete repository history becomes public for judging.
 
 Vercel gives every commit deployment a unique immutable preview URL, so seeing that address change during the build is expected. The launch uses the stable production alias [morrowward.vercel.app](https://morrowward.vercel.app); later production deployments update behind that same URL. The README intentionally links the stable alias rather than a commit preview. See Vercel's [generated URL reference](https://vercel.com/docs/deployments/generated-urls).
 

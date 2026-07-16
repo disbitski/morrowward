@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
+const allowSearchIndexing =
+  process.env.NEXT_PUBLIC_ALLOW_INDEXING?.trim().toLowerCase() === "true";
+
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
   (process.env.VERCEL_PROJECT_PRODUCTION_URL
@@ -25,6 +28,17 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  robots: allowSearchIndexing
+    ? {
+        index: true,
+        follow: true,
+      }
+    : {
+        index: false,
+        follow: false,
+        noarchive: true,
+        nosnippet: true,
+      },
   icons: {
     icon: "/icon-192.png",
     shortcut: "/icon-192.png",

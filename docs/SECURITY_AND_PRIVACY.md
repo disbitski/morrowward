@@ -18,15 +18,15 @@ Morrowward is an educational simulator. Its safest path is also its default path
 - Requests use GPT-5.6, `store: false`, strict structured output, bounded input and output, and a timeout.
 - Daily quote generation additionally requires hosted `web_search`, includes source metadata, limits each Responses request to at most one search tool call, and rejects memory-only, malformed, or unsourced output. A completed result is still educational and updated daily—not real-time or trading-grade.
 - Input checks reject prompt injection, direct individualized trading requests, and obvious sensitive identifiers. Generated text is checked again for direct recommendations, concentrated allocations, guarantees, and urgency.
-- Safe deterministic explanations, briefs, and synthetic quote values remain available when OpenAI is unconfigured, unavailable, over budget, or returns invalid output.
+- Safe deterministic explanations, briefs, and synthetic quote values remain available when OpenAI is unconfigured, unavailable, or returns invalid output. When the educator's shared daily AI quota is exhausted, model-eligible requests receive a retryable rate-limit response until the UTC reset; locally handled safety and professional-support boundaries remain available without spending that quota.
 - `store: false` disables response storage, but API inputs may still be retained temporarily for abuse monitoring under OpenAI's applicable data controls. Users are told not to submit account numbers or other private information.
 
 ## HTTP and deployment controls
 
 - State-changing routes require `application/json` and reject cross-site browser requests using Origin and Fetch Metadata.
 - Requests and responses have bounded schemas and sizes.
-- Rate limiting is keyed to a salted hash of the platform-provided client address, never the User-Agent or a raw address.
-- The included limiter is best-effort within a warm runtime. A public high-traffic deployment should also use Vercel Firewall/WAF or an atomic Redis/KV limiter because cold starts and regions do not share process memory.
+- Rate limiting is keyed to a salted hash of Vercel's platform `x-vercel-forwarded-for`, then `x-forwarded-for`, then `x-real-ip`; it never uses the User-Agent, `cf-connecting-ip`, or a stored raw address.
+- With a complete Redis REST credential pair, per-client limits and the educator's 100-request UTC-day circuit breaker use atomic increment-and-expiry operations shared across cold starts, regions, and parallel instances. Prompt injection, sensitive identifiers, personalized trading requests, and crisis/debt/tax boundaries resolve locally before the daily quota. Provider-eligible attempts reserve quota before the call, so upstream failures still count. Vercel Production refuses model-eligible work whenever OpenAI is enabled without a complete available durable pair. Preview/local deployments with no store configured may use the bounded warm-runtime limiter; Vercel Firewall/WAF remains useful defense in depth.
 - Vercel and vinext/worker targets return anti-framing, MIME-sniffing, referrer, permissions, opener, and Content Security Policy headers.
 - Daily AI content can use a Vercel KV-compatible or Upstash REST store. Configure either the complete `KV_REST_API_URL` + `KV_REST_API_TOKEN` pair or the complete `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` pair; the KV pair takes precedence when both are complete. Saved briefs and quote snapshots are schema-validated, expire after 48 hours, and store operations time out after 1.5 seconds. Missing, slow, unavailable, or malformed store data degrades to labeled in-process/deterministic content.
 - Vercel Cron uses authenticated `GET /api/v1/briefs/generate` and `GET /api/v1/quotes/generate` with `CRON_SECRET`. Operator-controlled JSON `POST` generation may use either `CRON_SECRET` or `ADMIN_API_TOKEN`. Vercel invokes cron jobs only for Production deployments, not protected Preview deployments.
@@ -48,12 +48,12 @@ Before public launch:
 2. Add $10 prepaid credit, leave auto-recharge disabled, and enable usage notifications. Reporting may be delayed, so this is not described as an absolute hard cap.
 3. Set `OPENAI_API_KEY` only in server-side deployment settings.
 4. Set a long random `CRON_SECRET` before enabling the daily Vercel cron.
-5. Configure KV/Redis in Production so generated briefs, the shared quote snapshot, and the 12-hour distributed quote retry guard persist across serverless instances.
-6. Enable a platform-level request/spend circuit breaker for unexpected public traffic.
+5. Configure KV/Redis in Production so generated briefs, the shared quote snapshot, the 12-hour distributed quote retry guard, shared request limits, and the educator's daily AI circuit breaker persist across serverless instances.
+6. Confirm `EDUCATOR_DAILY_AI_REQUEST_LIMIT` is set to the intended bounded daily budget (the code default is 100), and enable platform-level Firewall/WAF controls as defense in depth.
 7. Verify the Production quote cron, one guarded self-healing read, source/freshness labels, and synthetic fallback with OpenAI disabled. Preview cron jobs do not run.
 8. Run `npm audit --omit=dev`, both production builds, the full unit/integration suite, and `npm run test:e2e` for the Playwright desktop/mobile suite.
 9. Confirm no secrets, raw media candidates, or private reference files exist in the Git history.
-10. Keep the repository and preview deployments private through July 19, 2026; make both the production site and full repository history public on July 20 for judging.
+10. Keep the public Production site unannounced and `noindex` while the repository and preview deployments remain private through July 19, 2026. On July 20, enable indexing and publish the complete repository history for judging.
 
 Primary implementation references: [OpenAI Responses API web search](https://developers.openai.com/api/docs/guides/tools-web-search), [OpenAI API pricing](https://developers.openai.com/api/docs/pricing), [Vercel Cron Jobs quickstart](https://vercel.com/docs/cron-jobs/quickstart), and [Vercel cron security/operations](https://vercel.com/docs/cron-jobs/manage-cron-jobs). At the documented build-time price, the web-search tool costs $10 per 1,000 calls ($0.01 per call) plus model and search-content tokens. Normal operation uses one successful search per 24-hour snapshot; during persistent failures, the configured retry guard permits no more than one attempt per 12 hours. Every Responses request remains limited to one search tool call.
 

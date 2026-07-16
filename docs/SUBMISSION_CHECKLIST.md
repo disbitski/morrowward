@@ -3,7 +3,9 @@
 ## Project
 
 - [x] Repository and preview deployments remain private through July 19, 2026.
-- [ ] On July 20, make `disbitski/morrowward` and the production deployment public before recording/submitting.
+- [x] Production was intentionally moved to a stable public-but-unannounced URL on July 16 for web/Apple integration testing; search indexing remains disabled.
+- [x] Build journal preserves the Preview-versus-Production tradeoff, sensitive-key promotion friction, stable Apple backend decision, and bot/spend circuit-breaker lesson for the post-submission field note.
+- [ ] On July 20, make `disbitski/morrowward` public and enable production search indexing before submission.
 - [ ] Production URL is public and unrestricted.
 - [ ] `disbitski/morrowward` is public with its full history and MIT license.
 - [x] Commit `74f77ad` passes a clean-clone `npm install`, 122 tests, lint, Grok dry run, vinext production build, and Vercel/Next production build using the README workflow.
@@ -14,7 +16,7 @@
 - [x] Education Center has four paths, 48 level-specific prompts, explicit topic payloads, deterministic follow-ups, source-tier labels, verified supplemental Grokipedia links, and no retired “may be offered later” copy.
 - [x] Marcus Aurelius and Benjamin Franklin welcomes have approved publication records binding exact video, captions, poster, transcript, primary quotation source, AI disclosures, generation provenance, and Dave's final approval; the app makes no xAI runtime call.
 - [x] The two-entry greeting roster assigns one approved welcome randomly once per browser, preserves that local assignment, never autoplays, and offers user-controlled playback and replay from Our Why.
-- [ ] Production has one complete KV/Upstash REST credential pair so the daily quote snapshot and 12-hour distributed `NX` retry guard are shared across serverless instances.
+- [x] Production has one complete KV/Upstash REST credential pair so the daily quote snapshot, 12-hour distributed `NX` retry guard, shared request limits, and educator circuit breaker work across serverless instances.
 - [ ] iPhone-sized and macOS-sized PWA flows are verified.
 - [x] `npm run test:e2e` passes its desktop Chrome and mobile Pixel 7 projects from a production build.
 
@@ -30,7 +32,7 @@
 - [ ] Local plan/practice data survives complete app termination and relaunch.
 - [ ] README documents XcodeGen, local-server testing, Release origin, simulator, unsigned Mac build, and optional physical-device signing.
 
-Earlier protected preview verified July 14: `https://morrowward-qui11xo7k-thedavedev.vercel.app`. Anonymous requests redirect to Vercel Authentication. Its health route reports GPT-5.6 configured, and its deployed GPT-5.6 educator response was verified. The July 15 market-milestone preview is recorded below. The public production alias remains unassigned until July 20.
+Earlier protected preview verified July 14: `https://morrowward-qui11xo7k-thedavedev.vercel.app`. Anonymous requests redirect to Vercel Authentication. Its health route reports GPT-5.6 configured, and its deployed GPT-5.6 educator response was verified. The July 15 market-milestone preview is recorded below. The stable production alias moved to public-but-unannounced integration testing on July 16; protected previews remain private.
 
 - [x] July 15 milestone protected preview verified: `https://morrowward-q0us50u15-thedavedev.vercel.app`. Anonymous access redirects to Vercel Authentication; authenticated checks report GPT-5.6 configured, safe quote sample fallback, limited synthetic SPCX history, and a successful bounded GPT-5.6 educator response.
 
@@ -60,7 +62,7 @@ Final README link: `https://morrowward.vercel.app`. Commit preview URLs are expe
 ## Final verification
 
 - [ ] Add the restricted `OPENAI_API_KEY` to Vercel **Production**, redeploy, verify `/api/v1/health` reports AI configured, and confirm the bounded educator returns a labeled GPT-5.6 response before public launch.
-- [ ] Set a long random `CRON_SECRET` and one complete KV/Upstash REST credential pair in **Production**; keep all values server-only.
+- [x] Set a long random `CRON_SECRET`, one complete KV/Upstash REST credential pair, and `EDUCATOR_DAILY_AI_REQUEST_LIMIT=100` in **Production**; keep all secret values server-only.
 - [ ] Confirm both Production cron jobs are registered. Vercel cron is Production-only; do not expect either job to run in protected Preview deployments.
 - [ ] Invoke `GET /api/v1/quotes/generate` once with the Production cron bearer, verify the shared eleven-symbol snapshot stores validated sourced values plus explicit per-symbol fallbacks, and confirm the UI says **Real Prices Updated Every 24 Hours** with **Last updated** and **Current as of _n_ hours ago**. Verify source/freshness details remain in each asset sheet. Do not call it real-time.
 - [ ] Verify a missing/stale-snapshot first load starts one guarded background refresh, concurrent reads receive saved/synthetic content, the initiating UI's two observation-only rechecks can adopt the result without retriggering generation, UTC-day cron cadence does not skip the next day, and Redis/KV `NX` plus warm-runtime singleflight enforce the 12-hour failure backoff.
