@@ -15,6 +15,7 @@ import {
   Download,
   ExternalLink,
   FlaskConical,
+  Globe2,
   Heart,
   Home,
   Info,
@@ -23,8 +24,8 @@ import {
   Lightbulb,
   LineChart,
   Lock,
-  Mail,
   Menu,
+  Monitor,
   Moon,
   PiggyBank,
   Plus,
@@ -35,6 +36,7 @@ import {
   Settings,
   ShieldCheck,
   SlidersHorizontal,
+  Smartphone,
   Sparkles,
   Sun,
   Target,
@@ -1807,7 +1809,10 @@ function MissionView({
           <blockquote><Quote size={24} aria-hidden="true" /><p>“I want Morrowward to give someone the feeling I had at that keyboard: my future can be different, and I can begin today.”</p><cite>— Dave, creator of Morrowward</cite></blockquote>
         </div>
         <figure className="mission-photo">
-          <div className="photo-frame"><Image src="/dave-age-10-commodore-64.jpg" alt="Dave at age 10 sitting beside his Commodore 64" width={447} height={447} priority /></div>
+          <div className="photo-frame">
+            <Image src="/dave-age-10-commodore-64.jpg" alt="Dave at age 10 sitting beside his Commodore 64" width={447} height={447} priority />
+            <span aria-hidden="true" className="photo-label" data-testid="mission-photo-label">Dave</span>
+          </div>
           <figcaption>Age 10 · A Commodore 64 bought with paper-route savings</figcaption>
         </figure>
       </section>
@@ -1834,13 +1839,56 @@ function MissionView({
           <article><span><Leaf size={21} aria-hidden="true" /></span><h3>Consistency over perfection</h3><p>Celebrate the repeatable habit, not a lucky market outcome.</p></article>
         </div>
       </section>
-      <section className="roadmap-panel">
-        <div><span className="section-kicker">Beyond build week</span><h2>Where Morrowward can go next</h2><p>The web app is the beginning. Every future connection will preserve the same educational, private, and user-controlled foundation.</p></div>
+      <section className="roadmap-panel" aria-labelledby="companion-title" data-testid="companion-panel">
+        <div className="roadmap-panel-copy">
+          <div>
+            <span className="section-kicker">Beyond the browser</span>
+            <h2 id="companion-title">Take Morrowward with you.</h2>
+          </div>
+          <p>iPhone and Mac companion builds are next. Their source links will activate as soon as the local projects are ready; Dave’s work is already one click away.</p>
+        </div>
         <ul>
-          <li><span><Rocket size={18} aria-hidden="true" /></span><div><strong>Native iOS & macOS</strong><small>A focused daily companion across devices</small></div></li>
-          <li><span><Landmark size={18} aria-hidden="true" /></span><div><strong>Optional brokerage connections</strong><small>Read-only organization with explicit consent</small></div></li>
-          <li><span><LineChart size={18} aria-hidden="true" /></span><div><strong>Options & LEAPS education</strong><small>Scenario modeling with clear risk boundaries</small></div></li>
-          <li><span><Mail size={18} aria-hidden="true" /></span><div><strong>Scheduled learning briefs</strong><small>Opt-in reminders that support the habit</small></div></li>
+          <li>
+            <article className="roadmap-source-card" data-state="pending" data-testid="mission-source-iphone">
+              <span className="roadmap-source-icon"><Smartphone size={22} aria-hidden="true" /></span>
+              <div className="roadmap-source-copy">
+                <span className="roadmap-source-platform">iPhone source</span>
+                <h3>Morrowward for iPhone</h3>
+                <p>A lightweight Apple companion for the same local-first Morrowward experience.</p>
+              </div>
+              <span className="roadmap-source-status">Source link coming after the build</span>
+            </article>
+          </li>
+          <li>
+            <article className="roadmap-source-card" data-state="pending" data-testid="mission-source-mac">
+              <span className="roadmap-source-icon"><Monitor size={22} aria-hidden="true" /></span>
+              <div className="roadmap-source-copy">
+                <span className="roadmap-source-platform">Mac source</span>
+                <h3>Morrowward for Mac</h3>
+                <p>A focused desktop companion backed by the same stable Morrowward web app.</p>
+              </div>
+              <span className="roadmap-source-status">Source link coming after the build</span>
+            </article>
+          </li>
+          <li>
+            <a
+              className="roadmap-source-card"
+              data-state="active"
+              data-testid="mission-follow-dave"
+              href="https://thedavedev.com/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span className="roadmap-source-icon"><Globe2 size={22} aria-hidden="true" /></span>
+              <div className="roadmap-source-copy">
+                <span className="roadmap-source-platform">TheDaveDev.com</span>
+                <h3>Follow Dave online</h3>
+                <p>Field notes, projects, and practical experiments in real-world AI.</p>
+              </div>
+              <span className="roadmap-source-cta">Visit Dave’s site <ExternalLink size={15} aria-hidden="true" /></span>
+              <span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          </li>
         </ul>
       </section>
     </div>

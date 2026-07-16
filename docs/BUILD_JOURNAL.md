@@ -279,11 +279,19 @@ This is a field-note lesson worth preserving in full. The original private-previ
 
 The useful lesson is not that private previews were a mistake. They were the right first boundary, then became operational friction as the architecture matured. GPT-5.6/Codex helped recognize when the tradeoff changed, audited the consequences of going public, and converted that decision into tested infrastructure rather than merely flipping a visibility setting.
 
+### The companion destination arrived before the companion code
+
+Dave chose not to wait for Friday's Apple work before replacing the About-page future-roadmap block. The page now presents the actual destination state: polished **Morrowward for iPhone** and **Morrowward for Mac** source cards plus an active **Follow Dave online** card. Because the Apple source folders do not exist yet, the first two cards are intentionally informational rather than fake links, disabled controls, private-repository URLs, or App Store claims. Their visible status says that the source link is coming after the build. Once the exact folders exist and the repository is public, those same cards can become verified GitHub links without redesigning the section.
+
+The active Dave card links to `https://thedavedev.com`, opens in a new tab with explicit assistive text, and uses the same full-card interaction treatment planned for the source links. The childhood-photo overlay was also corrected from the vague decade label **1980s** to the personal label **Dave**.
+
+This focused pass retained **243 passing unit/integration tests across 24 files**, clean ESLint and TypeScript checks, clean vinext and Next/Vercel production builds, and all ten Playwright journeys across desktop and mobile Chrome. Browser coverage now verifies the non-interactive Apple cards, the exact Dave destination and security attributes, the photo label, touch-target size, no horizontal overflow, keyboard focus, and no serious or critical Mission-page accessibility violations in Dawn, Horizon, Alchemy, or Space.
+
 ## July 17 — Shared iOS and macOS companion shells
 
 - Create the fresh `apple/` project and shared SwiftUI/WebKit source.
 - Build the Morrowward icon and restrained native launch/navigation/error states.
-- After both companion targets and their exact source folders exist, replace the About-page future-roadmap panel with three accurate source cards: **Morrowward for iPhone**, **Morrowward for Mac**, and **Follow Dave online**. The first two will link to their real GitHub folders for local builds, and the third to `https://thedavedev.com`. Keep this change staged until the repository is public so the shipped links never lead to a private-repository 404.
+- The About page now uses a three-card companion panel: **Morrowward for iPhone**, **Morrowward for Mac**, and **Follow Dave online**. The iPhone and Mac source cards are intentionally informational and non-interactive until their exact local source folders exist; turn them into links only after the corresponding public GitHub folder URLs have been verified. **Follow Dave online** is active now and links to `https://thedavedev.com`.
 - Keep internal Morrowward navigation in the shell and open educational external links in the system browser.
 - Verify clean iPhone 17 Pro simulator and unsigned macOS builds.
 - Exercise onboarding, Practice, Market Journey, Education, themes, local persistence, export/import/reset, media playback, and network failure.

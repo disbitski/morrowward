@@ -127,6 +127,32 @@ test("one-time historical welcome never autoplays and guides the next practice s
   await expect(page.getByTestId("historical-greeting-dialog")).toHaveCount(0);
 
   await openMission(page);
+  await expect(page.getByTestId("mission-photo-label")).toHaveText("Dave");
+  const companionPanel = page.getByTestId("companion-panel");
+  await expect(companionPanel).toBeVisible();
+  const iphoneSource = page.getByTestId("mission-source-iphone");
+  const macSource = page.getByTestId("mission-source-mac");
+  await expect(iphoneSource.getByRole("heading", { name: "Morrowward for iPhone" })).toBeVisible();
+  await expect(macSource.getByRole("heading", { name: "Morrowward for Mac" })).toBeVisible();
+  await expect(iphoneSource.getByText(/Source link coming after the build/i)).toBeVisible();
+  await expect(macSource.getByText(/Source link coming after the build/i)).toBeVisible();
+  await expect(iphoneSource.locator("a, button, [role='button'], [tabindex]")).toHaveCount(0);
+  await expect(macSource.locator("a, button, [role='button'], [tabindex]")).toHaveCount(0);
+  const followDave = page.getByTestId("mission-follow-dave");
+  await expect(followDave).toHaveAttribute("href", "https://thedavedev.com/");
+  await expect(followDave).toHaveAttribute("target", "_blank");
+  await expect(followDave).toHaveAttribute("rel", /noopener/u);
+  await expect(followDave).toHaveAttribute("rel", /noreferrer/u);
+  await expect(followDave).toHaveAccessibleName(/Follow Dave online.*opens in a new tab/i);
+  const companionWidth = await companionPanel.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(companionWidth.scrollWidth).toBeLessThanOrEqual(companionWidth.clientWidth);
+  const followDaveBox = await followDave.boundingBox();
+  expect(followDaveBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+  await followDave.focus();
+  await expect(followDave).toBeFocused();
   await expect(page.getByTestId("historical-greeting-replay")).toBeVisible();
   await page.getByTestId("historical-greeting-replay").click();
   await expect(page.getByTestId("historical-greeting-dialog")).toBeVisible();
@@ -413,6 +439,16 @@ test("PWA reloads offline and has no serious automated accessibility violations"
     expect(
       await seriousAccessibilityViolations(page),
       `${theme} Learn accessibility violations`,
+    ).toEqual([]);
+
+    await openMission(page);
+    await expect(page.getByTestId("companion-panel")).toBeVisible();
+    await page.locator(".view-stack").evaluate(async (element) => {
+      await Promise.all(element.getAnimations().map((animation) => animation.finished));
+    });
+    expect(
+      await seriousAccessibilityViolations(page),
+      `${theme} Mission accessibility violations`,
     ).toEqual([]);
   }
 

@@ -24,7 +24,10 @@
 
 ## Apple companion shells
 
-- [ ] After the exact iPhone and Mac source folders exist, replace the About-page roadmap panel with polished Morrowward companion-source cards plus a **Follow Dave online** card. Verify the GitHub folder links only after the repository becomes public; do not use App Store download badges for builds distributed as source.
+- [x] About page uses the polished three-card companion layout for **Morrowward for iPhone**, **Morrowward for Mac**, and **Follow Dave online**.
+- [ ] Keep the iPhone and Mac source cards intentionally informational, non-interactive, and free of placeholder URLs until their exact local source folders exist. Turn them into links only after the corresponding GitHub folder links resolve from the public repository.
+- [x] **Follow Dave online** links to `https://thedavedev.com`.
+- [ ] Do not use App Store download badges or availability claims for companion builds distributed as source.
 - [ ] Fresh `apple/` project contains shared SwiftUI/WebKit code for iOS and macOS targets.
 - [ ] Debug origin is configurable for the local server; Release uses `https://morrowward.vercel.app`.
 - [ ] No OpenAI key, Vercel token, protected-preview URL, or bypass credential appears in the project or built products.
