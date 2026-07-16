@@ -26,9 +26,9 @@ Briefly switch the market path once and point to maximum drawdown and the all-da
 
 ## 1:32–1:56 — Financial literacy with GPT-5.6
 
-Ask: “Why can missing a few strong days matter?”
+Open **Build the Habit**, then ask: “Why can missing a few strong days matter?”
 
-“GPT-5.6 explains at my experience level. Its structured response states assumptions and cannot trade or give individualized buy/sell instructions. Without an API key, deterministic education keeps working.”
+“The Education Center changes its questions for New, Familiar, and Advanced learners, and every topic leads with canonical resources while Grokipedia is clearly supplemental. GPT-5.6 explains at my experience level with key ideas and assumptions; it cannot trade or give individualized buy/sell instructions. Related questions are deterministic, and without an API key the education experience still works.”
 
 Show the daily brief’s separate facts, sentiment, uncertainty, and takeaway.
 

@@ -1,6 +1,32 @@
 import { expect, test, type Page } from "@playwright/test";
 import axe from "axe-core";
 
+async function seriousAccessibilityViolations(page: Page) {
+  return page.evaluate(async () => {
+    const result = await window.axe.run(document, {
+      runOnly: {
+        type: "tag",
+        values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"],
+      },
+    });
+    return result.violations
+      .filter(
+        (item) =>
+          item.impact === "serious" || item.impact === "critical",
+      )
+      .map((item) => ({
+        id: item.id,
+        impact: item.impact,
+        help: item.help,
+        nodes: item.nodes.map((node) => ({
+          target: node.target,
+          html: node.html,
+          summary: node.failureSummary,
+        })),
+      }));
+  });
+}
+
 async function openView(page: Page, view: "plan" | "practice" | "learn") {
   const desktop = page.getByTestId(`nav-${view}`);
   if (await desktop.isVisible()) {
@@ -16,7 +42,11 @@ async function openSettings(page: Page) {
     await desktop.click();
     return;
   }
-  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Open menu" }).click();
+  await page
+    .getByRole("navigation", { name: "Mobile menu" })
+    .getByRole("button", { name: /Settings/i })
+    .click();
 }
 
 async function onboard(
@@ -49,11 +79,7 @@ async function openMission(page: Page) {
     await desktop.click();
     return;
   }
-  await page.getByRole("button", { name: "Open menu" }).click();
-  await page
-    .getByRole("navigation", { name: "Mobile menu" })
-    .getByRole("button", { name: /Our why/i })
-    .click();
+  await page.getByTestId("mobile-nav-mission").click();
 }
 
 test("one-time historical welcome never autoplays and guides the next practice step", async ({ page }) => {
@@ -170,10 +196,36 @@ test("golden path stays educational, local, and fully simulated", async ({ page 
   await expect(page.getByText("All simulated days included")).toBeVisible();
 
   await openView(page, "learn");
+  await expect(page.locator(".learning-path-card")).toHaveCount(4);
+  await page.getByTestId("education-path-understand-risk").click();
+  await expect(page.getByText("What does a 20% market drop mean?")).toBeVisible();
+  await expect(page.getByText("Supplemental reading · Grokipedia").first()).toBeVisible();
+  await expect(page.getByText(/may be offered later/i)).toHaveCount(0);
   await page.getByTestId("educator-chip-0").click();
+  await expect(page.getByTestId("educator-question")).toHaveValue(
+    "What does a 20% market drop mean?",
+  );
+  const educationRequest = page.waitForRequest(
+    (request) =>
+      request.url().includes("/api/v1/education/explain") &&
+      request.method() === "POST",
+  );
   await page.getByTestId("educator-submit").click();
+  expect((await educationRequest).postDataJSON()).toMatchObject({
+    experienceLevel: "new",
+    topic: "volatility",
+  });
   await expect(page.locator(".educator-response")).toBeVisible();
   await expect(page.getByText(/Deterministic fallback|GPT-5\.6 generated|Safety-guided response/i)).toBeVisible();
+  await expect(page.getByText("Key ideas")).toBeVisible();
+  const relatedQuestions = page.getByRole("group", { name: "Related questions" });
+  const relatedQuestion = relatedQuestions.getByRole("button").first();
+  const relatedText = await relatedQuestion.textContent();
+  await relatedQuestion.click();
+  await expect(page.getByTestId("educator-question")).toBeFocused();
+  await expect(page.getByTestId("educator-question")).toHaveValue(
+    relatedText?.trim() ?? "",
+  );
 
   await openSettings(page);
   await expect(page.getByRole("heading", { name: /Your plan belongs to you/i })).toBeVisible();
@@ -337,20 +389,20 @@ test("PWA reloads offline and has no serious automated accessibility violations"
     await page.locator(".view-stack").evaluate(async (element) => {
       await Promise.all(element.getAnimations().map((animation) => animation.finished));
     });
-    const violations = await page.evaluate(async () => {
-      const result = await window.axe.run(document, {
-        runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"] },
-      });
-      return result.violations
-        .filter((item) => item.impact === "serious" || item.impact === "critical")
-        .map((item) => ({
-          id: item.id,
-          impact: item.impact,
-          help: item.help,
-          nodes: item.nodes.map((node) => ({ target: node.target, html: node.html, summary: node.failureSummary })),
-        }));
+    expect(
+      await seriousAccessibilityViolations(page),
+      `${theme} Practice accessibility violations`,
+    ).toEqual([]);
+
+    await openView(page, "learn");
+    await expect(page.locator(".learning-path-card")).toHaveCount(4);
+    await page.locator(".view-stack").evaluate(async (element) => {
+      await Promise.all(element.getAnimations().map((animation) => animation.finished));
     });
-    expect(violations, `${theme} theme accessibility violations`).toEqual([]);
+    expect(
+      await seriousAccessibilityViolations(page),
+      `${theme} Learn accessibility violations`,
+    ).toEqual([]);
   }
 
   await context.setOffline(true);

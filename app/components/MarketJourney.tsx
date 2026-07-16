@@ -405,14 +405,11 @@ export function MarketJourney({
           </span>
           <h2 id={`${componentId}-lab-title`}>{heading}</h2>
           <p>
-            Explore one deterministic learning path through rising markets,
-            pullbacks, deep declines, and possible recovery. The synthetic
-            market index starts at 100; real markets do not follow a schedule.
-            The growth setting shapes the path—it is not an expected return or
-            target for any asset. Choose a sample starting point or begin with
-            your current practice portfolio balance. Both use your weekly
-            habit and the same synthetic index—not the future of an asset
-            selected above.
+            Explore one deterministic synthetic market path—an index starting
+            at 100 that moves through rises, pullbacks, declines, and possible
+            recovery. Choose sample data or your practice balance; both use
+            your weekly habit, and neither forecasts any asset or expected
+            return.
           </p>
         </div>
         <fieldset className={styles.balanceSelector}>

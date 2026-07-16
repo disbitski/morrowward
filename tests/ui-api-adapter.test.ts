@@ -269,7 +269,9 @@ describe("UI API adapters", () => {
         nextStep: "Top-level next step.",
         disclosure: "Top-level disclosure.",
         explanation: {
+          title: "Compounding explained",
           summary: "Nested summary.",
+          keyPoints: ["Time matters.", "Returns remain uncertain."],
           assumptions: ["Nested assumption."],
           tryNext: ["Nested next step."],
         },
@@ -284,7 +286,9 @@ describe("UI API adapters", () => {
     );
 
     expect(reply).toMatchObject({
+      title: "Compounding explained",
       answer: "Top-level answer from the service.",
+      keyPoints: ["Time matters.", "Returns remain uncertain."],
       assumptions: ["Top-level assumption."],
       nextStep: "Top-level next step.",
       disclosure: "Top-level disclosure.",

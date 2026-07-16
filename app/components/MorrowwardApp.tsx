@@ -76,16 +76,27 @@ import {
 } from "../../src/domain";
 import {
   CURRENT_STATE_VERSION,
+  EDUCATION_PATHS,
   EDUCATIONAL_QUOTES,
   MAX_IMPORT_BYTES,
   createDefaultState,
+  educationPath,
+  educationPrompts,
+  educationResources,
+  inferEducationTopic,
   parseStateExport,
+  relatedEducationPrompts,
+  resourceTierLabel,
   serializeStateExport,
   validateState,
+  type EducationIconKey,
+  type EducationPathId,
+  type EducationPrompt,
   type MorrowwardState,
 } from "../../src/data";
 import {
   QuotesResponseSchema,
+  type EducationTopic,
   type EducationalQuote as MarketEducationalQuote,
 } from "../../src/contracts";
 import {
@@ -164,7 +175,9 @@ type Brief = {
 };
 
 type EducatorReply = {
+  title: string;
   answer: string;
+  keyPoints: string[];
   assumptions: string[];
   nextStep: string;
   disclosure: string;
@@ -222,79 +235,26 @@ const FALLBACK_BRIEF: Brief = {
   },
 };
 
-const EDUCATION_TOPICS: Array<{
-  title: string;
-  kicker: string;
-  description: string;
-  source: string;
-  href: string;
-  icon: LucideIcon;
-}> = [
-  {
-    title: "Compounding",
-    kicker: "Start with time",
-    description: "Learn why returns can build on prior growth—and why the path is never perfectly smooth.",
-    source: "Investor.gov",
-    href: "https://www.investor.gov/introduction-investing",
-    icon: TrendingUp,
-  },
-  {
-    title: "Diversification",
-    kicker: "Spread exposure",
-    description: "See how an allocation can combine different assets and risks without promising safety.",
-    source: "Investor.gov",
-    href: "https://www.investor.gov/introduction-investing/getting-started/asset-allocation",
-    icon: Compass,
-  },
-  {
-    title: "Dollar-cost averaging",
-    kicker: "Build a rhythm",
-    description: "Understand the habit of investing equal amounts at regular intervals.",
-    source: "Investor.gov",
-    href: "https://www.investor.gov/introduction-investing/investing-basics/glossary/dollar-cost-averaging",
-    icon: Calendar,
-  },
-  {
-    title: "Risk & volatility",
-    kicker: "Name the tradeoffs",
-    description: "Explore why potential return and uncertainty belong in the same conversation.",
-    source: "Investor.gov",
-    href: "https://www.investor.gov/introduction-investing",
-    icon: LineChart,
-  },
-  {
-    title: "Time in the market",
-    kicker: "Days you cannot predict",
-    description: "See why missing only a few unusually strong days can materially change a long-run result—and why those days are unknowable in advance.",
-    source: "Fidelity research",
-    href: "https://www.fidelity.com/learning-center/trading-investing/should-i-sell-my-stocks-now",
-    icon: Clock,
-  },
-  {
-    title: "Options basics",
-    kicker: "Advanced lesson",
-    description: "Learn the language of contracts, expiration, and the Greeks before considering real-world use.",
-    source: "FINRA",
-    href: "https://www.finra.org/investors/insights/options-z-basics-greeks",
-    icon: SlidersHorizontal,
-  },
-  {
-    title: "Crypto assets",
-    kicker: "Know the risks",
-    description: "Review custody, volatility, scams, and regulatory uncertainty in plain language.",
-    source: "FINRA",
-    href: "https://www.finra.org/investors/investing/investment-products/crypto-assets/overview",
-    icon: Bitcoin,
-  },
-];
+const EDUCATION_ICONS: Record<EducationIconKey, LucideIcon> = {
+  bitcoin: Bitcoin,
+  book: BookOpen,
+  calendar: Calendar,
+  clock: Clock,
+  compass: Compass,
+  landmark: Landmark,
+  "line-chart": LineChart,
+  "piggy-bank": PiggyBank,
+  sliders: SlidersHorizontal,
+  "trending-up": TrendingUp,
+  wallet: WalletCards,
+};
 
-const GUIDED_QUESTIONS = [
-  "How does compounding work here?",
-  "What does inflation-adjusted mean?",
-  "Why can returns vary so much?",
-  "Why can missing a few strong days matter?",
-  "Explain diversification simply.",
-];
+const EDUCATION_PATH_ICONS: Record<EducationPathId, LucideIcon> = {
+  "start-here": BookOpen,
+  "build-the-habit": Calendar,
+  "understand-risk": ShieldCheck,
+  "go-deeper": SlidersHorizontal,
+};
 
 const DEMO_QUOTES = Object.fromEntries(
   ASSETS.map((asset) => [
@@ -602,23 +562,50 @@ function stringArray(value: unknown): string[] {
 
 function fallbackEducator(question: string): EducatorReply {
   const lower = question.toLowerCase();
+  let title = "Learn one tradeoff at a time";
   let answer =
     "A long-term projection is a way to explore how your starting amount, recurring contributions, time, and an illustrative return interact. It is a learning model—not a prediction.";
+  let keyPoints = [
+    "Time, contributions, fees, and diversification are inputs you can examine.",
+    "Future returns remain uncertain, so scenarios compare possibilities rather than predict outcomes.",
+  ];
   if (lower.includes("compound")) {
+    title = "Compounding rewards time and consistency";
     answer =
       "Compounding means growth can earn growth of its own. In this simulation, each week begins with the prior balance, applies the selected illustrative rate, and then adds your weekly contribution. More time gives that repeated process more chances to work.";
+    keyPoints = [
+      "Starting earlier gives each contribution more periods to participate.",
+      "A higher illustrative rate also represents greater uncertainty—not a promise.",
+    ];
   } else if (lower.includes("inflation")) {
+    title = "Inflation changes what future money can buy";
     answer =
       "Inflation-adjusted value translates a future amount into an estimate of today's purchasing power. If prices rise over time, the same number of dollars may buy less, so Morrowward shows both nominal and inflation-adjusted illustrations.";
+    keyPoints = [
+      "Nominal value counts future dollars.",
+      "Inflation-adjusted value estimates what those dollars may buy in today's terms.",
+    ];
   } else if (lower.includes("divers")) {
+    title = "Diversification spreads exposure";
     answer =
       "Diversification means spreading exposure across different investments rather than relying on one outcome. It can reduce concentration risk, but it cannot prevent losses or guarantee returns.";
+    keyPoints = [
+      "Different assets can respond differently to the same event.",
+      "Diversification manages concentration; it does not make investing risk-free.",
+    ];
   } else if (lower.includes("return") || lower.includes("vary") || lower.includes("risk")) {
+    title = "Risk and return belong in the same conversation";
     answer =
       "Real returns change from year to year and can be negative. Morrowward's 3%, 6%, and 9% scenarios are editable illustrations chosen to compare possibilities—not forecasts or expected results.";
+    keyPoints = [
+      "Average returns can hide large gains and losses along the way.",
+      "A long horizon may create recovery time, but it never removes risk.",
+    ];
   }
   return {
+    title,
     answer,
+    keyPoints,
     assumptions: ["The simulator uses a steady illustrative rate.", "Taxes, fees, and market swings are not modeled in this view."],
     nextStep: "Try changing one assumption at a time and compare the three scenarios.",
     disclosure: "Educational information only—not individualized financial advice.",
@@ -650,7 +637,11 @@ export function parseEducatorReply(payload: unknown, question: string): Educator
   const tryNext = stringArray(nested.tryNext);
 
   return {
+    title:
+      (typeof nested.title === "string" && nested.title) ||
+      "Morrow’s explanation",
     answer,
+    keyPoints: stringArray(nested.keyPoints),
     assumptions:
       topLevelAssumptions.length > 0
         ? topLevelAssumptions
@@ -980,7 +971,7 @@ function Onboarding({ data, setData }: { data: AppData; setData: (data: AppData)
             <div className="setup-step">
               <div className="setup-heading">
                 <span>Step 2 of 3</span>
-                <h2 id="setup-title" ref={setupTitleRef} tabIndex={-1}>Choose your horizon</h2>
+                <h2 id="setup-title" ref={setupTitleRef} tabIndex={-1}>Choose your atmosphere</h2>
                 <p>Pick the atmosphere that helps the future feel inviting.</p>
               </div>
               <div className="theme-cards" role="group" aria-labelledby="setup-title">
@@ -1076,16 +1067,45 @@ function TopBar({
     const frame = window.requestAnimationFrame(() => {
       mobileMenuRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
     });
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      setMenuOpen(false);
-      menuTriggerRef.current?.focus();
+    const handleMenuKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setMenuOpen(false);
+        menuTriggerRef.current?.focus();
+        return;
+      }
+      if (event.key !== "Tab" || !mobileMenuRef.current) return;
+      const focusable = Array.from(
+        mobileMenuRef.current.querySelectorAll<HTMLButtonElement>("button"),
+      );
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     };
-    document.addEventListener("keydown", closeOnEscape);
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return;
+      if (
+        mobileMenuRef.current?.contains(target) ||
+        menuTriggerRef.current?.contains(target)
+      ) {
+        return;
+      }
+      setMenuOpen(false);
+    };
+    document.addEventListener("keydown", handleMenuKeyDown);
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
     return () => {
       window.cancelAnimationFrame(frame);
-      document.removeEventListener("keydown", closeOnEscape);
+      document.removeEventListener("keydown", handleMenuKeyDown);
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
     };
   }, [menuOpen, setMenuOpen]);
 
@@ -1489,28 +1509,35 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
 
   return (
     <div className="view-stack">
-      <div className="page-intro"><div><span className="section-kicker">Practice mode</span><h1>Learn the motion before risking money.</h1><p>Cash, holdings, purchases, and results are simulated. Price inputs come from current market sources when available, with offline practice data as a fallback.</p></div><span className="simulation-badge"><FlaskConical size={16} /> 100% simulation</span></div>
+      <div className="page-intro"><div><span className="section-kicker">Practice mode</span><h1>Learn the motion before risking money.</h1><p>Cash, holdings, purchases, and results are simulated. Price inputs are labeled with their source and freshness so you can see exactly what each practice value represents.</p></div><span className="simulation-badge"><FlaskConical size={16} /> 100% simulation</span></div>
       <section className="practice-summary">
         <article><span><WalletCards size={19} /> Simulated cash</span><strong>{formatMoney(data.practice.cashCents)}</strong><small>available to practice</small></article>
         <article><span><LineChart size={19} /> Practice holdings</span><strong>{formatMoney(Math.round(holdingsValue))}</strong><small>using labeled educational prices</small></article>
         <article><span><Leaf size={19} /> Learning streak</span><strong>{habit.streak} weeks</strong><small>consistency over outcomes</small></article>
       </section>
-      <PracticeMarketPanel
-        assets={practiceMarketAssets}
-        selectedSymbol={selected}
-        onSelect={(symbol) => {
-          const asset = ASSETS.find((candidate) => candidate.symbol === symbol);
-          if (asset) setSelected(asset.symbol);
-        }}
-        onRequestHistory={loadOneYearHistory}
-        refreshStatus={refreshStatus}
-        refreshError={refreshError}
-        lastUpdatedAt={lastMarketUpdatedAt}
-        title="Explore eleven practice assets"
-        description="Compare broad funds, public companies, and crypto assets. The daily snapshot loads automatically, and every value keeps its freshness and provenance. Inclusion is not endorsement."
-      />
+      <nav className="practice-jump-nav" aria-label="Practice page shortcuts">
+        <a href="#practice-assets"><LineChart size={16} aria-hidden="true" /><span><strong>Explore assets</strong><small>Learn what each one is</small></span></a>
+        <a href="#practice-weekly"><Leaf size={16} aria-hidden="true" /><span><strong>Practice this week</strong><small>Add cash and simulate</small></span></a>
+        <a href="#practice-journey"><TrendingUp size={16} aria-hidden="true" /><span><strong>Open Market Journey</strong><small>See risk and time together</small></span></a>
+      </nav>
+      <div className="scroll-anchor" id="practice-assets">
+        <PracticeMarketPanel
+          assets={practiceMarketAssets}
+          selectedSymbol={selected}
+          onSelect={(symbol) => {
+            const asset = ASSETS.find((candidate) => candidate.symbol === symbol);
+            if (asset) setSelected(asset.symbol);
+          }}
+          onRequestHistory={loadOneYearHistory}
+          refreshStatus={refreshStatus}
+          refreshError={refreshError}
+          lastUpdatedAt={lastMarketUpdatedAt}
+          title="Explore eleven practice assets"
+          description="Compare broad funds, public companies, and crypto assets. The daily snapshot loads automatically, and every value keeps its freshness and provenance. Inclusion is not endorsement."
+        />
+      </div>
       <section className="practice-layout">
-        <article className="panel habit-flow">
+        <article className="panel habit-flow scroll-anchor" id="practice-weekly">
           <div className="panel-heading"><div><span className="section-kicker">This week’s habit</span><h2>Three small moves</h2></div><span className="step-count">{habit.purchaseDone ? "3" : habit.weeklyAdded ? "2" : "1"} / 3</span></div>
           <ol className="flow-steps">
             <li className="complete"><span><Check size={16} /></span><div><strong>Choose the weekly amount</strong><small>{formatMoney(data.plan.weeklyCents)} comes from your plan</small></div></li>
@@ -1535,13 +1562,15 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
           <div className="price-note"><Clock size={15} aria-hidden="true" /><span><strong>Portfolio valuation</strong>Uses the labeled prices above only inside Practice mode.</span></div>
         </aside>
       </section>
-      <MarketJourney
-        startingBalanceCents={data.plan.startingCents}
-        practicePortfolioBalanceCents={valuation.totalValueCents}
-        weeklyContributionCents={data.plan.weeklyCents}
-        initialReturnBps={data.plan.returnBps}
-        experienceLevel={data.experience}
-      />
+      <div className="scroll-anchor" id="practice-journey">
+        <MarketJourney
+          startingBalanceCents={data.plan.startingCents}
+          practicePortfolioBalanceCents={valuation.totalValueCents}
+          weeklyContributionCents={data.plan.weeklyCents}
+          initialReturnBps={data.plan.returnBps}
+          experienceLevel={data.experience}
+        />
+      </div>
       {data.practice.transactions.length > 0 && <section className="panel activity-panel"><div className="panel-heading"><div><span className="section-kicker">Practice receipt</span><h2>Recent activity</h2></div><ShieldCheck size={20} /></div><div className="activity-list">{[...data.practice.transactions].reverse().slice(0, 5).map((item) => <div key={item.id}><span className={item.type === "deposit" ? "activity-icon deposit" : "activity-icon"}>{item.type === "deposit" ? <Plus size={16} /> : <FlaskConical size={16} />}</span><div><strong>{item.type === "deposit" ? "Weekly practice deposit" : `${item.symbol} simulated purchase`}</strong><small>{new Date(item.occurredAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</small></div><b>{item.type === "deposit" ? "+" : "−"}{formatMoney(item.type === "deposit" ? item.amountCents : item.spentCents)}</b></div>)}</div></section>}
     </div>
   );
@@ -1551,12 +1580,35 @@ function LearnView({ data }: { data: AppData }) {
   const [question, setQuestion] = useState("");
   const [reply, setReply] = useState<EducatorReply | null>(null);
   const [loading, setLoading] = useState(false);
+  const [selectedPathId, setSelectedPathId] =
+    useState<EducationPathId>("start-here");
+  const [selectedTopic, setSelectedTopic] =
+    useState<EducationTopic>("general");
+  const [replyTopic, setReplyTopic] =
+    useState<EducationTopic>("general");
   const responseRef = useRef<HTMLDivElement>(null);
+  const questionRef = useRef<HTMLTextAreaElement>(null);
+  const selectedPath = educationPath(selectedPathId);
+  const prompts = educationPrompts(selectedPathId, data.experience);
+  const resources = educationResources(selectedPathId);
+  const followUps = reply
+    ? relatedEducationPrompts(replyTopic, data.experience, question)
+    : [];
+
+  const choosePrompt = (prompt: EducationPrompt) => {
+    setQuestion(prompt.question);
+    setSelectedTopic(prompt.topic);
+    window.setTimeout(() => questionRef.current?.focus(), 50);
+  };
 
   const ask = async (event?: FormEvent) => {
     event?.preventDefault();
-    const clean = question.trim().slice(0, 500);
+    const clean = question.trim().slice(0, 600);
     if (!clean || loading) return;
+    const resolvedTopic =
+      selectedTopic === "general"
+        ? inferEducationTopic(clean)
+        : selectedTopic;
     setLoading(true);
     try {
       const response = await fetch("/api/v1/education/explain", {
@@ -1565,6 +1617,7 @@ function LearnView({ data }: { data: AppData }) {
         body: JSON.stringify({
           question: clean,
           experienceLevel: data.experience,
+          topic: resolvedTopic,
           context: {
             yearsRemaining: data.plan.targetAge - data.plan.currentAge,
             weeklyContributionCents: data.plan.weeklyCents,
@@ -1575,8 +1628,10 @@ function LearnView({ data }: { data: AppData }) {
       });
       if (!response.ok) throw new Error("Educator unavailable");
       setReply(parseEducatorReply(await response.json(), clean));
+      setReplyTopic(resolvedTopic);
     } catch {
       setReply(fallbackEducator(clean));
+      setReplyTopic(resolvedTopic);
     } finally {
       setLoading(false);
       window.setTimeout(() => responseRef.current?.focus(), 50);
@@ -1586,32 +1641,114 @@ function LearnView({ data }: { data: AppData }) {
   return (
     <div className="view-stack">
       <div className="page-intro"><div><span className="section-kicker">Education center</span><h1>Understanding is a form of freedom.</h1><p>Start with one honest question. Build from there.</p></div><span className="level-badge"><UserRound size={15} aria-hidden="true" /> {data.experience === "new" ? "Plain-language mode" : data.experience === "familiar" ? "Familiar mode" : "Advanced detail mode"}</span></div>
+      <section className="learning-path-section" aria-labelledby="learning-path-title">
+        <div className="section-heading">
+          <div>
+            <span className="section-kicker">Choose a learning path</span>
+            <h2 id="learning-path-title">One idea at a time. No gatekeeping.</h2>
+          </div>
+          <p>Your experience level changes the questions and depth—not the safety boundaries.</p>
+        </div>
+        <div className="learning-path-grid" role="group" aria-label="Education learning paths">
+          {EDUCATION_PATHS.map((path) => {
+            const Icon = EDUCATION_PATH_ICONS[path.id];
+            const selected = path.id === selectedPathId;
+            return (
+              <button
+                aria-pressed={selected}
+                className={selected ? "learning-path-card selected" : "learning-path-card"}
+                data-testid={`education-path-${path.id}`}
+                key={path.id}
+                onClick={() => setSelectedPathId(path.id)}
+                type="button"
+              >
+                <span className="learning-path-icon"><Icon size={20} aria-hidden="true" /></span>
+                <span className="section-kicker">{path.eyebrow}</span>
+                <strong>{path.title}</strong>
+                <small>{path.description}</small>
+                <span className="learning-path-action">{selected ? "Exploring now" : "Explore path"} <ArrowRight size={14} aria-hidden="true" /></span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
       <section className="educator-panel" aria-labelledby="educator-title" aria-busy={loading}>
         <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">{loading ? "Morrow is preparing an explanation." : reply ? "Morrow’s explanation is ready." : ""}</p>
         <div className="educator-intro">
           <span className="morrow-avatar"><Sparkles size={24} aria-hidden="true" /></span>
-          <div><span className="section-kicker">Ask Morrow · GPT-5.6 when available</span><h2 id="educator-title">What would you like to understand?</h2><p>I explain concepts and assumptions. I do not tell you what to buy, sell, or do with your money.</p></div>
+          <div><span className="section-kicker">Ask Morrow · {selectedPath.title} · GPT-5.6 when available</span><h2 id="educator-title">What would you like to understand?</h2><p>I explain concepts and assumptions at your selected level. I do not tell you what to buy, sell, or do with your money.</p></div>
         </div>
-        <div className="prompt-chips" role="group" aria-label="Suggested questions">{GUIDED_QUESTIONS.map((prompt) => <button data-testid={`educator-chip-${GUIDED_QUESTIONS.indexOf(prompt)}`} key={prompt} type="button" onClick={() => setQuestion(prompt)}>{prompt}<ChevronRight size={14} aria-hidden="true" /></button>)}</div>
+        <div className="guided-prompt-grid" role="group" aria-label={`${selectedPath.title} suggested questions`}>
+          {prompts.map((prompt, index) => (
+            <button
+              data-testid={`educator-chip-${index}`}
+              key={prompt.id}
+              onClick={() => choosePrompt(prompt)}
+              type="button"
+            >
+              <span>{prompt.question}</span>
+              <ChevronRight size={15} aria-hidden="true" />
+            </button>
+          ))}
+        </div>
         <form className="question-form" onSubmit={ask}>
           <label htmlFor="educator-question">Your question</label>
-          <div><textarea data-testid="educator-question" id="educator-question" value={question} maxLength={500} onChange={(event) => setQuestion(event.target.value)} placeholder="Try: Why does the 6% scenario grow faster over time?" rows={3} /><button className="button primary" data-testid="educator-submit" type="submit" disabled={!question.trim() || loading}>{loading ? <RefreshCw className="spin" size={18} aria-hidden="true" /> : <Send size={18} aria-hidden="true" />}<span>{loading ? "Explaining…" : "Explain it"}</span></button></div><small>{question.length}/500 · Please don’t share account numbers or private information. When GPT is configured, this question and four bounded illustration values pass through Morrowward’s server to OpenAI.</small>
+          <div><textarea data-testid="educator-question" id="educator-question" ref={questionRef} value={question} maxLength={600} onChange={(event) => { setQuestion(event.target.value); setSelectedTopic(inferEducationTopic(event.target.value)); }} placeholder="Try: Why does the 6% scenario grow faster over time?" rows={3} /><button className="button primary" data-testid="educator-submit" type="submit" disabled={!question.trim() || loading}>{loading ? <RefreshCw className="spin" size={18} aria-hidden="true" /> : <Send size={18} aria-hidden="true" />}<span>{loading ? "Explaining…" : "Explain it"}</span></button></div><small>{question.length}/600 · Please don’t share account numbers or private information. When GPT is configured, this question and four bounded illustration values pass through Morrowward’s server to OpenAI.</small>
         </form>
         {reply && (
           <div className="educator-response" ref={responseRef} tabIndex={-1} role="region" aria-labelledby="morrow-response-title">
-            <div className="response-label" id="morrow-response-title"><Sparkles size={15} aria-hidden="true" /> Morrow’s explanation <span>{reply.meta.mode === "ai" ? <><Sparkles size={12} aria-hidden="true" /> {reply.meta.model?.toUpperCase() ?? "AI"} generated</> : reply.meta.mode === "guardrail" ? <><ShieldCheck size={12} aria-hidden="true" /> Safety-guided response</> : <><Database size={12} aria-hidden="true" /> Deterministic fallback</>}</span></div>
+            <div className="response-label"><Sparkles size={15} aria-hidden="true" /> Morrow’s explanation <span>{reply.meta.mode === "ai" ? <><Sparkles size={12} aria-hidden="true" /> {reply.meta.model?.toUpperCase() ?? "AI"} generated</> : reply.meta.mode === "guardrail" ? <><ShieldCheck size={12} aria-hidden="true" /> Safety-guided response</> : <><Database size={12} aria-hidden="true" /> Deterministic fallback</>}</span></div>
+            <h3 id="morrow-response-title">{reply.title}</h3>
             <p>{reply.answer}</p>
+            {reply.keyPoints.length > 0 && <div className="key-point-list"><strong>Key ideas</strong><ul>{reply.keyPoints.map((item) => <li key={item}>{item}</li>)}</ul></div>}
             {reply.assumptions.length > 0 && <div className="assumption-list"><strong>Assumptions to notice</strong><ul>{reply.assumptions.map((item) => <li key={item}>{item}</li>)}</ul></div>}
             <div className="next-step"><ArrowRight size={17} aria-hidden="true" /><span><strong>Try next</strong>{reply.nextStep}</span></div>
+            {followUps.length > 0 && (
+              <div className="follow-up-prompts" role="group" aria-label="Related questions">
+                <strong>Keep learning</strong>
+                <div>
+                  {followUps.map((prompt) => (
+                    <button
+                      data-testid={`educator-follow-up-${prompt.id}`}
+                      key={prompt.id}
+                      onClick={() => choosePrompt(prompt)}
+                      type="button"
+                    >
+                      {prompt.question}<ChevronRight size={13} aria-hidden="true" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <small>{reply.disclosure}</small>
           </div>
         )}
       </section>
       <section aria-labelledby="library-title">
-        <div className="section-heading"><div><span className="section-kicker">Learning library</span><h2 id="library-title">Build your financial vocabulary</h2></div><p>Approachable introductions with links to primary educational sources.</p></div>
-        <div className="topic-grid">{EDUCATION_TOPICS.map((topic) => { const Icon = topic.icon; return <article className="topic-card" key={topic.title}><span className="topic-icon"><Icon size={22} aria-hidden="true" /></span><span className="section-kicker">{topic.kicker}</span><h3>{topic.title}</h3><p>{topic.description}</p><a href={topic.href} target="_blank" rel="noreferrer">Read at {topic.source}<ExternalLink size={14} aria-hidden="true" /><span className="sr-only"> (opens in a new tab)</span></a></article>; })}</div>
+        <div className="section-heading"><div><span className="section-kicker">Learning library · {selectedPath.title}</span><h2 id="library-title">Build your financial vocabulary</h2></div><p>Canonical resources lead each topic. Grokipedia links are clearly labeled supplemental reading.</p></div>
+        <div className="topic-grid">
+          {resources.map((resource) => {
+            const Icon = EDUCATION_ICONS[resource.icon];
+            return (
+              <article className="topic-card" key={resource.id}>
+                <span className="topic-icon"><Icon size={22} aria-hidden="true" /></span>
+                <span className="section-kicker">{resource.kicker}</span>
+                <h3>{resource.title}</h3>
+                <p>{resource.description}</p>
+                <div className="resource-links">
+                  {resource.links.map((link) => (
+                    <a href={link.href} key={`${resource.id}-${link.href}`} target="_blank" rel="noreferrer">
+                      <span className={`resource-tier ${link.tier}`}>{resourceTierLabel(link.tier)}</span>
+                      <span>{link.label} · {link.source}<ExternalLink size={13} aria-hidden="true" /></span>
+                      <span className="sr-only"> (opens in a new tab)</span>
+                    </a>
+                  ))}
+                </div>
+              </article>
+            );
+          })}
+        </div>
       </section>
-      <aside className="supplemental-note"><Info size={18} aria-hidden="true" /><p><strong>About sources</strong> Morrowward prioritizes primary public-interest resources such as Investor.gov and FINRA. Grokipedia may be offered later as clearly labeled supplemental reading, never as the canonical source.</p></aside>
     </div>
   );
 }
@@ -1767,11 +1904,9 @@ function AppFooter({ onNavigate }: { onNavigate: (view: View) => void }) {
 }
 
 function MobileNav({ active, onNavigate }: { active: View; onNavigate: (view: View) => void }) {
-  const items = NAV_ITEMS.slice(0, 4);
   return (
     <nav className="bottom-nav" aria-label="Mobile primary navigation">
-      {items.map((item) => { const Icon = item.icon; return <button data-testid={`mobile-nav-${item.id}`} key={item.id} type="button" className={active === item.id ? "active" : ""} onClick={() => onNavigate(item.id)} aria-current={active === item.id ? "page" : undefined}><Icon size={19} aria-hidden="true" /><span>{item.label}</span></button>; })}
-      <button type="button" className={active === "settings" ? "active" : ""} onClick={() => onNavigate("settings")} aria-current={active === "settings" ? "page" : undefined}><Settings size={19} aria-hidden="true" /><span>Settings</span></button>
+      {NAV_ITEMS.map((item) => { const Icon = item.icon; return <button data-testid={`mobile-nav-${item.id}`} key={item.id} type="button" className={active === item.id ? "active" : ""} onClick={() => onNavigate(item.id)} aria-current={active === item.id ? "page" : undefined}><Icon size={19} aria-hidden="true" /><span>{item.label}</span></button>; })}
     </nav>
   );
 }

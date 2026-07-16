@@ -178,9 +178,9 @@ The refinement closed with **201 passing unit/integration tests**, clean ESLint 
 
 Planned milestone: weekly simulation, practice portfolio, Education Center, GPT-5.6 educator, daily brief, provenance, and AI safety tests.
 
-### Planned Education Center expansion and creative polish
+### Education Center expansion and creative polish
 
-The next hands-on pass will turn Learn from a compact question surface into a more complete financial-literacy center while preserving the bounded educator and non-advice contract:
+The hands-on pass turned Learn from a compact question surface into a more complete financial-literacy center while preserving the bounded educator and non-advice contract:
 
 - Expand the guided question library across compounding, dollar-cost averaging, diversification, ETFs, inflation, volatility, drawdowns, bear markets, CAGR versus personal return, stocks, crypto, options, market timing, and common terminology.
 - Tailor prompt sets and explanation depth for **New**, **Familiar**, and **Advanced** experience levels.
@@ -194,18 +194,60 @@ The next hands-on pass will turn Learn from a compact question surface into a mo
 
 Acceptance for this pass includes verified non-broken links, keyboard and screen-reader access, responsive layouts, useful deterministic/offline education, experience-appropriate prompt coverage, and continued rejection of personalized buy/sell instructions, guarantees, urgency, and prompt-injection attempts.
 
-## July 17 — Feature-complete release candidate
+The completed implementation:
 
-Planned milestone: data portability, offline behavior, accessibility, security review, documentation, demo seed state, and production rehearsal.
+- Adds four stable learning paths: **Start Here**, **Build the Habit**, **Understand Risk**, and **Go Deeper**.
+- Provides 48 unique guided questions across New, Familiar, and Advanced modes, each mapped to one bounded educator topic.
+- Sends that topic explicitly with guided questions and infers it locally for freeform questions; neither path adds balances, holdings, transactions, identity, or medical context.
+- Renders the educator's structured title, key ideas, assumptions, disclosure, and safe simulator activity instead of flattening the response into one paragraph.
+- Adds deterministic related-question chips that fill and focus the question field without automatically creating another API call.
+- Expands the library to 14 topic cards with visible source tiers: **Primary resource**, **Authoritative education**, **Industry research**, and **Supplemental reading · Grokipedia**.
+- Verifies direct Grokipedia article routes and removes the old “may be offered later” note. Supplemental links always appear beside a primary or authoritative resource; no external article content is scraped into Morrowward.
+- Makes the four-path selector a compact horizontal exploration row on small screens so the educator remains close to the page opening.
+- Fixes the onboarding theme-step heading, removes remaining fallback implementation language from the Practice introduction, adds direct Practice shortcuts, keeps Our Why in the five-item mobile navigation, and adds outside-click plus focus containment to the mobile drawer.
+- Replaces the hard-coded welcome CTA amount with **Practice this week's step**, shortens Market Journey's opening explanation, and makes screenshot capture dismiss the one-time welcome reliably.
 
-## July 18 — Hands-on evaluation
+The visual review produced new desktop and mobile Education Center captures, refreshed every existing product screenshot from the current build, and confirmed the Space theme keeps its contrast and hierarchy at both sizes.
 
-Reserved for evidence-based adjustments from real desktop and mobile use.
+Verification closed with **206 passing unit/integration tests across 21 files**, clean ESLint and TypeScript checks, clean vinext and Next/Vercel production builds, four rendered-worker checks, and all ten Playwright journeys across desktop and mobile Chrome. The browser path now verifies all four learning paths, the selected level's wording, the exact educator topic payload, structured key ideas, deterministic follow-up focus, visible Grokipedia source-tier labels, absence of the retired disclaimer, offline reload, and serious/critical accessibility checks on both Practice and Learn in all four themes.
 
-## July 19 — Code freeze
+### Scope evolution: Apple companion demonstrations
 
-Reserved for final QA, clean-room setup verification, security checks, release commit, and tag.
+The original July 14 decision correctly kept the web/PWA as the complete hackathon product and treated native apps as future work. After the web experience matured ahead of schedule, Dave and Codex revisited that boundary for a narrower purpose: demonstrate how Codex can carry a finished product into Apple tooling without pretending that two rushed native rewrites improve the product.
+
+Friday's target is therefore a fresh shared SwiftUI project with thin iOS and macOS companion shells around the proven Morrowward web experience:
+
+- Share one SwiftUI/WebKit implementation across two targets, following Apple's [multiplatform target guidance](https://developer.apple.com/documentation/Xcode/configuring-a-multiplatform-app-target) and current [WebKit for SwiftUI](https://developer.apple.com/documentation/webkit/webkit-for-swiftui) APIs.
+- Preserve the React UI, deterministic engines, local browser data, and server API boundaries rather than duplicating them in Swift.
+- Add only the native value needed for an honest hackathon demonstration: launch/loading/error states, restrained Apple navigation chrome, app icons, external-link handling, simulator/Mac build verification, and platform documentation. Apple's [Liquid Glass guidance](https://developer.apple.com/documentation/TechnologyOverviews/adopting-liquid-glass) will inform controls and navigation rather than replacing Morrowward's content layer.
+- Keep Debug origin configurable for a local server and point Release at the stable public production alias. Never embed a protected preview URL, Vercel credential, OpenAI key, or bypass token.
+- Describe the result as a companion shell and portability demonstration, not an App Store-ready native rewrite; Apple's [App Review Guideline 4.2](https://developer.apple.com/app-store/review/guidelines/) sets a higher bar for a future store release.
+- Journal every Xcode, simulator, signing, design, and verification decision so the process itself demonstrates Codex capability.
+
+The local audit confirmed Xcode 26.6, Swift 6.3.3, XcodeGen 2.45.4, an iOS 26.5 runtime, and an iPhone 17 Pro simulator are ready. Simulator and unsigned local Mac builds do not require the currently absent signing identity; physical-device installation remains optional and would require selecting an Apple development team.
+
+## July 17 — Shared iOS and macOS companion shells
+
+- Create the fresh `apple/` project and shared SwiftUI/WebKit source.
+- Build the Morrowward icon and restrained native launch/navigation/error states.
+- Keep internal Morrowward navigation in the shell and open educational external links in the system browser.
+- Verify clean iPhone 17 Pro simulator and unsigned macOS builds.
+- Exercise onboarding, Practice, Market Journey, Education, themes, local persistence, export/import/reset, media playback, and network failure.
+- Add Apple setup, XcodeGen, local-server, signing, and architecture documentation.
+
+## July 18 — Submission package and recording
+
+- Complete final web and Apple smoke tests.
+- Finalize the Devpost description, README, screenshots, attribution, and three-minute demo path.
+- Record the public demo showing the web app plus the iPhone and macOS companion shells.
+- Keep the product demonstration independent from live market conditions by using repeatable seeded state.
+
+## July 19 — Buffer and submission-blocking fixes
+
+Reserved for issues discovered during recording, clean-room setup verification, final security/history review, and submission-blocking fixes only.
 
 ## July 20 — Publish and submit
 
-Reserved for public repository access, public production deployment, the under-three-minute YouTube demo, and Devpost submission.
+- Make the full repository history and stable Vercel production deployment public.
+- Recheck clean clone, public website, Apple project instructions, YouTube visibility, and every Devpost link.
+- Submit during the evening, preserving the full-day buffer before the July 21, 8:00 PM ET deadline.

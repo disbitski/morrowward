@@ -368,7 +368,7 @@ function HistoricalGreetingDialogContent({
                 type="button"
                 onClick={onPractice}
               >
-                Practice your first $10 week <ArrowRight size={17} aria-hidden="true" />
+                Practice this week’s step <ArrowRight size={17} aria-hidden="true" />
               </button>
               <button className="button secondary" type="button" onClick={onExplore}>
                 Explore my dashboard

@@ -36,6 +36,14 @@ async function onboard(page) {
   await page.getByTestId("plan-weekly-contribution").fill("25");
   await page.getByTestId("onboarding-complete").click();
   await page.getByRole("heading", { name: /future is still in motion/i }).waitFor();
+  const greeting = page.getByTestId("historical-greeting-dialog");
+  const greetingAppeared = await greeting
+    .waitFor({ state: "visible", timeout: 2_000 })
+    .then(() => true, () => false);
+  if (greetingAppeared) {
+    await greeting.getByRole("button", { name: /^Skip welcome$/i }).click();
+    await greeting.waitFor({ state: "hidden" });
+  }
   await finishAnimations(page);
 }
 
@@ -58,6 +66,12 @@ try {
   await desktopPage.screenshot({ path: fileURLToPath(new URL("mission-story-desktop.png", outputDirectory)) });
 
   await desktopPage.getByTestId("theme-space").click();
+  await desktopPage.getByTestId("nav-learn").click();
+  await desktopPage.getByRole("heading", { name: /Understanding is a form of freedom/i }).waitFor();
+  await desktopPage.getByTestId("education-path-understand-risk").click();
+  await finishAnimations(desktopPage);
+  await desktopPage.screenshot({ path: fileURLToPath(new URL("education-center-space-desktop.png", outputDirectory)) });
+
   await desktopPage.getByTestId("nav-practice").click();
   const practiceMarket = desktopPage.getByTestId("practice-market-panel");
   await practiceMarket.waitFor();
@@ -98,7 +112,11 @@ try {
   await mobilePage.screenshot({ path: fileURLToPath(new URL("spcx-detail-mobile.png", outputDirectory)) });
   await mobilePage.getByRole("button", { name: /Close SPCX details/i }).click();
 
-  await mobilePage.getByRole("button", { name: "Settings", exact: true }).click();
+  await mobilePage.getByRole("button", { name: "Open menu" }).click();
+  await mobilePage
+    .getByRole("navigation", { name: "Mobile menu" })
+    .getByRole("button", { name: /Settings/i })
+    .click();
   const mobileAppearance = mobilePage.locator(".setting-card").filter({ hasText: "Choose a theme" });
   await mobileAppearance.getByTestId("theme-space").click();
   await mobilePage.getByTestId("mobile-nav-practice").click();
@@ -107,6 +125,12 @@ try {
   await mobilePage.getByTestId("market-journey-chart").scrollIntoViewIfNeeded();
   await finishAnimations(mobilePage);
   await mobilePage.screenshot({ path: fileURLToPath(new URL("market-journey-space-mobile.png", outputDirectory)) });
+  await mobilePage.getByTestId("mobile-nav-learn").click();
+  await mobilePage.getByRole("heading", { name: /Understanding is a form of freedom/i }).waitFor();
+  await mobilePage.getByTestId("education-path-understand-risk").click();
+  await mobilePage.evaluate(() => window.scrollTo({ top: 0, behavior: "auto" }));
+  await finishAnimations(mobilePage);
+  await mobilePage.screenshot({ path: fileURLToPath(new URL("education-center-space-mobile.png", outputDirectory)) });
   await mobile.close();
 } finally {
   await browser.close();

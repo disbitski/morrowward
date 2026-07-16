@@ -28,6 +28,8 @@ Morrowward carries that lesson into financial literacy: a modest action repeated
 
 ![Morrowward Practice market in the Space theme showing eleven labeled educational assets](docs/screenshots/practice-market-space-desktop.png)
 
+![Morrowward Education Center in the Space theme showing four guided learning paths](docs/screenshots/education-center-space-desktop.png)
+
 The mission page connects the product to the childhood story behind it, while the mobile experience keeps simulated investing clearly separated from real money.
 
 | Mission story | Mobile SPCX detail sheet |
@@ -49,8 +51,10 @@ The mission page connects the product to the childhood story behind it, while th
 - Current market quotes via GPT-5.6 web search, refreshed daily, with source, last-successful-update time, freshness, and change-basis labels
 - Accessible asset-detail sheets with plain-language descriptions, qualitative risk context, and a bounded one-year price path
 - One protected GPT-5.6 web-search batch for the fixed eleven-asset universe; deterministic synthetic values remain the offline fallback
-- Financial-literacy lessons linking to primary Investor.gov and FINRA sources
-- Guided questions and bounded freeform questions for a GPT-5.6 educator
+- Four Education Center paths—**Start Here**, **Build the Habit**, **Understand Risk**, and **Go Deeper**—with 48 questions tailored across New, Familiar, and Advanced modes
+- A multi-source learning library that labels regulator/government material as canonical, industry research separately, and Grokipedia as supplemental reading
+- Structured GPT-5.6 explanations with a title, key ideas, assumptions, a safe simulator activity, and deterministic related questions
+- Guided questions send an explicit bounded education topic; freeform questions are classified locally without sending holdings, balances, or identity
 - Educational daily brief separating facts, sentiment, uncertainty, and takeaway
 - An optional 15-second historical welcome with explicit playback, captions, transcript, primary quote source, visible AI disclosures, a permanent Mission replay, and a versioned approved-greeting roster
 - Versioned IndexedDB persistence with automatic in-memory fallback
@@ -317,9 +321,15 @@ No test sends a real OpenAI request or places a real financial transaction.
 Morrowward summarizes concepts in original language and links outward for canonical detail:
 
 - [Investor.gov introduction to investing](https://www.investor.gov/introduction-investing)
+- [Investor.gov compound interest calculator](https://www.investor.gov/financial-tools-calculators/calculators/compound-interest-calculator)
 - [Investor.gov asset allocation and diversification](https://www.investor.gov/introduction-investing/getting-started/asset-allocation)
 - [Investor.gov dollar-cost averaging glossary](https://www.investor.gov/introduction-investing/investing-basics/glossary/dollar-cost-averaging)
+- [Investor.gov stocks](https://www.investor.gov/introduction-investing/investing-basics/investment-products/stocks)
+- [Investor.gov exchange-traded funds](https://www.investor.gov/introduction-investing/investing-basics/investment-products/mutual-funds-and-exchange-traded-2)
 - [Investor.gov bulletin on performance claims and hypothetical results](https://www.investor.gov/introduction-investing/general-resources/news-alerts/alerts-bulletins/investor-bulletins-47)
+- [U.S. Bureau of Labor Statistics: purchasing power and constant dollars](https://www.bls.gov/cpi/factsheets/purchasing-power-constant-dollars.htm)
+- [FINRA risk](https://www.finra.org/investors/investing/investing-basics/risk)
+- [FINRA volatility](https://www.finra.org/investors/investing/investing-basics/volatility)
 - [Fidelity: the impact of missing a few strong market days](https://www.fidelity.com/learning-center/trading-investing/should-i-sell-my-stocks-now)
 - [Charles Schwab: market volatility and missing top days](https://www.schwab.com/learn/story/ups-and-downs-stock-market-volatility)
 - [J.P. Morgan Asset Management: strong and weak market days can occur close together](https://am.jpmorgan.com/us/en/asset-management/adv/insights/retirement-insights/navigating-market-volatility-retirement-guide/)
@@ -328,7 +338,7 @@ Morrowward summarizes concepts in original language and links outward for canoni
 - [SpaceX IPO pricing release identifying SPCX](https://ir.spacex.com/updates/releases-details/2026/Space-Exploration-Technologies-Corp--Announces-Pricing-of-Initial-Public-Offering/default.aspx)
 - [SEC SpaceX pricing filing](https://www.sec.gov/Archives/edgar/data/1181412/000162828026044955/spcx-pricing8xk.htm)
 
-Grokipedia may be offered later as clearly labeled supplemental reading; it is not a canonical source and no content is scraped or redistributed.
+The Education Center also links directly to verified Grokipedia articles such as [compound interest](https://grokipedia.com/page/Compound_interest), [diversification](https://grokipedia.com/page/Diversification_(finance)), [inflation](https://grokipedia.com/page/Inflation), [ETFs](https://grokipedia.com/page/Exchange-traded_fund), [market timing](https://grokipedia.com/page/Market_timing), [cryptocurrency](https://grokipedia.com/page/Cryptocurrency), and [options](https://grokipedia.com/page/Option_(finance)). Every one is visibly labeled **Supplemental reading · Grokipedia** beside a primary or authoritative resource; no Grokipedia content is scraped or presented as canonical.
 
 ## How Codex accelerated the build
 
