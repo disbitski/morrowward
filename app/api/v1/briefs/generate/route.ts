@@ -51,6 +51,10 @@ async function generateAuthorizedBrief(
         error instanceof DailyBriefRefreshError
           ? error.diagnostic
           : null,
+      details:
+        error instanceof DailyBriefRefreshError
+          ? error.diagnosticDetails
+          : [],
     });
     return apiError(
       503,

@@ -88,7 +88,11 @@ type BriefFetchDiagnostic =
 
 type WebBriefFetchResult =
   | { ok: true; generation: BriefGeneration }
-  | { ok: false; diagnostic: BriefFetchDiagnostic };
+  | {
+      ok: false;
+      diagnostic: BriefFetchDiagnostic;
+      details?: string[];
+    };
 
 export class DailyBriefRefreshError extends Error {
   constructor(
@@ -99,6 +103,7 @@ export class DailyBriefRefreshError extends Error {
       | "provider_failed"
       | "invalid_response",
     public readonly diagnostic: BriefFetchDiagnostic | null = null,
+    public readonly diagnosticDetails: string[] = [],
   ) {
     super(reason);
     this.name = "DailyBriefRefreshError";
@@ -565,7 +570,13 @@ async function fetchWebDailyBrief(
   }
   const parsed = BriefGenerationSchema.safeParse(candidate);
   if (!parsed.success) {
-    return { ok: false, diagnostic: "output_schema_invalid" };
+    return {
+      ok: false,
+      diagnostic: "output_schema_invalid",
+      details: parsed.error.issues
+        .slice(0, 10)
+        .map((issue) => `${issue.path.join(".") || "root"}:${issue.code}`),
+    };
   }
   const supportFailure = generationSupportFailure(parsed.data, evidence, now);
   return supportFailure
@@ -603,6 +614,7 @@ async function performDailyBriefRefresh(
     throw new DailyBriefRefreshError(
       "invalid_response",
       fetchResult.diagnostic,
+      fetchResult.details,
     );
   }
 
