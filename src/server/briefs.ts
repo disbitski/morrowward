@@ -342,6 +342,36 @@ function sourceDiagnosticLabel(value: unknown): string | null {
   return `${url.hostname}${url.pathname}`.slice(0, 240);
 }
 
+function unsupportedEvidenceUrlDetails(
+  label: string,
+  value: unknown,
+  evidence: WebEvidence,
+): string[] {
+  const unsupportedUrl = safeHttpUrl(value);
+  const unsupportedOrigin = unsupportedUrl
+    ? new URL(unsupportedUrl).origin
+    : null;
+  const sameOriginPaths = unsupportedOrigin
+    ? [...evidence.sourceUrls]
+        .filter((sourceUrl) => new URL(sourceUrl).origin === unsupportedOrigin)
+        .map(sourceDiagnosticLabel)
+        .filter((label): label is string => Boolean(label))
+        .slice(0, 5)
+    : [];
+  const sourceOrigins = [...new Set(
+    [...evidence.sourceUrls].map((sourceUrl) => new URL(sourceUrl).origin),
+  )].slice(0, 8);
+
+  return [
+    `${label}:${sourceDiagnosticLabel(unsupportedUrl) ?? "invalid"}`,
+    `search_sources:${evidence.searchSourceUrls.size}`,
+    `provider_citations:${evidence.providerCitationUrls.size}`,
+    `same_origin_sources:${sameOriginPaths.length}`,
+    `same_origin_paths:${sameOriginPaths.join("|") || "none"}`,
+    `source_origins:${sourceOrigins.join("|") || "none"}`,
+  ];
+}
+
 function unsupportedCitationDetails(
   generation: BriefGeneration,
   evidence: WebEvidence,
@@ -353,26 +383,34 @@ function unsupportedCitationDetails(
       (citation) =>
         !citationIsSupported(citation, evidence.sourceUrls),
     );
-  const citationUrl = unsupported ? safeHttpUrl(unsupported.url) : null;
-  const citationOrigin = citationUrl ? new URL(citationUrl).origin : null;
-  const sameOriginPaths = citationOrigin
-    ? [...evidence.sourceUrls]
-        .filter((sourceUrl) => new URL(sourceUrl).origin === citationOrigin)
-        .map(sourceDiagnosticLabel)
-        .filter((label): label is string => Boolean(label))
-        .slice(0, 5)
-    : [];
-  const sourceOrigins = [...new Set(
-    [...evidence.sourceUrls].map((sourceUrl) => new URL(sourceUrl).origin),
-  )].slice(0, 8);
+  return unsupportedEvidenceUrlDetails(
+    "citation",
+    unsupported?.url,
+    evidence,
+  );
+}
 
+function unsupportedAssetSourceDetails(
+  generation: BriefGeneration,
+  evidence: WebEvidence,
+): string[] {
+  const unsupported = generation.assetChecks.find((check) => {
+    const sourceUrl = safeHttpUrl(check.sourceUrl);
+    return (
+      (check.status === "verified" && !sourceUrl) ||
+      Boolean(
+        sourceUrl &&
+          !evidenceUrlIsSupported(sourceUrl, evidence.sourceUrls),
+      )
+    );
+  });
   return [
-    `citation:${sourceDiagnosticLabel(citationUrl) ?? "invalid"}`,
-    `search_sources:${evidence.searchSourceUrls.size}`,
-    `provider_citations:${evidence.providerCitationUrls.size}`,
-    `same_origin_sources:${sameOriginPaths.length}`,
-    `same_origin_paths:${sameOriginPaths.join("|") || "none"}`,
-    `source_origins:${sourceOrigins.join("|") || "none"}`,
+    `asset:${unsupported?.assetId ?? "unknown"}`,
+    ...unsupportedEvidenceUrlDetails(
+      "asset_source",
+      unsupported?.sourceUrl,
+      evidence,
+    ),
   ];
 }
 
@@ -723,6 +761,8 @@ async function fetchWebDailyBrief(
         details:
           supportFailure === "section_citation_unsupported"
             ? unsupportedCitationDetails(parsed.data, evidence)
+            : supportFailure === "asset_source_unsupported"
+              ? unsupportedAssetSourceDetails(parsed.data, evidence)
             : supportFailure === "unsafe_language"
               ? [`pattern:${unsafeBriefReason(parsed.data) ?? "unknown"}`]
               : [],

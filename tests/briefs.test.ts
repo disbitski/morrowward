@@ -334,6 +334,43 @@ describe.sequential("sourced daily briefing generation", () => {
     });
   });
 
+  it("reports only bounded public-link metadata for an unsupported asset source", async () => {
+    const unsupported = candidate();
+    const aapl = unsupported.assetChecks.find(
+      (check) => check.assetId === "AAPL",
+    );
+    if (!aapl) throw new Error("AAPL fixture missing");
+    aapl.sourceUrl = "https://unsupported.example/aapl";
+    const fetchImpl = vi.fn(async (
+      _input: RequestInfo | URL,
+      _init?: RequestInit,
+    ) => {
+      void _input;
+      void _init;
+      return new Response(JSON.stringify(responsesPayload(unsupported)), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    await expect(
+      refreshDailyBrief({
+        apiKey: "test-api-key",
+        fetchImpl,
+        now: NOW,
+      }),
+    ).rejects.toMatchObject({
+      reason: "invalid_response",
+      diagnostic: "asset_source_unsupported",
+      diagnosticDetails: expect.arrayContaining([
+        "asset:AAPL",
+        "asset_source:unsupported.example/aapl",
+        "search_sources:4",
+        "provider_citations:0",
+      ]),
+    });
+  });
+
   it("accepts the same searched page after removing only tracking parameters", async () => {
     const fetchImpl = vi.fn(async (
       _input: RequestInfo | URL,
