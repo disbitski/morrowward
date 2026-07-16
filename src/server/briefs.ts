@@ -22,7 +22,8 @@ const MAX_RESPONSE_BYTES = 128_000;
 const MAX_WEB_SEARCH_CALLS = 4;
 export const BRIEF_REQUEST_TIMEOUT_MS = 150_000;
 const PROCESS_RETRY_BACKOFF_MS = 12 * 60 * 60_000;
-const MAX_AS_OF_SKEW_MS = 15 * 60_000;
+const MAX_AS_OF_AGE_MS = 36 * 60 * 60_000;
+const MAX_AS_OF_FUTURE_SKEW_MS = 15 * 60_000;
 const MAX_FED_EVENT_LOOKAHEAD_MS = 120 * 24 * 60 * 60_000;
 
 const BRIEF_INSTRUCTIONS = `You are Morrowward's daily educational market-brief editor. You are not a financial adviser, fiduciary, broker, or portfolio manager.
@@ -407,7 +408,8 @@ function generationSupportFailure(
   const asOf = Date.parse(generation.asOf);
   if (
     !Number.isFinite(asOf) ||
-    Math.abs(asOf - now.getTime()) > MAX_AS_OF_SKEW_MS
+    asOf - now.getTime() > MAX_AS_OF_FUTURE_SKEW_MS ||
+    now.getTime() - asOf > MAX_AS_OF_AGE_MS
   ) {
     return "as_of_invalid";
   }

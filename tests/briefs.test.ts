@@ -217,6 +217,60 @@ describe.sequential("sourced daily briefing generation", () => {
     expect(brief.meta.mode).toBe("ai");
   });
 
+  it("accepts a same-day market observation timestamp", async () => {
+    const sameDay = candidate();
+    sameDay.asOf = "2026-07-16T09:30:00-04:00";
+    const fetchImpl = vi.fn(async (
+      _input: RequestInfo | URL,
+      _init?: RequestInit,
+    ) => {
+      void _input;
+      void _init;
+      return new Response(JSON.stringify(responsesPayload(sameDay)), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    await expect(
+      refreshDailyBrief({
+        apiKey: "test-api-key",
+        fetchImpl,
+        now: NOW,
+      }),
+    ).resolves.toMatchObject({
+      generatedAt: NOW.toISOString(),
+      meta: { mode: "ai" },
+    });
+  });
+
+  it("rejects a market observation older than the daily evidence window", async () => {
+    const stale = candidate();
+    stale.asOf = "2026-07-14T23:59:59Z";
+    const fetchImpl = vi.fn(async (
+      _input: RequestInfo | URL,
+      _init?: RequestInit,
+    ) => {
+      void _input;
+      void _init;
+      return new Response(JSON.stringify(responsesPayload(stale)), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    await expect(
+      refreshDailyBrief({
+        apiKey: "test-api-key",
+        fetchImpl,
+        now: NOW,
+      }),
+    ).rejects.toMatchObject({
+      reason: "invalid_response",
+      diagnostic: "as_of_invalid",
+    });
+  });
+
   it("rejects personalized language in rendered briefing copy", async () => {
     const unsafe = candidate();
     unsafe.sections.learningLensAndFedWatch.sentences[0].text =
