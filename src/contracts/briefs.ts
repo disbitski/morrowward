@@ -79,7 +79,7 @@ export const BriefFedEventSchema = z
 export const BriefGenerationSchema = z
   .object({
     headline: z.string().trim().min(1).max(140),
-    asOf: z.string().datetime(),
+    asOf: z.string().datetime({ offset: true }),
     marketSession: z.enum(["pre-market", "open", "closed", "unknown"]),
     sentimentLabel: z.enum([
       "bullish",

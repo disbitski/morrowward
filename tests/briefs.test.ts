@@ -20,7 +20,7 @@ const SEARCH_SOURCES = [MARKET_SOURCE, ASSET_SOURCE, SPCX_SOURCE, FED_SOURCE];
 function candidate(): BriefGeneration {
   return {
     headline: "Verified signals for a long-horizon learning scenario",
-    asOf: NOW.toISOString(),
+    asOf: "2026-07-16T13:00:00-04:00",
     marketSession: "open",
     sentimentLabel: "neutral",
     sections: {
