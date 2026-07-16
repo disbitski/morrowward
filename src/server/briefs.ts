@@ -41,7 +41,7 @@ Return exactly three concise educational sections:
 
 3. $100K learning lens and Fed watch: Explain what the verified conditions highlight for the fixed hypothetical $100,000 long-horizon scenario, including concentration, volatility, rate sensitivity, diversification, or crypto correlation when relevant. Suggest only non-transactional learning actions inside Morrowward, such as reviewing assumptions or comparing a simulated stress scenario. Include only upcoming Federal Reserve events verified from an official Federal Reserve source, using exact dates. If an event or time cannot be verified, say so.
 
-Never tell the reader to buy, sell, trade, hold, add, trim, reduce, rebalance, allocate, overweight, underweight, or time the market. Never address a client, claim personalization, imply certainty, create urgency, guarantee an outcome, or mention any balance other than the fixed hypothetical $100,000 scenario.
+Never tell the reader to buy, sell, trade, hold, add, trim, reduce, rebalance, allocate, overweight, underweight, or time the market. Never address a client, claim personalization, imply certainty, create urgency, guarantee an outcome, or mention any balance other than the fixed hypothetical $100,000 scenario. Do not use "you," "your," "should," "must," "need to," or "recommend" in the headline or section sentence text. Use impersonal educational phrasing such as "the learning scenario" or "a learner can review."
 
 Ticker identity rule: SPCX may be treated as Space Exploration Technologies only when current evidence verifies "Space Exploration Technologies Corp. Class A" on Nasdaq. Never attach information from a former ETF, SPAC, or pre-listing history to SpaceX. If current identity cannot be verified, mark SPCX ambiguous and state that briefly instead of silently substituting another instrument.
 
@@ -285,29 +285,37 @@ function extractWebEvidence(payload: unknown): WebEvidence | null {
   };
 }
 
-function allGeneratedText(generation: BriefGeneration): string {
+function renderedGeneratedText(generation: BriefGeneration): string {
   return [
     generation.headline,
     ...Object.values(generation.sections).flatMap((section) =>
       section.sentences.map((sentence) => sentence.text),
     ),
-    ...generation.uncertainty,
   ].join(" ");
 }
 
-function containsUnsafeBriefAdvice(generation: BriefGeneration): boolean {
-  const text = allGeneratedText(generation);
-  return [
-    /\b(?:you|your|client|customer|account holder)\b/iu,
+const UNSAFE_BRIEF_PATTERNS = [
+  ["second_person", /\b(?:you|your|client|customer|account holder)\b/iu],
+  [
+    "transaction_instruction",
     /\b(?:buy|sell|trade|hold|add|trim|reduce|rebalance|allocate|overweight|underweight)\b/iu,
+  ],
+  [
+    "prescriptive_language",
     /\b(?:should|must|need to|recommend(?:ed|s|ing)?)\b/iu,
-    /\b(?:act now|immediately|before it is too late)\b/iu,
-    /\bguaranteed (?:return|profit|gain|outcome)\b/iu,
-    /\brisk[- ]free\b/iu,
-    /\bwill definitely\b/iu,
-    /\$500,?000\b/iu,
-    /https?:\/\/|<a\b|\[[^\]]+\]\([^)]+\)/iu,
-  ].some((pattern) => pattern.test(text));
+  ],
+  ["urgency", /\b(?:act now|immediately|before it is too late)\b/iu],
+  ["guarantee", /\bguaranteed (?:return|profit|gain|outcome)\b/iu],
+  ["risk_free", /\brisk[- ]free\b/iu],
+  ["certainty", /\bwill definitely\b/iu],
+  ["wrong_scenario_balance", /\$500,?000\b/iu],
+  ["embedded_link", /https?:\/\/|<a\b|\[[^\]]+\]\([^)]+\)/iu],
+] as const;
+
+function unsafeBriefReason(generation: BriefGeneration): string | null {
+  const text = renderedGeneratedText(generation);
+  return UNSAFE_BRIEF_PATTERNS.find(([, pattern]) => pattern.test(text))?.[0] ??
+    null;
 }
 
 function citationIsSupported(
@@ -394,7 +402,7 @@ function generationSupportFailure(
   ) {
     return "as_of_invalid";
   }
-  if (containsUnsafeBriefAdvice(generation)) {
+  if (unsafeBriefReason(generation)) {
     return "unsafe_language";
   }
 
@@ -704,7 +712,9 @@ async function fetchWebDailyBrief(
         details:
           supportFailure === "section_citation_unsupported"
             ? unsupportedCitationDetails(parsed.data, evidence)
-            : [],
+            : supportFailure === "unsafe_language"
+              ? [`pattern:${unsafeBriefReason(parsed.data) ?? "unknown"}`]
+              : [],
       }
     : { ok: true, generation: parsed.data };
 }

@@ -190,6 +190,62 @@ describe.sequential("sourced daily briefing generation", () => {
     expect(BRIEF_REQUEST_TIMEOUT_MS).toBe(150_000);
   });
 
+  it("does not reject unsafe text in a non-rendered internal uncertainty field", async () => {
+    const internalOnly = candidate();
+    internalOnly.uncertainty = [
+      "You should buy immediately.",
+    ];
+    const fetchImpl = vi.fn(async (
+      _input: RequestInfo | URL,
+      _init?: RequestInit,
+    ) => {
+      void _input;
+      void _init;
+      return new Response(JSON.stringify(responsesPayload(internalOnly)), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    const brief = await refreshDailyBrief({
+      apiKey: "test-api-key",
+      fetchImpl,
+      now: NOW,
+    });
+
+    expect(JSON.stringify(brief)).not.toContain("You should buy immediately.");
+    expect(brief.meta.mode).toBe("ai");
+  });
+
+  it("rejects personalized language in rendered briefing copy", async () => {
+    const unsafe = candidate();
+    unsafe.sections.learningLensAndFedWatch.sentences[0].text =
+      "You should buy the strongest asset immediately.";
+    const fetchImpl = vi.fn(async (
+      _input: RequestInfo | URL,
+      _init?: RequestInit,
+    ) => {
+      void _input;
+      void _init;
+      return new Response(JSON.stringify(responsesPayload(unsafe)), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    await expect(
+      refreshDailyBrief({
+        apiKey: "test-api-key",
+        fetchImpl,
+        now: NOW,
+      }),
+    ).rejects.toMatchObject({
+      reason: "invalid_response",
+      diagnostic: "unsafe_language",
+      diagnosticDetails: ["pattern:second_person"],
+    });
+  });
+
   it("rejects a displayed claim whose citation was not returned by web search", async () => {
     const unsupported = candidate();
     unsupported.sections.marketAndSentiment.sentences[0].citations[0].url =
