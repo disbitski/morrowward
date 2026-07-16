@@ -26,11 +26,15 @@ integration decisions, full-suite verification, and the final commit.
 ## Where GPT-5.6 appears in the product
 
 GPT-5.6 powers the optional financial-literacy educator, daily educational
-brief, and daily public-quote snapshot. The educator receives a bounded
+briefing, and daily public-quote snapshot. The educator receives a bounded
 question, experience level, topic, and at most four illustrative planning
 values. The quote job instead receives only the fixed eleven-symbol public
-allowlist and strict quote contract. Neither request receives a user's complete
-plan, portfolio, transaction history, identity, or health story.
+allowlist and strict quote contract. The briefing receives only the request
+time/time zone, four public benchmarks, nine public frontier-asset identifiers,
+and a fixed hypothetical $100,000 **Frontier Growth & Resilience** learning
+scenario. That scenario is not a reader's balance, model portfolio, or
+recommended strategy. None of these jobs receives a user's complete plan,
+portfolio, transaction history, identity, or health story.
 
 The model explains; tested TypeScript calculates. Projection values, simulated
 purchases, Market Journey paths, state migration, and portfolio accounting stay
@@ -57,6 +61,24 @@ reads reuse a successful snapshot for up to 24 hours, while the cron uses a UTC-
 policy to avoid a near-boundary every-other-day skip. Persistent failures retry no
 more frequently than once per 12 hours. This uses
 GPT-5.6 as a bounded, source-backed retrieval agent—not as an investment model.
+
+The daily briefing is deliberately a scheduled publication job rather than an
+interactive visitor request. Vercel Production invokes the protected route once
+per day at 12:00 UTC. The route and Responses API request allow 150 seconds for
+required web research, use `store: false`, strict structured output, source
+records, and no more than four search calls. The server rejects unsupported
+citations, stale timestamps, incomplete identity checks, unverified Federal
+Reserve dates, individualized trading language, guarantees, and urgency.
+
+An accepted edition becomes exactly three source-linked UI sections:
+**Market & sentiment**, **Frontier assets**, and **$100K learning lens & Fed
+watch**. Public `GET /api/v1/briefs/today` reads never invoke OpenAI and show the
+last successful generation time instead of a refresh control. A date-scoped
+lock makes generation idempotent by America/New_York calendar day, the latest
+validated edition is retained for up to 48 hours, and failed runs cannot replace
+it. If no valid edition is available, Morrowward serves an evergreen,
+source-linked edition that makes no claims about current prices, headlines,
+sentiment, or Federal Reserve dates.
 
 Primary references: [OpenAI web search](https://developers.openai.com/api/docs/guides/tools-web-search),
 [OpenAI API pricing](https://developers.openai.com/api/docs/pricing), and

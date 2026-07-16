@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  formatBriefUpdatedAt,
   marketQuotesToPracticeAssets,
   parseBrief,
   parseEducatorReply,
@@ -327,62 +328,98 @@ describe("UI API adapters", () => {
     expect(legacy.meta.model).toBeNull();
   });
 
-  it("keeps uncertainty arrays and delayed fact provenance from a brief", () => {
+  it("preserves exactly three sourced briefing sections and GPT provenance", () => {
     const brief = parseBrief({
-      headline: "Read the snapshot carefully",
-      facts: ["A fixed sample moved in both directions."],
-      factDetails: [
+      headline: "Read the sourced snapshot carefully",
+      sections: [
         {
-          fact: "A fixed sample moved in both directions.",
-          source: "Morrowward delayed educational sample",
-          asOf: "2026-07-14T20:00:00.000Z",
-          freshness: "delayed-sample",
+          id: "market-and-sentiment",
+          title: "Market & sentiment",
+          body: "Verified market context.",
+          sources: [{ title: "Market source", url: "https://example.com/market#today" }],
+        },
+        {
+          id: "frontier-assets",
+          title: "Frontier assets",
+          body: "Verified frontier context.",
+          sources: [{ title: "Asset source", url: "https://example.com/assets" }],
+        },
+        {
+          id: "learning-lens-and-fed-watch",
+          title: "$100K learning lens & Fed watch",
+          body: "A fixed educational scenario.",
+          sources: [{ title: "Fed source", url: "https://www.federalreserve.gov/calendar.htm" }],
         },
       ],
-      sentiment: "Mixed.",
-      uncertainty: ["One snapshot is not a trend.", "Current news is omitted."],
-      takeaway: "Separate facts from stories.",
       generatedAt: "2026-07-15T12:00:00.000Z",
+      marketSession: "open",
+      sentimentLabel: "cautiously-bullish",
+      scenarioBalanceUsd: 100_000,
+      disclosure: "Educational information only.",
       meta: {
         mode: "ai",
         model: "gpt-5.6",
-        source: "Morrowward delayed educational sample",
+        source: "OpenAI web search",
       },
     });
 
-    expect(brief.uncertainty).toEqual([
-      "One snapshot is not a trend.",
-      "Current news is omitted.",
+    expect(brief.sections.map((section) => section.id)).toEqual([
+      "market-and-sentiment",
+      "frontier-assets",
+      "learning-lens-and-fed-watch",
     ]);
-    expect(brief.factDetails).toHaveLength(1);
+    expect(brief.sections[0].sources).toEqual([
+      { title: "Market source", url: "https://example.com/market" },
+    ]);
+    expect(brief.generatedAt).toBe("2026-07-15T12:00:00.000Z");
+    expect(brief.marketSession).toBe("open");
+    expect(brief.sentimentLabel).toBe("cautiously-bullish");
+    expect(brief.scenarioBalanceUsd).toBe(100_000);
     expect(brief.provenance).toEqual({
       mode: "ai",
       model: "gpt-5.6",
-      source: "Morrowward delayed educational sample",
-      freshness: "delayed",
+      source: "OpenAI web search",
     });
   });
 
-  it("never treats a deterministic brief as fresh", () => {
+  it("rejects unsafe source URLs and never dates a fallback as current", () => {
     const brief = parseBrief({
-      headline: "Deterministic edition",
-      facts: ["Educational fact."],
-      factDetails: [
+      headline: "Untrusted edition",
+      sections: [
         {
-          fact: "Educational fact.",
-          source: "Fixture",
-          asOf: "2026-07-15T12:00:00.000Z",
-          freshness: "fresh",
+          id: "market-and-sentiment",
+          title: "Market & sentiment",
+          body: "Body.",
+          sources: [{ title: "Unsafe", url: "javascript:alert(1)" }],
+        },
+        {
+          id: "frontier-assets",
+          title: "Frontier assets",
+          body: "Body.",
+          sources: [{ title: "Source", url: "https://example.com/assets" }],
+        },
+        {
+          id: "learning-lens-and-fed-watch",
+          title: "$100K learning lens & Fed watch",
+          body: "Body.",
+          sources: [{ title: "Source", url: "https://example.com/fed" }],
         },
       ],
-      sentiment: "Mixed.",
-      uncertainty: ["Outcomes remain uncertain."],
-      takeaway: "Keep learning.",
       generatedAt: "2026-07-15T12:00:00.000Z",
-      meta: { mode: "fallback", model: null, source: "Fixture" },
+      meta: { mode: "ai", model: "gpt-5.6", source: "Fixture" },
     });
 
     expect(brief.provenance.mode).toBe("fallback");
-    expect(brief.provenance.freshness).toBe("unknown");
+    expect(brief.generatedAt).toBeNull();
+    expect(brief.sections).toHaveLength(3);
+    expect(JSON.stringify(brief)).not.toContain("javascript:");
+  });
+
+  it("formats a verified briefing timestamp in Eastern Time", () => {
+    expect(formatBriefUpdatedAt("2026-07-15T21:30:00.000Z")).toMatch(
+      /Jul 15, 2026, 5:30 PM EDT/u,
+    );
+    expect(formatBriefUpdatedAt(null)).toBeNull();
+    expect(formatBriefUpdatedAt("not-a-date")).toBeNull();
   });
 });

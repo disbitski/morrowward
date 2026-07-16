@@ -163,6 +163,27 @@ test("one-time historical welcome never autoplays and guides the next practice s
 test("golden path stays educational, local, and fully simulated", async ({ page }, testInfo) => {
   await onboard(page);
   await expect(page.getByText("Local & private", { exact: true })).toHaveCount(0);
+  const dailyBrief = page.getByTestId("daily-brief");
+  await expect(dailyBrief).toBeVisible();
+  await expect(dailyBrief.getByTestId(/^brief-section-/u)).toHaveCount(3);
+  await expect(dailyBrief.getByRole("button", { name: /refresh/i })).toHaveCount(0);
+  await expect(page.getByTestId("brief-last-updated")).toContainText(
+    /Briefing last updated/i,
+  );
+  const hundredKDetails = page.getByTestId("hundred-k-details");
+  await expect(hundredKDetails.getByText("Why $100K?", { exact: true })).toBeVisible();
+  await hundredKDetails.locator("summary").click();
+  await expect(hundredKDetails).toHaveAttribute("open", "");
+  await expect(hundredKDetails.getByText("$1 → $100K", { exact: true })).toBeVisible();
+  await expect(hundredKDetails.getByText("$100K → $1M", { exact: true })).toBeVisible();
+  const hundredKSources = hundredKDetails.getByRole("navigation").getByRole("link");
+  await expect(hundredKSources).toHaveCount(3);
+  for (let index = 0; index < 3; index += 1) {
+    await expect(hundredKSources.nth(index)).toHaveAttribute("href", /^https?:\/\//u);
+    await expect(hundredKSources.nth(index)).toHaveAttribute("target", "_blank");
+  }
+  await hundredKDetails.locator("summary").click();
+  await expect(hundredKDetails).not.toHaveAttribute("open", "");
   await expect(page.getByTestId("horizon-future-image")).toBeVisible();
   await expect(
     page.getByTestId("horizon-future-image").locator("img"),
@@ -233,6 +254,7 @@ test("golden path stays educational, local, and fully simulated", async ({ page 
   await expect(page.getByText("All simulated days included")).toBeVisible();
 
   await openView(page, "learn");
+  await expect(page.getByText("Plain-language mode", { exact: true })).toHaveCount(0);
   await expect(page.locator(".learning-path-card")).toHaveCount(4);
   await page.getByTestId("education-path-understand-risk").click();
   await expect(page.getByText("What does a 20% market drop mean?")).toBeVisible();
@@ -297,6 +319,68 @@ test("golden path stays educational, local, and fully simulated", async ({ page 
       ),
     )
     .toBeNull();
+});
+
+test("sourced daily briefing renders its timestamp and safe citation links", async ({ page }) => {
+  const generatedAt = "2026-07-15T21:30:00.000Z";
+  await page.route("**/api/v1/briefs/today", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        headline: "A verified educational snapshot",
+        sections: [
+          {
+            id: "market-and-sentiment",
+            title: "Market & sentiment",
+            body: "Verified market context.",
+            sources: [{ title: "Market source", url: "https://example.com/market" }],
+          },
+          {
+            id: "frontier-assets",
+            title: "Frontier assets",
+            body: "Verified frontier context.",
+            sources: [{ title: "Asset source", url: "https://example.com/assets" }],
+          },
+          {
+            id: "learning-lens-and-fed-watch",
+            title: "$100K learning lens & Fed watch",
+            body: "A fixed educational scenario.",
+            sources: [{
+              title: "Federal Reserve source",
+              url: "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+            }],
+          },
+        ],
+        generatedAt,
+        marketSession: "closed",
+        sentimentLabel: "neutral",
+        scenarioBalanceUsd: 100_000,
+        disclosure: "Educational information only.",
+        meta: {
+          mode: "ai",
+          model: "gpt-5.6",
+          source: "OpenAI web search",
+        },
+      }),
+    });
+  });
+
+  await onboard(page);
+  const dailyBrief = page.getByTestId("daily-brief");
+  await expect(dailyBrief.getByTestId(/^brief-section-/u)).toHaveCount(3);
+  const timestamp = page.getByTestId("brief-last-updated").locator("time");
+  await expect(timestamp).toHaveAttribute("datetime", generatedAt);
+  await expect(timestamp).toHaveText("Jul 15, 2026, 5:30 PM EDT");
+  const sourceLinks = dailyBrief.locator(".brief-sources a");
+  await expect(sourceLinks).toHaveCount(3);
+  for (let index = 0; index < 3; index += 1) {
+    await expect(sourceLinks.nth(index)).toHaveAttribute("href", /^https?:\/\//u);
+    await expect(sourceLinks.nth(index)).toHaveAttribute("target", "_blank");
+    await expect(sourceLinks.nth(index)).toHaveAttribute("rel", /noopener/u);
+    await expect(sourceLinks.nth(index)).toHaveAttribute("rel", /noreferrer/u);
+  }
+  await expect(dailyBrief.getByRole("button", { name: /refresh/i })).toHaveCount(0);
 });
 
 test("daily price status shows the successful refresh time and its age", async ({ page }) => {

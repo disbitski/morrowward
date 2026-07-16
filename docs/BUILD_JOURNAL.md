@@ -287,6 +287,28 @@ The active Dave card links to `https://thedavedev.com`, opens in a new tab with 
 
 This focused pass retained **243 passing unit/integration tests across 24 files**, clean ESLint and TypeScript checks, clean vinext and Next/Vercel production builds, and all ten Playwright journeys across desktop and mobile Chrome. Browser coverage now verifies the non-interactive Apple cards, the exact Dave destination and security attributes, the photo label, touch-target size, no horizontal overflow, keyboard focus, and no serious or critical Mission-page accessibility violations in Dawn, Horizon, Alchemy, or Space.
 
+### The daily brief became a protected sourced publication
+
+Dave's final Today-page review identified the last major mismatch between presentation and product truth: the attractive 90-second briefing card still showed deterministic sample copy and a manual refresh control. The replacement treats a market briefing as a publication job, not as a button a visitor should wait on or repeatedly invoke.
+
+The settled design is one protected Vercel Production cron at 12:00 UTC. Its serverless route and GPT-5.6 Responses request each allow **150 seconds**, matching hands-on runs that often needed roughly 90 seconds for current web research. The job uses required hosted web search, `store: false`, strict structured output, source records, and no more than four search calls. Application validation then checks every displayed citation against returned search evidence, rejects stale timestamps and unsafe advice language, verifies all required asset identities, protects SPCX from former-ticker confusion, and permits Federal Reserve dates only when an official `federalreserve.gov` source supports them.
+
+The model sees no visitor plan or portfolio. Its entire financial lens is one fixed public **$100,000 Frontier Growth & Resilience** educational scenario plus a public benchmark/watchlist and request time. The number is a deliberately round case study for making accumulated principal and compounding visible, not a claim that every person should have $100,000, not Dave's or a visitor's balance, and not a recommended strategy or allocation. Investor.gov's [compound-interest calculator](https://www.investor.gov/financial-tools-calculators/calculators/compound-interest-calculator) and [savings-goal calculator](https://www.investor.gov/savings-goal-calculator) became the primary educational references for that boundary; whether a milestone is easy or hard depends on contributions, time, returns, fees, taxes, and risk.
+
+The former four-part sample layout became exactly three source-linked cards in the existing visual language:
+
+- **Market & sentiment** separates verified movement from interpretation.
+- **Frontier assets** covers only material, source-supported developments.
+- **$100K learning lens & Fed watch** connects conditions to diversification, volatility, and rate-sensitivity lessons without prescribing a trade.
+
+The third card also has a compact **Why $100K?** disclosure. It uses simple scale math to show why accumulated principal can make compounding feel more visible, links directly to Investor.gov education, and says plainly that $100,000 is not magic and that the next $900,000 is not guaranteed to take less time.
+
+The refresh button disappeared. Today now shows the last successful generation time, while public reads only retrieve the latest validated shared edition and never call OpenAI. A date-scoped distributed lock makes generation idempotent by America/New_York calendar day; the durable last valid edition survives cold starts for up to 48 hours, and a failed run cannot replace it. When no valid edition exists, an evergreen source-linked edition says current conditions could not be verified and makes no invented price, headline, sentiment, posture, or Federal Reserve claim.
+
+This decision also reinforced the July 16 deployment simplification. With one stable Production backend as the engineering truth, the scheduled job, shared Redis state, source-validation path, and eventual Apple shells all use the same environment. The repository remains private and the public site remains unannounced/noindex until launch, but spend safety comes from authenticated cron access, durable generation locks, the existing educator circuit breaker, strict validation, and no public generation path—not from trying to maintain a second pseudo-production Preview environment.
+
+Final verification for the sourced-brief pass reached **251 passing unit/integration tests across 25 files**, clean ESLint and TypeScript checks, clean vinext and Next/Vercel production builds, and all **12 Playwright journeys** across desktop and mobile Chrome. The browser suite exercises the three cards, safe citations, exact update time, removed refresh control, removed Learn badge, expandable $100K explanation and sources, offline reload, and all four themes with no serious or critical automated accessibility violations.
+
 ## July 17 — Shared iOS and macOS companion shells
 
 - Create the fresh `apple/` project and shared SwiftUI/WebKit source.

@@ -55,14 +55,14 @@ The mission page connects the product to the childhood story behind it, while th
 - A multi-source learning library that labels regulator/government material as canonical, industry research separately, and Grokipedia as supplemental reading
 - Structured GPT-5.6 explanations with a title, key ideas, assumptions, a safe simulator activity, and deterministic related questions
 - Guided questions send an explicit bounded education topic; freeform questions are classified locally without sending holdings, balances, or identity
-- Educational daily brief separating facts, sentiment, uncertainty, and takeaway
+- A once-daily, source-backed GPT-5.6 market briefing rendered as exactly three sections: **Market & sentiment**, **Frontier assets**, and **$100K learning lens & Fed watch**
 - Two optional 15-second historical welcomes with explicit playback, captions, transcripts, primary quote sources, visible AI disclosures, stable randomized assignment, permanent Mission replay, and a versioned approved-greeting roster
 - Versioned IndexedDB persistence with automatic in-memory fallback
 - Validated JSON export, import, and complete local reset
 - Installable PWA shell with useful offline fallbacks
 - No account, birthdate, brokerage credential, or real transaction path
 
-The complete simulator works without an OpenAI key, a brokerage account, or network access. GPT-5.6 adds optional explanations, the educational brief, and a source-backed daily public-quote snapshot; tested code owns every financial calculation.
+The complete simulator works without an OpenAI key, a brokerage account, or network access. GPT-5.6 adds optional explanations, a source-backed daily briefing, and a source-backed daily public-quote snapshot; tested code owns every financial calculation. If a sourced briefing is not available, the Today page serves a safe evergreen edition that makes no current-market claims.
 
 ## Quick start
 
@@ -92,7 +92,7 @@ Set this only in `.env.local` or your hosting provider’s encrypted environment
 OPENAI_API_KEY=your_project_key
 ```
 
-Never prefix the variable with `NEXT_PUBLIC_` and never place the key in browser code. The server currently uses the explicit hackathon model alias `gpt-5.6` for the educator, daily brief, and protected daily quote-snapshot generator. All three have useful deterministic fallbacks when the key is absent.
+Never prefix the variable with `NEXT_PUBLIC_` and never place the key in browser code. The server currently uses the explicit hackathon model alias `gpt-5.6` for the educator, protected daily briefing, and protected daily quote-snapshot generator. The educator and quote panel have deterministic fallbacks; the briefing has a source-linked evergreen edition that deliberately avoids live claims when a current edition cannot be verified.
 
 For the protected brief and quote generation endpoints, also set a long random secret:
 
@@ -104,7 +104,7 @@ Vercel Cron calls `GET /api/v1/briefs/generate` and `GET /api/v1/quotes/generate
 
 ### Optional durable daily-content cache
 
-The app always has deterministic brief and quote fallbacks. To share the generated daily brief and quote snapshot across Vercel cold starts, regions, and parallel instances, configure one complete REST credential pair:
+The app always has safe brief and quote fallbacks. To share the last validated daily briefing and quote snapshot across Vercel cold starts, regions, and parallel instances, configure one complete REST credential pair:
 
 ```bash
 # Vercel KV-compatible names
@@ -116,7 +116,7 @@ UPSTASH_REDIS_REST_URL=https://your-store.example
 UPSTASH_REDIS_REST_TOKEN=your_token
 ```
 
-If both complete pairs are present, the `KV_REST_API_*` pair takes precedence. Content is schema-validated before storage and after retrieval. Briefs use a UTC-date key; the latest quote snapshot uses one shared key. Both expire after 48 hours. Store operations time out after 1.5 seconds and fail closed to in-process/deterministic content, so Redis/KV is a durability enhancement rather than an availability dependency. Without a durable store, generated content is not guaranteed to survive a serverless cold start.
+If both complete pairs are present, the `KV_REST_API_*` pair takes precedence. Content is schema-validated before storage and after retrieval. The briefing and quote snapshot each use a shared latest-successful-edition key and expire after 48 hours. A date-scoped briefing lock and quote retry guard prevent rapid duplicate generation. Store operations time out after 1.5 seconds and fail closed to in-process/evergreen content, so Redis/KV is a durability enhancement rather than an availability dependency. Without a durable store, generated content is not guaranteed to survive a serverless cold start.
 
 The same complete Redis REST pair also enables atomic shared fixed-window rate limits across serverless instances. The educator has a conservative UTC-day AI circuit breaker that defaults to 100 provider-attempt requests and may be adjusted with `EDUCATOR_DAILY_AI_REQUEST_LIMIT` (bounded in code). Prompt injection, sensitive identifiers, personalized trading requests, and crisis/debt/tax guardrails are handled locally before this daily quota; provider failures still count after a slot is reserved. A Vercel Production deployment with OpenAI enabled refuses model-eligible educator work unless a complete durable credential pair is present. When that store is unavailable, those potentially cost-bearing requests fail closed. Preview/local deployments with no durable configuration and deterministic no-key use retain the bounded in-memory limiter.
 
@@ -131,6 +131,14 @@ The cron is primary, with a guarded self-healing path for missed runs: when the 
 After a successful refresh, the interface says **Real Prices Updated Every 24 Hours**—never “real-time”—and shows both the exact last-successful-update timestamp and its age in completed hours. Per-asset details retain source/citations when supplied, observation time, and freshness. URL citations are displayed for an asset only when the completed search call returned that URL and annotated that asset's quote object; hosted `oai-finance` evidence never receives an invented link. If the scheduled call, OpenAI, network, or durable store is unavailable, Practice remains usable with clearly labeled deterministic synthetic values; a synthetic one-year chart is never represented as actual historical performance.
 
 OpenAI documents that Responses API web search can return sourced citations and source records labeled `oai-finance`. The application preserves clickable URL citations when provided and never invents a URL for a hosted source that does not expose one. At the documented price at build time, web search is $10 per 1,000 calls—$0.01 for the normal successful daily search—plus GPT-5.6 model and search-content tokens. With the durable retry guard configured, persistent failures can attempt at most once per 12 hours, so the search-tool portion is bounded to roughly $0.02 per day before tokens during an outage. See OpenAI's [web-search guide](https://developers.openai.com/api/docs/guides/tools-web-search) and [API pricing](https://developers.openai.com/api/docs/pricing). This is a bounded operating design, not a guarantee that API pricing or usage reporting cannot change.
+
+### Automatic daily market briefing
+
+A second protected Production cron calls `GET /api/v1/briefs/generate` once per day at `0 12 * * *` (12:00 UTC). The route allows up to **150 seconds** for the source-gathering Responses API job; browser reads never wait for or start that job. GPT-5.6 must use hosted web search, `store: false`, low reasoning effort, strict structured output, supplied source records, and no more than four search calls. The server rejects malformed output, unsupported citation URLs, stale timestamps, unverified asset identities, unsupported Federal Reserve dates, individualized trading language, guarantees, and urgency.
+
+The request contains only public, fixed context: the request time and Eastern time zone; the S&P 500, Nasdaq Composite, VTI, and BND benchmarks; the AAPL, TSLA, SPCX, NVDA, MRVL, MU, AVGO, BTC, and ETH watchlist; and a hypothetical **$100,000 Frontier Growth & Resilience** learning scenario. It never contains a visitor's plan, starting balance, simulated cash, holdings, transactions, educator question, identity, or health story. The $100,000 figure is a round educational case study—not a recommended portfolio size, a model allocation, or a claim about the reader. Its teaching purpose is to make the mechanics of accumulated principal and compounding tangible; Investor.gov explains that compound interest is earned on both principal and accumulated interest and offers a [compound-interest calculator](https://www.investor.gov/financial-tools-calculators/calculators/compound-interest-calculator) plus a [savings-goal calculator](https://www.investor.gov/savings-goal-calculator). Whether any milestone is easy or hard depends on contributions, time, returns, fees, taxes, and risk.
+
+The validated edition is rendered as exactly three concise, source-linked UI sections: **Market & sentiment**, **Frontier assets**, and **$100K learning lens & Fed watch**. A **Why $100K?** detail inside the third section explains the accumulated-principal effect with simple illustrative math, links to Investor.gov, and explicitly says the milestone is useful rather than magical or universally faster. The interface shows the last successful generation time instead of a refresh control. A valid edition is generated at most once per America/New_York calendar day, persisted as the shared latest edition for up to 48 hours, and never replaced by a failed run. If OpenAI, web search, the durable store, or source verification is unavailable, the public read returns the last valid edition when available; otherwise it serves a source-linked evergreen edition with no current prices, headlines, sentiment conclusions, or inferred Federal Reserve schedule.
 
 ## Repeatable sample demo
 
@@ -159,7 +167,8 @@ Browser / installed PWA
 ├── export / import / reset
 └── bounded API calls with minimal context
     ├── education explanation → GPT-5.6 or deterministic fallback
-    ├── daily brief → cached deterministic sample or GPT-5.6
+    ├── daily brief → last validated GPT-5.6 web-sourced edition
+    │                 or evergreen no-current-claims fallback
     └── daily quotes → shared validated GPT-5.6 web-search snapshot
                        or labeled deterministic synthetic fallback
 ```
@@ -187,11 +196,11 @@ The server calls the OpenAI Responses API using:
 - `model: "gpt-5.6"`
 - `store: false`
 - strict `text.format` JSON Schema outputs
-- a 25-second timeout and bounded output tokens
+- feature-specific abort deadlines and bounded output tokens; the protected daily briefing has a 150-second function/request window because its required web research can take longer than an interactive explanation
 - Zod validation after JSON parsing
 - prompt-injection checks and generated-content safety checks
-- minimal optional context: years, weekly contribution, illustrative return, and illustrative inflation
-- deterministic educational fallback whenever the key, network, model, or schema is unavailable
+- feature-specific minimal context: the educator can receive years, weekly contribution, illustrative return, and illustrative inflation; the briefing receives only its fixed public watchlist, request time, and $100,000 learning scenario
+- feature-appropriate safe fallbacks whenever the key, network, model, or schema is unavailable
 
 The daily quote generator adds required `web_search`, `reasoning: { effort: "low" }`, source metadata, and a maximum of one search tool call. It batches the fixed eleven-symbol allowlist into one request, accepts only completed search-backed values that pass strict identity, timestamp, source, and response-schema checks, and never asks the model to calculate portfolio or projection values. Equities/ETFs allow a long-weekend observation window; crypto requires a much newer observation. Regular quote reads reuse the generated snapshot; only a guarded missing/stale first-load recovery may start generation, with singleflight and a 12-hour distributed retry guard preventing duplicate or rapid repeated work.
 
@@ -229,9 +238,9 @@ Both assets are optional and never call xAI at runtime. Sanitized publication ma
 | `GET` | `/api/v1/quotes/generate` | Protected scheduled generation of one complete eleven-symbol snapshot; bearer `CRON_SECRET` or `ADMIN_API_TOKEN`, no request body |
 | `POST` | `/api/v1/quotes/generate` | Protected operator-controlled generation; same bearer authentication plus `Content-Type: application/json` |
 | `POST` | `/api/v1/education/explain` | Bounded GPT-5.6 explanation or deterministic fallback |
-| `GET` | `/api/v1/briefs/today` | Cached educational brief with separated facts and uncertainty |
-| `GET` | `/api/v1/briefs/generate` | Protected scheduled generation; bearer `CRON_SECRET` or `ADMIN_API_TOKEN`, no request body |
-| `POST` | `/api/v1/briefs/generate` | Protected manual generation; same bearer authentication plus `Content-Type: application/json` |
+| `GET` | `/api/v1/briefs/today` | Last validated three-section, source-backed edition or evergreen no-current-claims fallback; never starts generation |
+| `GET` | `/api/v1/briefs/generate` | Protected once-daily scheduled GPT-5.6 web-search generation; 150-second function window; bearer `CRON_SECRET` or `ADMIN_API_TOKEN`, no request body |
+| `POST` | `/api/v1/briefs/generate` | Protected operator-controlled generation using the same validation and idempotency boundary; bearer authentication plus `Content-Type: application/json` |
 
 All three `POST` routes require `Content-Type: application/json`, and browser requests must be same-origin. Either operator generation request may use `{}` as its JSON body. Scheduled `GET` routes require neither content type nor body. Both generation endpoints require `Authorization: Bearer <CRON_SECRET-or-ADMIN_API_TOKEN>`; Vercel supplies the `CRON_SECRET` bearer header to configured cron invocations. Authenticated schedulers and other server-to-server callers may omit browser-only `Origin` and `Sec-Fetch-Site` headers.
 
@@ -251,9 +260,9 @@ curl -X POST \
   https://your-deployment.example/api/v1/quotes/generate
 ```
 
-`GET /api/v1/briefs/today` first checks the optional date-keyed Redis/KV brief. `GET /api/v1/quotes` first checks the same store's shared latest-snapshot key. Every value is schema-validated after retrieval. A missing credential pair, timeout, unavailable store, or malformed stored value is treated as a cache miss; the route continues with safe in-process/deterministic content. `GET /api/v1/health` reports only whether a complete durable-store pair is configured, never its URL or token.
+`GET /api/v1/briefs/today` first checks the optional Redis/KV latest-valid-brief key and never invokes OpenAI. `GET /api/v1/quotes` first checks the same store's shared latest-snapshot key. Every value is schema-validated after retrieval. A missing credential pair, timeout, unavailable store, or malformed stored value is treated as a cache miss; the routes continue with safe in-process/evergreen content. `GET /api/v1/health` reports only whether a complete durable-store pair is configured, never its URL or token.
 
-`vercel.json` schedules the quote job at `15 22 * * *` (22:15 UTC), after the regular U.S. equity session. Cron schedules use UTC. Vercel cron is Production-only, delivery is best effort, and duplicate or missed delivery is possible, so the generator replaces a timestamped snapshot instead of mutating user state. See Vercel's [Cron Jobs overview](https://vercel.com/docs/cron-jobs), [quickstart](https://vercel.com/docs/cron-jobs/quickstart), and [management notes](https://vercel.com/docs/cron-jobs/manage-cron-jobs).
+`vercel.json` schedules the briefing job at `0 12 * * *` (12:00 UTC) and the quote job at `15 22 * * *` (22:15 UTC), after the regular U.S. equity session. Cron schedules use UTC. Vercel cron is Production-only, delivery is best effort, and duplicate or missed delivery is possible, so both generators are idempotent and replace validated shared snapshots instead of mutating user state. See Vercel's [Cron Jobs overview](https://vercel.com/docs/cron-jobs), [quickstart](https://vercel.com/docs/cron-jobs/quickstart), and [management notes](https://vercel.com/docs/cron-jobs/manage-cron-jobs).
 
 With a complete Redis REST pair, rate limits use an atomic `EVAL` increment-and-expiry script, so per-client windows and the educator's 100-request UTC-day circuit breaker are shared across cold starts, regions, and parallel serverless instances. Production refuses any model-eligible educator attempt when OpenAI is enabled but a complete durable pair is missing or unavailable. Locally resolved safety and professional-support boundaries do not spend the daily AI quota. Preview/local deployments with no store configured use the bounded warm-runtime memory limiter. Per-client buckets prefer Vercel's platform `x-vercel-forwarded-for`, then `x-forwarded-for`, then `x-real-ip`; raw addresses are never stored. See Vercel's [request-header reference](https://vercel.com/docs/headers/request-headers). A platform-level Firewall/WAF remains useful defense in depth for unexpected public traffic.
 
@@ -310,6 +319,7 @@ The automated suite covers:
 - IndexedDB refresh, memory fallback, v1-to-v2 portfolio migration, malformed import, export/restore, and reset
 - Required web-search enforcement, one-call quote batching, strict schema/source validation, durable snapshot reads/writes, partial failure, stale behavior, SPCX identity protection, and synthetic fallback labels
 - Invalid JSON, oversized bodies, unknown quote symbols/history ranges, rate limits, cron/admin authorization, and safe generation failure
+- Daily-brief source validation, exact three-section contracts, fixed $100,000 public context, once-per-day idempotency, durable last-valid retention, 150-second deadline configuration, and evergreen fallback behavior
 - GPT timeout, invalid schema, unsafe generated advice, prompt injection, personalized advice, and no-key fallback
 
 No test sends a real OpenAI request or places a real financial transaction.

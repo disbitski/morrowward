@@ -30,11 +30,11 @@ Open **Build the Habit**, then ask: “Why can missing a few strong days matter?
 
 “The Education Center changes its questions for New, Familiar, and Advanced learners, and every topic leads with canonical resources while Grokipedia is clearly supplemental. GPT-5.6 explains at my experience level with key ideas and assumptions; it cannot trade or give individualized buy/sell instructions. Related questions are deterministic, and without an API key the education experience still works.”
 
-Show the daily brief’s separate facts, sentiment, uncertainty, and takeaway.
+Show the daily briefing's **Briefing last updated** timestamp and its three sourced cards: **Market & sentiment**, **Frontier assets**, and **$100K learning lens & Fed watch**. Open **Why $100K?** and one compact Investor.gov source; point out that the number is a useful learning milestone—not magic, the viewer's portfolio, or a recommendation. Mention that a protected once-daily cron performs the longer GPT-5.6 web research; the page itself never starts or waits for generation.
 
 ## 1:56–2:28 — Codex, specialist agents, and implementation quality
 
-“GPT-5.6 Sol in Codex orchestrated focused agents for market contracts, accessible UI, optional media tooling, and independent review, then consolidated one tested architecture. Codex built the PWA, deterministic engines, tests, safety evaluations, and decision journal. One guarded batch creates the daily shared snapshot; singleflight and a 12-hour Redis retry guard let first load self-heal a missed run without blocking visitors, while read-only rechecks update that first screen. GPT-5.6 educates and gathers public quotes; tested code owns the math.”
+“GPT-5.6 Sol in Codex orchestrated focused agents for market contracts, accessible UI, optional media tooling, and independent review, then consolidated one tested architecture. Codex built the PWA, deterministic engines, tests, safety evaluations, and decision journal. One guarded batch creates the daily shared quote snapshot; a separate protected cron has a 150-second window to publish the three-section sourced briefing while visitors keep using its last valid edition. GPT-5.6 educates and gathers public facts; tested code owns the math.”
 
 Flash the test output, architecture section in the README, build journal, and AI orchestration/provenance note.
 

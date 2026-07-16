@@ -1,5 +1,5 @@
 import { isAuthorizedBriefGenerator } from "../../../../../src/server/admin-auth";
-import { generateDailyBrief } from "../../../../../src/server/briefs";
+import { refreshDailyBrief } from "../../../../../src/server/briefs";
 import {
   apiError,
   jsonResponse,
@@ -9,6 +9,7 @@ import {
 import { enforceRateLimit } from "../../../../../src/server/rate-limit";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 150;
 
 async function generateAuthorizedBrief(
   request: Request,
@@ -31,11 +32,23 @@ async function generateAuthorizedBrief(
     );
   }
 
-  const brief = await generateDailyBrief();
-  return jsonResponse(brief, {
-    status,
-    headers: noStoreHeaders(rateLimit.headers),
-  });
+  try {
+    const brief = await refreshDailyBrief();
+    return jsonResponse(brief, {
+      status,
+      headers: noStoreHeaders(rateLimit.headers),
+    });
+  } catch (error) {
+    console.warn("Morrowward daily briefing refresh failed safely.", {
+      reason: error instanceof Error ? error.name : "unknown_error",
+    });
+    return apiError(
+      503,
+      "service_unavailable",
+      "Today’s sourced briefing could not be refreshed. The last validated edition, when available, remains readable.",
+      { headers: noStoreHeaders(rateLimit.headers) },
+    );
+  }
 }
 
 export async function POST(request: Request): Promise<Response> {

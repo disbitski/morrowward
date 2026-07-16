@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { GET as generateBriefCron } from "../app/api/v1/briefs/generate/route";
+import {
+  GET as generateBriefCron,
+  maxDuration,
+} from "../app/api/v1/briefs/generate/route";
 import { resetBriefCacheForTests } from "../src/server/briefs";
 import { setRateLimiterForTests } from "../src/server/rate-limit";
 
@@ -27,7 +30,12 @@ describe.sequential("daily brief cron route", () => {
     expect(response.status).toBe(401);
   });
 
-  it("accepts Vercel Cron's authenticated GET and degrades safely without AI", async () => {
+  it("allows 150 seconds for the protected sourced generation job", () => {
+    expect(maxDuration).toBe(150);
+  });
+
+  it("accepts Vercel Cron authentication but returns 503 without AI", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const response = await generateBriefCron(
       new Request("https://morrowward.test/api/v1/briefs/generate", {
         headers: {
@@ -36,9 +44,11 @@ describe.sequential("daily brief cron route", () => {
         },
       }),
     );
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(503);
+    expect(response.headers.get("cache-control")).toContain("no-store");
     await expect(response.json()).resolves.toMatchObject({
-      meta: { mode: "fallback", model: null },
+      error: { code: "service_unavailable" },
     });
+    expect(warn).toHaveBeenCalledOnce();
   });
 });

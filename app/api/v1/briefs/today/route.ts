@@ -11,7 +11,13 @@ export async function GET(request: Request): Promise<Response> {
   });
   if (!rateLimit.ok) return rateLimit.response;
 
+  const brief = await getDailyBrief();
   const headers = new Headers(rateLimit.headers);
-  headers.set("cache-control", "public, max-age=300, stale-while-revalidate=3600");
-  return jsonResponse(await getDailyBrief(), { headers });
+  headers.set(
+    "cache-control",
+    brief.meta.mode === "ai"
+      ? "public, max-age=0, s-maxage=300, stale-while-revalidate=900"
+      : "private, no-store",
+  );
+  return jsonResponse(brief, { headers });
 }

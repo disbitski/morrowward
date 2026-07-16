@@ -804,21 +804,41 @@ describe.sequential("Morrowward API contracts and safeguards", () => {
     expect(warn).toHaveBeenCalledOnce();
   });
 
-  it("keeps facts, sentiment, uncertainty, and education separate", async () => {
-    const direct = getCachedDailyBrief(FIXED_NOW);
-    expect(direct.facts.length).toBeGreaterThan(0);
-    expect(direct.factDetails.every((fact) => fact.freshness === "delayed-sample"))
-      .toBe(true);
-    expect(direct.sentiment).toBeTruthy();
-    expect(direct.uncertainty.length).toBeGreaterThan(0);
-    expect(direct.takeaway).toBeTruthy();
+  it("returns exactly three sourced educational briefing sections", async () => {
+    const direct = getCachedDailyBrief();
+    expect(direct.sections.map((section) => section.id)).toEqual([
+      "market-and-sentiment",
+      "frontier-assets",
+      "learning-lens-and-fed-watch",
+    ]);
+    expect(
+      direct.sections.every(
+        (section) =>
+          section.body.length > 0 &&
+          section.sources.length > 0 &&
+          section.sources.every((source) => /^https?:\/\//u.test(source.url)),
+      ),
+    ).toBe(true);
+    expect(direct.generatedAt).toBeNull();
+    expect(direct.scenarioBalanceUsd).toBe(100_000);
 
     const response = await briefRoute(
       new Request("https://morrowward.test/api/v1/briefs/today"),
     );
     expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toBe("private, no-store");
     expect(await response.json()).toMatchObject({
-      meta: { mode: "fallback", source: "Morrowward delayed educational sample" },
+      sections: [
+        { id: "market-and-sentiment" },
+        { id: "frontier-assets" },
+        { id: "learning-lens-and-fed-watch" },
+      ],
+      generatedAt: null,
+      scenarioBalanceUsd: 100_000,
+      meta: {
+        mode: "fallback",
+        source: "Morrowward evergreen educational edition",
+      },
     });
   });
 
@@ -852,8 +872,9 @@ describe.sequential("Morrowward API contracts and safeguards", () => {
     });
   });
 
-  it("generates a protected deterministic fallback when AI is unavailable", async () => {
+  it("fails a protected refresh safely when AI is unavailable", async () => {
     vi.stubEnv("CRON_SECRET", "cron-token");
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const response = await generateBriefRoute(
       new Request("https://morrowward.test/api/v1/briefs/generate", {
         method: "POST",
@@ -863,10 +884,12 @@ describe.sequential("Morrowward API contracts and safeguards", () => {
         },
       }),
     );
-    expect(response.status).toBe(201);
+    expect(response.status).toBe(503);
+    expect(response.headers.get("cache-control")).toContain("no-store");
     expect(await response.json()).toMatchObject({
-      meta: { mode: "fallback", model: null },
+      error: { code: "service_unavailable" },
     });
+    expect(warn).toHaveBeenCalledOnce();
   });
 
   it("reports health without exposing an API credential", async () => {

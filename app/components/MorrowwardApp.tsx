@@ -8,7 +8,6 @@ import {
   Calendar,
   Check,
   ChevronRight,
-  CircleAlert,
   Clock,
   Compass,
   Database,
@@ -157,22 +156,33 @@ type Projection = {
 
 type Brief = {
   headline: string;
-  facts: string[];
-  sentiment: string;
-  uncertainty: string[];
-  takeaway: string;
-  generatedAt: string;
-  factDetails: Array<{
-    fact: string;
-    source: string;
-    asOf: string;
-    freshness: string;
+  sections: Array<{
+    id:
+      | "market-and-sentiment"
+      | "frontier-assets"
+      | "learning-lens-and-fed-watch";
+    title: string;
+    body: string;
+    sources: Array<{
+      title: string;
+      url: string;
+    }>;
   }>;
+  generatedAt: string | null;
+  marketSession: "pre-market" | "open" | "closed" | "unknown";
+  sentimentLabel:
+    | "bullish"
+    | "cautiously-bullish"
+    | "neutral"
+    | "cautious"
+    | "bearish"
+    | "unknown";
+  scenarioBalanceUsd: number;
+  disclosure: string;
   provenance: {
     mode: "ai" | "fallback";
     model: string | null;
     source: string;
-    freshness: "fresh" | "delayed" | "unknown";
   };
 };
 
@@ -219,21 +229,51 @@ const ASSETS: Asset[] = PRACTICE_ASSETS.map((asset) => ({
 }));
 
 const FALLBACK_BRIEF: Brief = {
-  headline: "A calm plan can outlast a noisy market",
-  facts: [
-    "Prices move every day, but your practice plan spans decades.",
-    "Diversification spreads exposure; it does not eliminate risk.",
+  headline: "Today’s verified market briefing is not available yet",
+  sections: [
+    {
+      id: "market-and-sentiment",
+      title: "Market & sentiment",
+      body: "Live market direction, session status, and sentiment could not be verified. Check a current market source before drawing conclusions from today’s movement.",
+      sources: [
+        {
+          title: "NYSE market hours and calendars",
+          url: "https://www.nyse.com/markets/hours-calendars",
+        },
+      ],
+    },
+    {
+      id: "frontier-assets",
+      title: "Frontier assets",
+      body: "Current developments for the frontier watchlist could not be verified. Morrowward will not invent prices, catalysts, ticker identities, or headlines when the sourced edition is unavailable.",
+      sources: [
+        {
+          title: "SEC EDGAR company filings",
+          url: "https://www.sec.gov/edgar/search/",
+        },
+      ],
+    },
+    {
+      id: "learning-lens-and-fed-watch",
+      title: "$100K learning lens & Fed watch",
+      body: "No current posture or Federal Reserve calendar is inferred without verified sources. The fixed $100,000 scenario remains an educational case study, and the next sourced edition will replace this fallback after the protected daily run succeeds.",
+      sources: [
+        {
+          title: "Federal Reserve FOMC calendars",
+          url: "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm",
+        },
+      ],
+    },
   ],
-  sentiment: "Mixed — a useful reminder that a mood is not a forecast.",
-  uncertainty: ["Short-term market direction cannot be known in advance."],
-  takeaway: "Review your assumptions, then focus on the next repeatable habit within your control.",
-  generatedAt: "Evergreen offline edition",
-  factDetails: [],
+  generatedAt: null,
+  marketSession: "unknown",
+  sentimentLabel: "unknown",
+  scenarioBalanceUsd: 100_000,
+  disclosure: "Educational information only—not individualized financial advice. Live information could not be verified, so this edition contains no current market claims.",
   provenance: {
     mode: "fallback",
     model: null,
     source: "Morrowward evergreen educational edition",
-    freshness: "unknown",
   },
 };
 
@@ -667,24 +707,39 @@ export function parseEducatorReply(payload: unknown, question: string): Educator
   };
 }
 
-function parseFactDetails(value: unknown): Brief["factDetails"] {
+function safeBriefSourceUrl(value: unknown): string | null {
+  if (typeof value !== "string" || value.length > 2_048) return null;
+  try {
+    const url = new URL(value);
+    if (
+      (url.protocol !== "https:" && url.protocol !== "http:") ||
+      url.username ||
+      url.password
+    ) {
+      return null;
+    }
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return null;
+  }
+}
+
+function parseBriefSources(value: unknown): Brief["sections"][number]["sources"] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
     if (
       !isRecord(item) ||
-      typeof item.fact !== "string" ||
-      typeof item.source !== "string" ||
-      typeof item.asOf !== "string" ||
-      typeof item.freshness !== "string"
+      typeof item.title !== "string"
     ) {
       return [];
     }
+    const url = safeBriefSourceUrl(item.url);
+    if (!url) return [];
     return [
       {
-        fact: item.fact,
-        source: item.source,
-        asOf: item.asOf,
-        freshness: item.freshness,
+        title: item.title,
+        url,
       },
     ];
   });
@@ -693,59 +748,91 @@ function parseFactDetails(value: unknown): Brief["factDetails"] {
 export function parseBrief(payload: unknown): Brief {
   if (!isRecord(payload)) return FALLBACK_BRIEF;
   const nested = isRecord(payload.brief) ? payload.brief : payload;
-  if (typeof nested.headline !== "string") return FALLBACK_BRIEF;
+  if (
+    typeof nested.headline !== "string" ||
+    !Array.isArray(nested.sections)
+  ) {
+    return FALLBACK_BRIEF;
+  }
+  const sectionIds = [
+    "market-and-sentiment",
+    "frontier-assets",
+    "learning-lens-and-fed-watch",
+  ] as const;
+  const rawSections = nested.sections as unknown[];
+  const sections = sectionIds.flatMap((id) => {
+    const section = rawSections.find(
+      (item) => isRecord(item) && item.id === id,
+    );
+    if (
+      !isRecord(section) ||
+      typeof section.title !== "string" ||
+      typeof section.body !== "string"
+    ) {
+      return [];
+    }
+    const sources = parseBriefSources(section.sources);
+    if (sources.length === 0) return [];
+    return [
+      {
+        id,
+        title: section.title,
+        body: section.body,
+        sources,
+      },
+    ];
+  });
+  if (sections.length !== 3) return FALLBACK_BRIEF;
+
   const meta = isRecord(nested.meta)
     ? nested.meta
     : isRecord(payload.meta)
       ? payload.meta
       : {};
-  const mode = meta.mode === "ai" ? "ai" : "fallback";
-  const factDetails = parseFactDetails(nested.factDetails);
-  const suppliedFacts = stringArray(nested.facts);
-  const uncertainty = stringArray(nested.uncertainty);
-  const education = stringArray(nested.education);
+  const suppliedGeneratedAt =
+    typeof nested.generatedAt === "string" &&
+    Number.isFinite(Date.parse(nested.generatedAt))
+      ? nested.generatedAt
+      : null;
+  const mode =
+    meta.mode === "ai" && suppliedGeneratedAt ? "ai" : "fallback";
   const source =
     (typeof meta.source === "string" && meta.source) ||
-    factDetails[0]?.source ||
     "Morrowward educational edition";
-  const provenanceText = [
-    source,
-    ...factDetails.map((detail) => detail.freshness),
-  ].join(" ");
-  const delayed = /\b(?:delayed|sample|stale)\b/iu.test(provenanceText);
-  const explicitlyFresh =
-    factDetails.length > 0 &&
-    factDetails.every((detail) => detail.freshness.toLowerCase() === "fresh");
-  const freshness: Brief["provenance"]["freshness"] = delayed
-    ? "delayed"
-    : mode === "ai" && explicitlyFresh
-      ? "fresh"
-      : "unknown";
+  const marketSession = [
+    "pre-market",
+    "open",
+    "closed",
+    "unknown",
+  ].includes(String(nested.marketSession))
+    ? nested.marketSession as Brief["marketSession"]
+    : "unknown";
+  const sentimentLabel = [
+    "bullish",
+    "cautiously-bullish",
+    "neutral",
+    "cautious",
+    "bearish",
+    "unknown",
+  ].includes(String(nested.sentimentLabel))
+    ? nested.sentimentLabel as Brief["sentimentLabel"]
+    : "unknown";
 
   return {
     headline: nested.headline,
-    facts:
-      suppliedFacts.length > 0
-        ? suppliedFacts
-        : factDetails.map((detail) => detail.fact),
-    factDetails,
-    sentiment: typeof nested.sentiment === "string" ? nested.sentiment : "No sentiment summary available.",
-    uncertainty:
-      uncertainty.length > 0
-        ? uncertainty
-        : typeof nested.uncertainty === "string"
-          ? [nested.uncertainty]
-          : ["Market outcomes remain uncertain."],
-    takeaway:
-      (typeof nested.takeaway === "string" && nested.takeaway) ||
-      education[0] ||
-      "Keep the focus on your repeatable learning habit.",
-    generatedAt: typeof nested.generatedAt === "string" ? nested.generatedAt : "Today",
+    sections,
+    generatedAt: mode === "ai" ? suppliedGeneratedAt : null,
+    marketSession,
+    sentimentLabel,
+    scenarioBalanceUsd: 100_000,
+    disclosure:
+      typeof nested.disclosure === "string"
+        ? nested.disclosure
+        : "Educational information only—not individualized financial advice.",
     provenance: {
       mode,
       model: typeof meta.model === "string" ? meta.model : null,
       source,
-      freshness,
     },
   };
 }
@@ -1200,34 +1287,146 @@ function MetricCard({ icon: Icon, label, value, detail }: { icon: LucideIcon; la
   );
 }
 
-function BriefCard({ brief, loading, onRefresh }: { brief: Brief; loading: boolean; onRefresh: () => void }) {
-  const editionLabel =
-    brief.provenance.freshness === "delayed"
-      ? `${brief.provenance.mode === "ai" ? "GPT summary" : "Deterministic"} · delayed sample`
-      : brief.provenance.mode === "ai"
-        ? "AI-generated edition"
-        : "Deterministic edition";
+const HUNDRED_K_MILESTONE_SOURCES = [
+  {
+    title: "Investor.gov · Introduction to investing",
+    url: "https://www.investor.gov/introduction-investing",
+  },
+  {
+    title: "Investor.gov · Compound interest calculator",
+    url: "https://www.investor.gov/financial-tools-calculators/calculators/compound-interest-calculator",
+  },
+  {
+    title: "Investor.gov · A $100K savings example",
+    url: "https://www.investor.gov/money-smarts-quiz-answer-7c",
+  },
+] as const;
+
+function HundredKMilestoneDetails() {
   return (
-    <article className="panel brief-card" aria-busy={loading}>
+    <details className="hundred-k-details" data-testid="hundred-k-details">
+      <summary>
+        <Info size={13} aria-hidden="true" />
+        Why $100K?
+        <ChevronRight size={13} aria-hidden="true" />
+      </summary>
+      <div className="hundred-k-panel">
+        <span className="section-kicker">A useful marker—not magic</span>
+        <h4>The first six figures can make compounding feel visible.</h4>
+        <p>
+          Early progress is driven mostly by consistent contributions because
+          the invested base is still small. At the same illustrative 6% annual
+          return, $10K would gain about $600 in one year while $100K would gain
+          about $6,000—before fees, taxes, and market losses.
+        </p>
+        <div className="hundred-k-math" aria-label="One hundred thousand dollar milestone comparison">
+          <span><strong>$1 → $100K</strong><small>100,000× the starting amount</small></span>
+          <ArrowRight size={14} aria-hidden="true" />
+          <span><strong>$100K → $1M</strong><small>10× the starting amount</small></span>
+        </div>
+        <p>
+          That explains the popular milestone, but it does not mean the next
+          $900K will take less time. Contributions, returns, risk, fees, taxes,
+          and setbacks determine every real path.
+        </p>
+        <nav aria-label="Why one hundred thousand dollars sources">
+          {HUNDRED_K_MILESTONE_SOURCES.map((source) => (
+            <a
+              href={source.url}
+              key={source.url}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {source.title}
+              <ExternalLink size={11} aria-hidden="true" />
+              <span className="sr-only"> (opens in a new tab)</span>
+            </a>
+          ))}
+        </nav>
+      </div>
+    </details>
+  );
+}
+
+export function formatBriefUpdatedAt(value: string | null): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "America/New_York",
+    timeZoneName: "short",
+  }).format(date);
+}
+
+function BriefCard({ brief, loading }: { brief: Brief; loading: boolean }) {
+  const updatedAt = formatBriefUpdatedAt(brief.generatedAt);
+  const editionLabel =
+    brief.provenance.mode === "ai"
+      ? `${brief.sentimentLabel.replace("-", " ")} · ${brief.marketSession}`
+      : "Verified daily edition pending";
+  return (
+    <article className="panel brief-card" aria-busy={loading} data-testid="daily-brief">
       <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
-        {loading ? "Updating the daily brief." : `Daily brief ready. ${editionLabel}.`}
+        {loading ? "Checking today’s daily briefing." : `Daily briefing ready. ${editionLabel}.`}
       </p>
       <div className="panel-heading">
         <div><span className="section-kicker">Today’s 90-second brief</span><h2>{brief.headline}</h2></div>
-        <button className="icon-button" type="button" onClick={onRefresh} disabled={loading} aria-label={loading ? "Refreshing daily brief" : "Refresh daily brief"}><RefreshCw className={loading ? "spin" : ""} size={18} aria-hidden="true" /></button>
+        <div className="brief-updated" data-testid="brief-last-updated">
+          <Clock size={17} aria-hidden="true" />
+          <span>
+            <strong>Briefing last updated</strong>
+            {updatedAt && brief.generatedAt ? (
+              <time dateTime={brief.generatedAt}>{updatedAt}</time>
+            ) : (
+              <small>Waiting for today’s verified edition</small>
+            )}
+          </span>
+        </div>
       </div>
       <div className="brief-grid">
-        <div><span className="brief-label"><Check size={15} aria-hidden="true" /> What we know</span><ul>{brief.facts.map((fact) => <li key={fact}>{fact}</li>)}</ul></div>
-        <div><span className="brief-label"><LineChart size={15} aria-hidden="true" /> Broad mood</span><p>{brief.sentiment}</p></div>
-        <div><span className="brief-label"><CircleAlert size={15} aria-hidden="true" /> Uncertainty</span><ul>{brief.uncertainty.map((item) => <li key={item}>{item}</li>)}</ul></div>
+        {brief.sections.map((section) => {
+          const Icon =
+            section.id === "market-and-sentiment"
+              ? LineChart
+              : section.id === "frontier-assets"
+                ? Sparkles
+                : Landmark;
+          return (
+            <section data-testid={`brief-section-${section.id}`} key={section.id}>
+              <div className="brief-section-heading">
+                <h3 className="brief-label"><Icon size={15} aria-hidden="true" /> {section.title}</h3>
+                {section.id === "learning-lens-and-fed-watch" && (
+                  <HundredKMilestoneDetails />
+                )}
+              </div>
+              <p>{section.body}</p>
+              <div className="brief-sources" aria-label={`${section.title} sources`}>
+                <span>Sources</span>
+                {section.sources.map((source) => (
+                  <a href={source.url} key={source.url} target="_blank" rel="noopener noreferrer">
+                    {source.title}<ExternalLink size={11} aria-hidden="true" />
+                    <span className="sr-only"> (opens in a new tab)</span>
+                  </a>
+                ))}
+              </div>
+            </section>
+          );
+        })}
       </div>
-      <div className="takeaway"><Lightbulb size={18} aria-hidden="true" /><div><strong>Learning takeaway</strong><span>{brief.takeaway}</span></div></div>
-      <footer><span>{brief.provenance.source} · {brief.generatedAt}</span><span title={`Source: ${brief.provenance.source}`}>{brief.provenance.mode === "ai" ? <Sparkles size={13} aria-hidden="true" /> : <Database size={13} aria-hidden="true" />}{editionLabel}</span></footer>
+      <footer>
+        <span>{brief.disclosure}</span>
+        <span title={`Source: ${brief.provenance.source}`}>{brief.provenance.mode === "ai" ? <Sparkles size={13} aria-hidden="true" /> : <Database size={13} aria-hidden="true" />}{brief.provenance.source}</span>
+      </footer>
     </article>
   );
 }
 
-function TodayView({ data, projection, brief, briefLoading, onRefreshBrief, onNavigate }: { data: AppData; projection: Projection; brief: Brief; briefLoading: boolean; onRefreshBrief: () => void; onNavigate: (view: View) => void }) {
+function TodayView({ data, projection, brief, briefLoading, onNavigate }: { data: AppData; projection: Projection; brief: Brief; briefLoading: boolean; onNavigate: (view: View) => void }) {
   const nextMilestone = [1_000_000, 2_500_000, 5_000_000, 10_000_000, 25_000_000, 50_000_000, 100_000_000].find((value) => value > data.plan.startingCents) ?? 250_000_000;
   const habit = practiceStatus(data);
   return (
@@ -1274,7 +1473,7 @@ function TodayView({ data, projection, brief, briefLoading, onRefreshBrief, onNa
           <div className="week-dots" aria-hidden="true">{Array.from({ length: 7 }, (_, index) => <i className={index < Math.min(7, habit.streak) ? "filled" : ""} key={index} />)}</div>
         </article>
       </section>
-      <BriefCard brief={brief} loading={briefLoading} onRefresh={onRefreshBrief} />
+      <BriefCard brief={brief} loading={briefLoading} />
       <article className="learn-invite">
         <span className="learn-invite-icon"><BookOpen size={24} aria-hidden="true" /></span>
         <div><span className="section-kicker">Learn one thing</span><h2>Why does time matter so much?</h2><p>Ask the Morrow guide for a plain-language explanation grounded in your selected experience level.</p></div>
@@ -1679,7 +1878,7 @@ function LearnView({ data }: { data: AppData }) {
 
   return (
     <div className="view-stack">
-      <div className="page-intro"><div><span className="section-kicker">Education center</span><h1>Understanding is a form of freedom.</h1><p>Start with one honest question. Build from there.</p></div><span className="level-badge"><UserRound size={15} aria-hidden="true" /> {data.experience === "new" ? "Plain-language mode" : data.experience === "familiar" ? "Familiar mode" : "Advanced detail mode"}</span></div>
+      <div className="page-intro"><div><span className="section-kicker">Education center</span><h1>Understanding is a form of freedom.</h1><p>Start with one honest question. Build from there.</p></div></div>
       <section className="learning-path-section" aria-labelledby="learning-path-title">
         <div className="section-heading">
           <div>
@@ -2144,7 +2343,7 @@ export function MorrowwardApp() {
         </div>
       )}
       <main ref={mainRef} className="app-main" id="main-content" tabIndex={-1} aria-label={`${activeLabel} view`}>
-        {active === "today" && <TodayView data={data} projection={projection} brief={brief} briefLoading={briefLoading} onRefreshBrief={loadBrief} onNavigate={navigate} />}
+        {active === "today" && <TodayView data={data} projection={projection} brief={brief} briefLoading={briefLoading} onNavigate={navigate} />}
         {active === "plan" && <PlanView data={data} setData={setData} projection={projection} />}
         {active === "practice" && <PracticeView data={data} setData={setData} />}
         {active === "learn" && <LearnView data={data} />}
