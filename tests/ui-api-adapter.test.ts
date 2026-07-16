@@ -136,6 +136,12 @@ describe("UI API adapters", () => {
       label: "Daily Price Refresh",
       mode: "practice",
     });
+    expect(
+      marketSourcePresentation(panelAssets, "success", null, true),
+    ).toEqual({
+      label: "Preparing today’s first price update…",
+      mode: "search",
+    });
 
     const webSourcedAssets = panelAssets.map((asset) => ({
       ...asset,

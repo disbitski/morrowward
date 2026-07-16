@@ -148,6 +148,7 @@ export type HistorySelectionResult =
 
 export interface MarketQuoteOptions {
   apiKey?: string;
+  bypassDurableReadCache?: boolean;
   fetchImpl?: typeof fetch;
   includeHistory?: boolean;
   now?: Date;
@@ -842,13 +843,14 @@ function snapshotIsCurrent(
 async function readLatestSnapshot(
   now: Date,
   fetchImpl?: typeof fetch,
+  bypassDurableReadCache = false,
 ): Promise<QuotesResponse | null> {
   const usableMemory =
     inMemorySnapshot && snapshotIsUsable(inMemorySnapshot, now)
       ? inMemorySnapshot
       : null;
   if (!hasDurableQuoteStore()) return usableMemory;
-  if (now.getTime() < nextDurableReadAt) {
+  if (!bypassDurableReadCache && now.getTime() < nextDurableReadAt) {
     return usableMemory;
   }
 
@@ -919,7 +921,11 @@ export async function getMarketQuotes(
   options: MarketQuoteOptions = {},
 ): Promise<QuotesResponse> {
   const now = options.now ?? new Date();
-  const snapshot = await readLatestSnapshot(now, options.storeFetchImpl);
+  const snapshot = await readLatestSnapshot(
+    now,
+    options.storeFetchImpl,
+    options.bypassDurableReadCache,
+  );
   if (snapshot) {
     return selectSnapshot(snapshot, symbols, now, Boolean(options.includeHistory));
   }

@@ -16,12 +16,15 @@
 - [x] Education Center has four paths, 48 level-specific prompts, explicit topic payloads, deterministic follow-ups, source-tier labels, verified supplemental Grokipedia links, and no retired “may be offered later” copy.
 - [x] Marcus Aurelius and Benjamin Franklin welcomes have approved publication records binding exact video, captions, poster, transcript, primary quotation source, AI disclosures, generation provenance, and Dave's final approval; the app makes no xAI runtime call.
 - [x] The two-entry greeting roster assigns one approved welcome randomly once per browser, preserves that local assignment, never autoplays, and offers user-controlled playback and replay from Our Why.
+- [x] Creative video scope is frozen at the two approved welcomes after both random assignments were verified through complete-reset testing.
+- [x] Today’s Morrowward horizon artwork is visible, responsive, theme-compatible, cached for offline use, and does not displace the deterministic projection or its disclosure.
 - [x] Production has one complete KV/Upstash REST credential pair so the daily quote snapshot, 12-hour distributed `NX` retry guard, shared request limits, and educator circuit breaker work across serverless instances.
 - [ ] iPhone-sized and macOS-sized PWA flows are verified.
 - [x] `npm run test:e2e` passes its desktop Chrome and mobile Pixel 7 projects from a production build.
 
 ## Apple companion shells
 
+- [ ] After the exact iPhone and Mac source folders exist, replace the About-page roadmap panel with polished Morrowward companion-source cards plus a **Follow Dave online** card. Verify the GitHub folder links only after the repository becomes public; do not use App Store download badges for builds distributed as source.
 - [ ] Fresh `apple/` project contains shared SwiftUI/WebKit code for iOS and macOS targets.
 - [ ] Debug origin is configurable for the local server; Release uses `https://morrowward.vercel.app`.
 - [ ] No OpenAI key, Vercel token, protected-preview URL, or bypass credential appears in the project or built products.

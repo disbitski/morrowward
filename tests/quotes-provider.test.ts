@@ -699,6 +699,44 @@ describe("GPT-5.6 educational quote snapshots", () => {
     expect(unavailableStore).toHaveBeenCalledOnce();
   });
 
+  it("lets observation reads bypass a cached durable miss", async () => {
+    const apiFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(Response.json(responsesPayload()));
+    const generated = await refreshMarketQuoteSnapshot({
+      apiKey: "server-secret",
+      fetchImpl: apiFetch,
+      now: NOW,
+    });
+
+    resetQuoteCacheForTests();
+    vi.stubEnv("KV_REST_API_URL", "https://kv.example.test");
+    vi.stubEnv("KV_REST_API_TOKEN", "kv-secret");
+    const storeFetch = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json({ result: null }))
+      .mockResolvedValueOnce(
+        Response.json({ result: JSON.stringify(generated) }),
+      );
+
+    const initial = await getMarketQuotes(["AAPL"], {
+      apiKey: "server-secret",
+      storeFetchImpl: storeFetch,
+      now: NOW,
+    });
+    const observed = await getMarketQuotes(["AAPL"], {
+      apiKey: "server-secret",
+      bypassDurableReadCache: true,
+      storeFetchImpl: storeFetch,
+      now: new Date(NOW.getTime() + 10_000),
+    });
+
+    expect(initial.provider.lastSuccessfulUpdate).toBeNull();
+    expect(observed.provider.lastSuccessfulUpdate).toBe(NOW.toISOString());
+    expect(observed.quotes[0].source.kind).toBe("openai-web-search");
+    expect(storeFetch).toHaveBeenCalledTimes(2);
+  });
+
   it("reports a durable write failure without replacing the last good snapshot", async () => {
     const firstFetch = vi
       .fn<typeof fetch>()

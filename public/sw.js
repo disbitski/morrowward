@@ -88,6 +88,7 @@ const CORE_APP_SHELL = [
   "/icon-192.png",
   "/icon-512.png",
   "/dave-age-10-commodore-64.jpg",
+  "/morrowward-future-horizon.jpg",
 ];
 
 // The greeting enriches the experience but is not required to use the app.

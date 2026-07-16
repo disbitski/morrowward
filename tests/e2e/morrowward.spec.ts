@@ -137,6 +137,10 @@ test("one-time historical welcome never autoplays and guides the next practice s
 test("golden path stays educational, local, and fully simulated", async ({ page }, testInfo) => {
   await onboard(page);
   await expect(page.getByText("Local & private", { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId("horizon-future-image")).toBeVisible();
+  await expect(
+    page.getByTestId("horizon-future-image").locator("img"),
+  ).toHaveAttribute("src", "/morrowward-future-horizon.jpg");
 
   await openView(page, "plan");
   await expect(page.getByRole("heading", { name: /Change the inputs/i })).toBeVisible();

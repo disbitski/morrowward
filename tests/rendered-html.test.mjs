@@ -66,6 +66,7 @@ test("ships the local-first PWA and mission assets", async () => {
     readFile(new URL("public/manifest.json", root), "utf8"),
     readFile(new URL("public/sw.js", root), "utf8"),
     access(new URL("public/dave-age-10-commodore-64.jpg", root)),
+    access(new URL("public/morrowward-future-horizon.jpg", root)),
     access(new URL("public/og.png", root)),
     access(new URL("public/morrowward-marcus-welcome.mp4", root)),
     access(new URL("public/morrowward-marcus-welcome.en.vtt", root)),

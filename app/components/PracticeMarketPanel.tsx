@@ -111,6 +111,7 @@ export interface PracticeMarketPanelProps {
   refreshStatus: PracticeRefreshStatus;
   refreshError?: string | null;
   lastUpdatedAt?: string | null;
+  providerConfigured?: boolean;
   title?: string;
   description?: string;
 }
@@ -269,6 +270,7 @@ export function marketSourcePresentation(
   assets: readonly PracticeMarketAsset[],
   refreshStatus: PracticeRefreshStatus,
   lastUpdatedAt?: string | null,
+  providerConfigured = false,
 ): MarketSourcePresentation {
   if (refreshStatus === "loading") {
     return { label: "Checking today’s market prices…", mode: "search" };
@@ -304,6 +306,17 @@ export function marketSourcePresentation(
     return {
       label: "Real Prices Updated Every 24 Hours",
       mode: allWebSearch ? "search" : "mixed",
+    };
+  }
+
+  if (
+    providerConfigured &&
+    !hasSuccessfulRefresh &&
+    refreshStatus !== "error"
+  ) {
+    return {
+      label: "Preparing today’s first price update…",
+      mode: "search",
     };
   }
 
@@ -567,6 +580,7 @@ export function PracticeMarketPanel({
   refreshStatus,
   refreshError,
   lastUpdatedAt,
+  providerConfigured = false,
   title = "Choose a practice asset",
   description = "Compare broad funds, individual companies, and crypto assets before making a simulated purchase. Inclusion is not endorsement.",
 }: PracticeMarketPanelProps) {
@@ -585,6 +599,7 @@ export function PracticeMarketPanel({
     assets,
     refreshStatus,
     lastUpdatedAt,
+    providerConfigured,
   );
   const snapshotAge = currentTimeMs === null
     ? null

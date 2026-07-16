@@ -1165,12 +1165,25 @@ function HorizonHero({ data, projection, onNavigate }: { data: AppData; projecti
           <span><Info size={15} aria-hidden="true" /> Illustration, not a forecast</span>
         </div>
       </div>
-      <div className="trajectory-card">
-        <div className="trajectory-head"><span>Illustrative path</span><strong>{projection.years} years</strong></div>
-        <div className="trajectory-bars" role="img" aria-label={`Illustrative growth from ${formatMoney(data.plan.startingCents)} to ${formatMoney(projection.futureCents)}`}>
-          {trajectory.map((point) => <span key={point.age} style={{ height: `${point.height}%` }}><i /><small>{point.age}</small></span>)}
+      <div className="horizon-visual">
+        <div className="horizon-art" aria-hidden="true" data-testid="horizon-future-image">
+          {/* Static, precached PWA artwork intentionally avoids an optimizer-only URL. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/morrowward-future-horizon.jpg"
+            alt=""
+            width="1794"
+            height="877"
+            decoding="async"
+          />
         </div>
-        <div className="trajectory-legend"><span>Today</span><span>Age {data.plan.targetAge}</span></div>
+        <div className="trajectory-card">
+          <div className="trajectory-head"><span>Illustrative path</span><strong>{projection.years} years</strong></div>
+          <div className="trajectory-bars" role="img" aria-label={`Illustrative growth from ${formatMoney(data.plan.startingCents)} to ${formatMoney(projection.futureCents)}`}>
+            {trajectory.map((point) => <span key={point.age} style={{ height: `${point.height}%` }}><i /><small>{point.age}</small></span>)}
+          </div>
+          <div className="trajectory-legend"><span>Today</span><span>Age {data.plan.targetAge}</span></div>
+        </div>
       </div>
     </section>
   );
@@ -1334,6 +1347,7 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
   const [refreshStatus, setRefreshStatus] =
     useState<PracticeRefreshStatus>("loading");
   const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [marketProviderConfigured, setMarketProviderConfigured] = useState(false);
   const [lastMarketUpdatedAt, setLastMarketUpdatedAt] = useState<string | null>(null);
   const selectedAsset = ASSETS.find((asset) => asset.symbol === selected) ?? ASSETS[0];
   const selectedQuote = quotes[selected] ?? DEMO_QUOTES[selected]!;
@@ -1393,6 +1407,7 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
         return next;
       });
       setQuotes({ ...DEMO_QUOTES, ...valuationQuotes });
+      setMarketProviderConfigured(parsed.data.provider.configured);
       setLastMarketUpdatedAt(parsed.data.provider.lastSuccessfulUpdate);
       setRefreshStatus("success");
       return shouldRecheckDailyMarketSnapshot(parsed.data.provider);
@@ -1455,6 +1470,27 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
       for (const timer of timers) window.clearTimeout(timer);
     };
   }, [refreshPrices]);
+
+  useEffect(() => {
+    if (!marketProviderConfigured || lastMarketUpdatedAt) return;
+    let observing = false;
+    const observeSavedSnapshot = () => {
+      if (observing) return;
+      observing = true;
+      void refreshPrices({ recheckAttempt: 3 }).finally(() => {
+        observing = false;
+      });
+    };
+    const observeWhenVisible = () => {
+      if (document.visibilityState === "visible") observeSavedSnapshot();
+    };
+    window.addEventListener("focus", observeSavedSnapshot);
+    document.addEventListener("visibilitychange", observeWhenVisible);
+    return () => {
+      window.removeEventListener("focus", observeSavedSnapshot);
+      document.removeEventListener("visibilitychange", observeWhenVisible);
+    };
+  }, [lastMarketUpdatedAt, marketProviderConfigured, refreshPrices]);
 
   const deposit = () => {
     if (habit.weeklyAdded) return;
@@ -1532,6 +1568,7 @@ function PracticeView({ data, setData }: { data: AppData; setData: (data: AppDat
           refreshStatus={refreshStatus}
           refreshError={refreshError}
           lastUpdatedAt={lastMarketUpdatedAt}
+          providerConfigured={marketProviderConfigured}
           title="Explore eleven practice assets"
           description="Compare broad funds, public companies, and crypto assets. The daily snapshot loads automatically, and every value keeps its freshness and provenance. Inclusion is not endorsement."
         />

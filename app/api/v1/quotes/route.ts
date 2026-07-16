@@ -67,16 +67,17 @@ export async function GET(request: Request): Promise<Response> {
     );
   }
 
+  const response = await getMarketQuotes(selection.symbols, {
+    bypassDurableReadCache: observeOnly,
+    includeHistory: historySelection.includeHistory,
+  });
   const headers = new Headers(rateLimit.headers);
   headers.set(
     "cache-control",
-    observeOnly
+    observeOnly || !response.provider.lastSuccessfulUpdate
       ? "private, no-store"
       : "public, max-age=0, s-maxage=300, stale-while-revalidate=900",
   );
-  const response = await getMarketQuotes(selection.symbols, {
-    includeHistory: historySelection.includeHistory,
-  });
   if (!observeOnly) {
     try {
       after(async () => {
