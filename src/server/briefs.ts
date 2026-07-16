@@ -156,6 +156,14 @@ function evidenceUrlKey(value: unknown): string | null {
   if (!safeUrl) return null;
 
   const url = new URL(safeUrl);
+  if (url.hostname === "apnews.com" || url.hostname === "www.apnews.com") {
+    const articleId = url.pathname.match(
+      /^\/article\/(?:[^/]*-)?([a-f0-9]{32})\/?$/iu,
+    )?.[1];
+    if (articleId) {
+      url.pathname = `/article/${articleId.toLowerCase()}`;
+    }
+  }
   for (const key of [...url.searchParams.keys()]) {
     const normalizedKey = key.toLowerCase();
     if (

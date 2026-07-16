@@ -343,6 +343,73 @@ describe.sequential("sourced daily briefing generation", () => {
     });
   });
 
+  it("matches AP article URLs by their stable article ID", async () => {
+    const apArticleId = "b2a85bf17cbb4653ba83bb7c655366c0";
+    const apCandidate = candidate();
+    apCandidate.sections.marketAndSentiment.sentences[0].citations[0].url =
+      `https://apnews.com/article/wall-street-stocks-dow-nasdaq-${apArticleId}`;
+    const fetchImpl = vi.fn(async (
+      _input: RequestInfo | URL,
+      _init?: RequestInit,
+    ) => {
+      void _input;
+      void _init;
+      return new Response(JSON.stringify(responsesPayload(apCandidate, [
+        `https://apnews.com/article/${apArticleId}`,
+        ASSET_SOURCE,
+        SPCX_SOURCE,
+        FED_SOURCE,
+      ])), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    await expect(
+      refreshDailyBrief({
+        apiKey: "test-api-key",
+        fetchImpl,
+        now: NOW,
+      }),
+    ).resolves.toMatchObject({
+      generatedAt: NOW.toISOString(),
+      meta: { mode: "ai" },
+    });
+  });
+
+  it("rejects a different AP article ID on the same origin", async () => {
+    const apCandidate = candidate();
+    apCandidate.sections.marketAndSentiment.sentences[0].citations[0].url =
+      "https://apnews.com/article/market-story-b2a85bf17cbb4653ba83bb7c655366c0";
+    const fetchImpl = vi.fn(async (
+      _input: RequestInfo | URL,
+      _init?: RequestInit,
+    ) => {
+      void _input;
+      void _init;
+      return new Response(JSON.stringify(responsesPayload(apCandidate, [
+        "https://apnews.com/article/a4f50a9a19d14802cb94b51db7bafba1",
+        ASSET_SOURCE,
+        SPCX_SOURCE,
+        FED_SOURCE,
+      ])), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    await expect(
+      refreshDailyBrief({
+        apiKey: "test-api-key",
+        fetchImpl,
+        now: NOW,
+      }),
+    ).rejects.toMatchObject({
+      reason: "invalid_response",
+      diagnostic: "section_citation_unsupported",
+    });
+  });
+
   it("rejects an out-of-bounds provider citation annotation", async () => {
     const annotated = candidate();
     const providerUrl = "https://example.com/malformed-provider-citation";
