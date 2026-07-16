@@ -334,7 +334,49 @@ describe.sequential("sourced daily briefing generation", () => {
     });
   });
 
-  it("reports only bounded public-link metadata for an unsupported asset source", async () => {
+  it("omits an unsupported sentence when supported evidence remains", async () => {
+    const partlySupported = candidate();
+    partlySupported.sections.marketAndSentiment.sentences[0] = {
+      text: "This unsupported sentence must never be displayed.",
+      classification: "verified-fact",
+      citations: [{
+        title: "Unsupported claim",
+        url: "https://unsupported.example/claim",
+      }],
+    };
+    partlySupported.sections.marketAndSentiment.sentences.push({
+      text: "The supported market observation remains available.",
+      classification: "verified-fact",
+      citations: [{ title: "Market observations", url: MARKET_SOURCE }],
+    });
+    const fetchImpl = vi.fn(async (
+      _input: RequestInfo | URL,
+      _init?: RequestInit,
+    ) => {
+      void _input;
+      void _init;
+      return new Response(JSON.stringify(responsesPayload(partlySupported)), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    const brief = await refreshDailyBrief({
+      apiKey: "test-api-key",
+      fetchImpl,
+      now: NOW,
+    });
+    const marketSection = brief.sections.find(
+      (section) => section.id === "market-and-sentiment",
+    );
+
+    expect(marketSection?.body).toBe(
+      "The supported market observation remains available.",
+    );
+    expect(JSON.stringify(brief)).not.toContain("unsupported.example");
+  });
+
+  it("downgrades an unsupported internal asset source", async () => {
     const unsupported = candidate();
     const aapl = unsupported.assetChecks.find(
       (check) => check.assetId === "AAPL",
@@ -359,15 +401,9 @@ describe.sequential("sourced daily briefing generation", () => {
         fetchImpl,
         now: NOW,
       }),
-    ).rejects.toMatchObject({
-      reason: "invalid_response",
-      diagnostic: "asset_source_unsupported",
-      diagnosticDetails: expect.arrayContaining([
-        "asset:AAPL",
-        "asset_source:unsupported.example/aapl",
-        "search_sources:4",
-        "provider_citations:0",
-      ]),
+    ).resolves.toMatchObject({
+      generatedAt: NOW.toISOString(),
+      meta: { mode: "ai" },
     });
   });
 

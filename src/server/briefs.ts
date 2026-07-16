@@ -414,6 +414,60 @@ function unsupportedAssetSourceDetails(
   ];
 }
 
+function generationWithSupportedEvidence(
+  generation: BriefGeneration,
+  evidence: WebEvidence,
+): BriefGeneration | null {
+  const supportedSentences = <T extends {
+    sentences: BriefGeneration["sections"]["marketAndSentiment"]["sentences"];
+  }>(section: T): T => ({
+    ...section,
+    sentences: section.sentences.filter((sentence) =>
+      sentence.citations.every((citation) =>
+        citationIsSupported(citation, evidence.sourceUrls)
+      )
+    ),
+  });
+  const sections = {
+    marketAndSentiment: supportedSentences(
+      generation.sections.marketAndSentiment,
+    ),
+    frontierAssets: supportedSentences(generation.sections.frontierAssets),
+    learningLensAndFedWatch: supportedSentences(
+      generation.sections.learningLensAndFedWatch,
+    ),
+  };
+  if (Object.values(sections).some((section) => section.sentences.length === 0)) {
+    return null;
+  }
+
+  const assetChecks = generation.assetChecks.map((check) => {
+    const sourceUrl = safeHttpUrl(check.sourceUrl);
+    const sourceIsSupported = Boolean(
+      sourceUrl &&
+        evidenceUrlIsSupported(sourceUrl, evidence.sourceUrls),
+    );
+    if (
+      (check.status === "verified" && !sourceIsSupported) ||
+      (sourceUrl && !sourceIsSupported)
+    ) {
+      return {
+        ...check,
+        status: "unavailable" as const,
+        identity: `${check.assetId} identity unavailable in this edition`,
+        sourceUrl: null,
+      };
+    }
+    return check;
+  });
+
+  return {
+    ...generation,
+    sections,
+    assetChecks,
+  };
+}
+
 function fedEventIsValid(
   event: BriefGeneration["fedEvents"][number],
   sourceUrls: Set<string>,
@@ -753,21 +807,26 @@ async function fetchWebDailyBrief(
         .map((issue) => `${issue.path.join(".") || "root"}:${issue.code}`),
     };
   }
-  const supportFailure = generationSupportFailure(parsed.data, evidence, now);
+  const evidenceBoundGeneration = generationWithSupportedEvidence(
+    parsed.data,
+    evidence,
+  );
+  const generation = evidenceBoundGeneration ?? parsed.data;
+  const supportFailure = generationSupportFailure(generation, evidence, now);
   return supportFailure
     ? {
         ok: false,
         diagnostic: supportFailure,
         details:
           supportFailure === "section_citation_unsupported"
-            ? unsupportedCitationDetails(parsed.data, evidence)
+            ? unsupportedCitationDetails(generation, evidence)
             : supportFailure === "asset_source_unsupported"
-              ? unsupportedAssetSourceDetails(parsed.data, evidence)
+              ? unsupportedAssetSourceDetails(generation, evidence)
             : supportFailure === "unsafe_language"
-              ? [`pattern:${unsafeBriefReason(parsed.data) ?? "unknown"}`]
+              ? [`pattern:${unsafeBriefReason(generation) ?? "unknown"}`]
               : [],
       }
-    : { ok: true, generation: parsed.data };
+    : { ok: true, generation };
 }
 
 function currentBriefIsForToday(
