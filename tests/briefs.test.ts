@@ -212,7 +212,16 @@ describe.sequential("sourced daily briefing generation", () => {
         fetchImpl,
         now: NOW,
       }),
-    ).rejects.toMatchObject({ reason: "invalid_response" });
+    ).rejects.toMatchObject({
+      reason: "invalid_response",
+      diagnostic: "section_citation_unsupported",
+      diagnosticDetails: expect.arrayContaining([
+        "citation:unsupported.example/claim",
+        "search_sources:4",
+        "provider_citations:0",
+        "same_origin_sources:0",
+      ]),
+    });
   });
 
   it("accepts the same searched page after removing only tracking parameters", async () => {

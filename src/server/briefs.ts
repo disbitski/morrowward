@@ -65,6 +65,8 @@ const FALLBACK_SOURCES = {
 type WebEvidence = {
   outputText: string;
   sourceUrls: Set<string>;
+  searchSourceUrls: Set<string>;
+  providerCitationUrls: Set<string>;
 };
 
 type BriefFetchDiagnostic =
@@ -278,6 +280,8 @@ function extractWebEvidence(payload: unknown): WebEvidence | null {
   return {
     outputText: textPieces.join(""),
     sourceUrls: new Set([...searchSourceUrls, ...providerCitationUrls]),
+    searchSourceUrls,
+    providerCitationUrls,
   };
 }
 
@@ -311,6 +315,47 @@ function citationIsSupported(
   sourceUrls: Set<string>,
 ): boolean {
   return evidenceUrlIsSupported(citation.url, sourceUrls);
+}
+
+function sourceDiagnosticLabel(value: unknown): string | null {
+  const safeUrl = safeHttpUrl(value);
+  if (!safeUrl) return null;
+  const url = new URL(safeUrl);
+  return `${url.hostname}${url.pathname}`.slice(0, 240);
+}
+
+function unsupportedCitationDetails(
+  generation: BriefGeneration,
+  evidence: WebEvidence,
+): string[] {
+  const unsupported = Object.values(generation.sections)
+    .flatMap((section) => section.sentences)
+    .flatMap((sentence) => sentence.citations)
+    .find(
+      (citation) =>
+        !citationIsSupported(citation, evidence.sourceUrls),
+    );
+  const citationUrl = unsupported ? safeHttpUrl(unsupported.url) : null;
+  const citationOrigin = citationUrl ? new URL(citationUrl).origin : null;
+  const sameOriginPaths = citationOrigin
+    ? [...evidence.sourceUrls]
+        .filter((sourceUrl) => new URL(sourceUrl).origin === citationOrigin)
+        .map(sourceDiagnosticLabel)
+        .filter((label): label is string => Boolean(label))
+        .slice(0, 5)
+    : [];
+  const sourceOrigins = [...new Set(
+    [...evidence.sourceUrls].map((sourceUrl) => new URL(sourceUrl).origin),
+  )].slice(0, 8);
+
+  return [
+    `citation:${sourceDiagnosticLabel(citationUrl) ?? "invalid"}`,
+    `search_sources:${evidence.searchSourceUrls.size}`,
+    `provider_citations:${evidence.providerCitationUrls.size}`,
+    `same_origin_sources:${sameOriginPaths.length}`,
+    `same_origin_paths:${sameOriginPaths.join("|") || "none"}`,
+    `source_origins:${sourceOrigins.join("|") || "none"}`,
+  ];
 }
 
 function fedEventIsValid(
@@ -653,7 +698,14 @@ async function fetchWebDailyBrief(
   }
   const supportFailure = generationSupportFailure(parsed.data, evidence, now);
   return supportFailure
-    ? { ok: false, diagnostic: supportFailure }
+    ? {
+        ok: false,
+        diagnostic: supportFailure,
+        details:
+          supportFailure === "section_citation_unsupported"
+            ? unsupportedCitationDetails(parsed.data, evidence)
+            : [],
+      }
     : { ok: true, generation: parsed.data };
 }
 
