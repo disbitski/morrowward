@@ -152,7 +152,7 @@ describe.sequential("sourced daily briefing generation", () => {
       store: false,
       tool_choice: "required",
       max_tool_calls: 4,
-      max_output_tokens: 4_200,
+      max_output_tokens: 6_000,
       tools: [{
         type: "web_search",
         search_context_size: "medium",

@@ -3,11 +3,11 @@ import {
   type DailyBriefResponse,
 } from "../contracts";
 
-const BRIEF_LATEST_KEY = "morrowward:daily-brief:latest";
+const BRIEF_LATEST_KEY = "morrowward:daily-brief:v1:latest";
 const BRIEF_REFRESH_LOCK_KEY_PREFIX =
-  "morrowward:daily-brief:refresh-lock:";
+  "morrowward:daily-brief:v1:refresh-lock:";
 const BRIEF_TTL_SECONDS = 60 * 60 * 48;
-const BRIEF_REFRESH_LOCK_SECONDS = 60 * 60 * 12;
+const BRIEF_REFRESH_LOCK_SECONDS = 5 * 60;
 export const BRIEF_STORE_TIMEOUT_MS = 1_500;
 
 type RedisCredentials = { url: string; token: string };
@@ -118,8 +118,9 @@ export async function writeLatestDailyBrief(
 
 /**
  * Claims one bounded generation window for an America/New_York calendar day.
- * The lock remains after a failed attempt so public traffic cannot repeatedly
- * spend model budget; a later attempt may retry after the twelve-hour TTL.
+ * The protected route has no public generation path. This five-minute lease
+ * collapses concurrent scheduler/admin invocations and allows a deliberate
+ * retry after a transient or validation failure.
  */
 export async function claimDailyBriefRefresh(
   easternCalendarDate: string,

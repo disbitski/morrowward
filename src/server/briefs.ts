@@ -67,6 +67,29 @@ type WebEvidence = {
   sourceUrls: Set<string>;
 };
 
+type BriefFetchDiagnostic =
+  | "provider_http_error"
+  | "provider_timeout"
+  | "provider_network_error"
+  | "response_too_large"
+  | "response_json_invalid"
+  | "response_incomplete"
+  | "web_evidence_missing"
+  | "output_json_invalid"
+  | "output_schema_invalid"
+  | "as_of_invalid"
+  | "unsafe_language"
+  | "asset_coverage_invalid"
+  | "section_citation_unsupported"
+  | "asset_source_unsupported"
+  | "spcx_identity_invalid"
+  | "spcx_claim_unsupported"
+  | "fed_event_unsupported";
+
+type WebBriefFetchResult =
+  | { ok: true; generation: BriefGeneration }
+  | { ok: false; diagnostic: BriefFetchDiagnostic };
+
 export class DailyBriefRefreshError extends Error {
   constructor(
     public readonly reason:
@@ -75,6 +98,7 @@ export class DailyBriefRefreshError extends Error {
       | "store_unavailable"
       | "provider_failed"
       | "invalid_response",
+    public readonly diagnostic: BriefFetchDiagnostic | null = null,
   ) {
     super(reason);
     this.name = "DailyBriefRefreshError";
@@ -236,18 +260,20 @@ function fedEventIsValid(
   );
 }
 
-function generationIsSupported(
+function generationSupportFailure(
   generation: BriefGeneration,
   evidence: WebEvidence,
   now: Date,
-): boolean {
+): BriefFetchDiagnostic | null {
   const asOf = Date.parse(generation.asOf);
   if (
     !Number.isFinite(asOf) ||
-    Math.abs(asOf - now.getTime()) > MAX_AS_OF_SKEW_MS ||
-    containsUnsafeBriefAdvice(generation)
+    Math.abs(asOf - now.getTime()) > MAX_AS_OF_SKEW_MS
   ) {
-    return false;
+    return "as_of_invalid";
+  }
+  if (containsUnsafeBriefAdvice(generation)) {
+    return "unsafe_language";
   }
 
   const assetIds = generation.assetChecks.map((check) => check.assetId);
@@ -255,7 +281,7 @@ function generationIsSupported(
     new Set(assetIds).size !== BRIEF_ASSET_IDS.length ||
     !BRIEF_ASSET_IDS.every((assetId) => assetIds.includes(assetId))
   ) {
-    return false;
+    return "asset_coverage_invalid";
   }
 
   for (const section of Object.values(generation.sections)) {
@@ -265,7 +291,7 @@ function generationIsSupported(
           (citation) => !citationIsSupported(citation, evidence.sourceUrls),
         )
       ) {
-        return false;
+        return "section_citation_unsupported";
       }
     }
   }
@@ -276,13 +302,13 @@ function generationIsSupported(
       check.status === "verified" &&
       (!sourceUrl || !evidence.sourceUrls.has(sourceUrl))
     ) {
-      return false;
+      return "asset_source_unsupported";
     }
     if (
       sourceUrl &&
       !evidence.sourceUrls.has(sourceUrl)
     ) {
-      return false;
+      return "asset_source_unsupported";
     }
   }
 
@@ -293,7 +319,7 @@ function generationIsSupported(
     spcx?.status === "verified" &&
     !/Space Exploration Technologies Corp\.? Class A/iu.test(spcx.identity)
   ) {
-    return false;
+    return "spcx_identity_invalid";
   }
   if (
     spcx?.status !== "verified" &&
@@ -305,12 +331,14 @@ function generationIsSupported(
         ),
     )
   ) {
-    return false;
+    return "spcx_claim_unsupported";
   }
 
   return generation.fedEvents.every((event) =>
     fedEventIsValid(event, evidence.sourceUrls, now),
-  );
+  )
+    ? null
+    : "fed_event_unsupported";
 }
 
 function uniqueSources(
@@ -433,7 +461,7 @@ async function fetchWebDailyBrief(
   apiKey: string,
   fetchImpl: typeof fetch,
   now: Date,
-): Promise<BriefGeneration | null> {
+): Promise<WebBriefFetchResult> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), BRIEF_REQUEST_TIMEOUT_MS);
   let raw: string;
@@ -482,7 +510,7 @@ async function fetchWebDailyBrief(
         tool_choice: "required",
         max_tool_calls: MAX_WEB_SEARCH_CALLS,
         include: ["web_search_call.action.sources"],
-        max_output_tokens: 4_200,
+        max_output_tokens: 6_000,
         text: {
           format: {
             type: "json_schema",
@@ -495,35 +523,54 @@ async function fetchWebDailyBrief(
       cache: "no-store",
       signal: controller.signal,
     });
-    if (!response.ok) return null;
+    if (!response.ok) {
+      return { ok: false, diagnostic: "provider_http_error" };
+    }
     raw = await response.text();
-  } catch {
-    return null;
+  } catch (error) {
+    return {
+      ok: false,
+      diagnostic:
+        controller.signal.aborted ||
+        (error instanceof Error && error.name === "AbortError")
+          ? "provider_timeout"
+          : "provider_network_error",
+    };
   } finally {
     clearTimeout(timeout);
   }
 
-  if (new TextEncoder().encode(raw).byteLength > MAX_RESPONSE_BYTES) return null;
+  if (new TextEncoder().encode(raw).byteLength > MAX_RESPONSE_BYTES) {
+    return { ok: false, diagnostic: "response_too_large" };
+  }
   let payload: unknown;
   try {
     payload = JSON.parse(raw);
   } catch {
-    return null;
+    return { ok: false, diagnostic: "response_json_invalid" };
+  }
+  if (isRecord(payload) && payload.status === "incomplete") {
+    return { ok: false, diagnostic: "response_incomplete" };
   }
   const evidence = extractWebEvidence(payload);
-  if (!evidence) return null;
+  if (!evidence) {
+    return { ok: false, diagnostic: "web_evidence_missing" };
+  }
 
   let candidate: unknown;
   try {
     candidate = JSON.parse(evidence.outputText);
   } catch {
-    return null;
+    return { ok: false, diagnostic: "output_json_invalid" };
   }
   const parsed = BriefGenerationSchema.safeParse(candidate);
-  if (!parsed.success || !generationIsSupported(parsed.data, evidence, now)) {
-    return null;
+  if (!parsed.success) {
+    return { ok: false, diagnostic: "output_schema_invalid" };
   }
-  return parsed.data;
+  const supportFailure = generationSupportFailure(parsed.data, evidence, now);
+  return supportFailure
+    ? { ok: false, diagnostic: supportFailure }
+    : { ok: true, generation: parsed.data };
 }
 
 function currentBriefIsForToday(
@@ -547,14 +594,19 @@ async function performDailyBriefRefresh(
   now: Date,
   durableStoreConfigured: boolean,
 ): Promise<DailyBriefResponse> {
-  const generation = await fetchWebDailyBrief(
+  const fetchResult = await fetchWebDailyBrief(
     options.apiKey,
     options.fetchImpl,
     now,
   );
-  if (!generation) throw new DailyBriefRefreshError("invalid_response");
+  if (!fetchResult.ok) {
+    throw new DailyBriefRefreshError(
+      "invalid_response",
+      fetchResult.diagnostic,
+    );
+  }
 
-  const response = responseFromGeneration(generation, now);
+  const response = responseFromGeneration(fetchResult.generation, now);
   cachedBrief = response;
   if (durableStoreConfigured) {
     const written = await writeLatestDailyBrief(

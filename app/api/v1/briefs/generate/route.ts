@@ -1,5 +1,8 @@
 import { isAuthorizedBriefGenerator } from "../../../../../src/server/admin-auth";
-import { refreshDailyBrief } from "../../../../../src/server/briefs";
+import {
+  DailyBriefRefreshError,
+  refreshDailyBrief,
+} from "../../../../../src/server/briefs";
 import {
   apiError,
   jsonResponse,
@@ -40,7 +43,14 @@ async function generateAuthorizedBrief(
     });
   } catch (error) {
     console.warn("Morrowward daily briefing refresh failed safely.", {
-      reason: error instanceof Error ? error.name : "unknown_error",
+      reason:
+        error instanceof DailyBriefRefreshError
+          ? error.reason
+          : "unknown_error",
+      diagnostic:
+        error instanceof DailyBriefRefreshError
+          ? error.diagnostic
+          : null,
     });
     return apiError(
       503,

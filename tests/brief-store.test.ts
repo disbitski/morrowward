@@ -84,7 +84,7 @@ describe("durable daily brief store", () => {
     const command = JSON.parse(requestBody) as string[];
     expect(command.slice(0, 2)).toEqual([
       "SET",
-      "morrowward:daily-brief:latest",
+      "morrowward:daily-brief:v1:latest",
     ]);
     expect(command.at(-2)).toBe("EX");
     expect(Number(command.at(-1))).toBe(60 * 60 * 48);
@@ -117,7 +117,7 @@ describe("durable daily brief store", () => {
     await expect(readLatestDailyBrief(invalidFetch)).resolves.toBeNull();
   });
 
-  it("claims a per-Eastern-day refresh window with a 12-hour NX lock", async () => {
+  it("claims a versioned per-Eastern-day refresh window with a five-minute NX lease", async () => {
     process.env.KV_REST_API_URL = "https://example.upstash.test";
     process.env.KV_REST_API_TOKEN = "test-token";
     let requestBody = "";
@@ -131,11 +131,11 @@ describe("durable daily brief store", () => {
     ).resolves.toEqual({ status: "claimed" });
     expect(JSON.parse(requestBody)).toEqual([
       "SET",
-      "morrowward:daily-brief:refresh-lock:2026-07-16",
+      "morrowward:daily-brief:v1:refresh-lock:2026-07-16",
       "2026-07-16",
       "NX",
       "EX",
-      String(60 * 60 * 12),
+      String(5 * 60),
     ]);
   });
 
