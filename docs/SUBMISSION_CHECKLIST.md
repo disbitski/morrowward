@@ -4,7 +4,7 @@
 
 - [x] Repository and preview deployments remain private through July 19, 2026.
 - [x] Production was intentionally moved to a stable public-but-unannounced URL on July 16 for web/Apple integration testing; search indexing remains disabled.
-- [x] Build journal preserves the Preview-versus-Production tradeoff, sensitive-key promotion friction, stable Apple backend decision, and bot/spend circuit-breaker lesson for the post-submission field note.
+- [x] Build journal preserves the Preview-versus-Production tradeoff, sensitive-key promotion friction, stable Apple backend decision, and the explicit risk that bots could discover the public educator/chat route—prompting distributed limits and a daily AI spend circuit breaker—for the post-submission field note.
 - [ ] On July 20, make `disbitski/morrowward` public and enable production search indexing before submission.
 - [ ] Production URL is public and unrestricted.
 - [ ] `disbitski/morrowward` is public with its full history and MIT license.
