@@ -73,7 +73,13 @@ function candidate(): BriefGeneration {
   };
 }
 
-function responsesPayload(generation: BriefGeneration): unknown {
+function responsesPayload(
+  generation: BriefGeneration,
+  sourceUrls = SEARCH_SOURCES,
+  providerCitationUrls: string[] = [],
+  annotationIndexDelta = 0,
+): unknown {
+  const outputText = JSON.stringify(generation);
   return {
     status: "completed",
     output: [
@@ -81,7 +87,7 @@ function responsesPayload(generation: BriefGeneration): unknown {
         type: "web_search_call",
         status: "completed",
         action: {
-          sources: SEARCH_SOURCES.map((url) => ({ url })),
+          sources: sourceUrls.map((url) => ({ url })),
         },
       },
       {
@@ -89,7 +95,17 @@ function responsesPayload(generation: BriefGeneration): unknown {
         status: "completed",
         content: [{
           type: "output_text",
-          text: JSON.stringify(generation),
+          text: outputText,
+          annotations: providerCitationUrls.map((url) => {
+            const start = outputText.indexOf(url) + annotationIndexDelta;
+            return {
+              type: "url_citation",
+              url,
+              title: "Provider citation",
+              start_index: start,
+              end_index: start + url.length,
+            };
+          }),
         }],
       },
     ],
@@ -185,6 +201,130 @@ describe.sequential("sourced daily briefing generation", () => {
       void _input;
       void _init;
       return new Response(JSON.stringify(responsesPayload(unsupported)), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    await expect(
+      refreshDailyBrief({
+        apiKey: "test-api-key",
+        fetchImpl,
+        now: NOW,
+      }),
+    ).rejects.toMatchObject({ reason: "invalid_response" });
+  });
+
+  it("accepts the same searched page after removing only tracking parameters", async () => {
+    const fetchImpl = vi.fn(async (
+      _input: RequestInfo | URL,
+      _init?: RequestInit,
+    ) => {
+      void _input;
+      void _init;
+      return new Response(JSON.stringify(responsesPayload(candidate(), [
+        `${MARKET_SOURCE}/?utm_source=chatgpt.com&utm_medium=referral`,
+        ASSET_SOURCE,
+        SPCX_SOURCE,
+        FED_SOURCE,
+      ])), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    await expect(
+      refreshDailyBrief({
+        apiKey: "test-api-key",
+        fetchImpl,
+        now: NOW,
+      }),
+    ).resolves.toMatchObject({
+      generatedAt: NOW.toISOString(),
+      meta: { mode: "ai" },
+    });
+  });
+
+  it("accepts a provider URL citation attached to the structured output", async () => {
+    const annotated = candidate();
+    const providerUrl = "https://example.com/provider-cited-market";
+    annotated.sections.marketAndSentiment.sentences[0].citations[0].url =
+      providerUrl;
+    const fetchImpl = vi.fn(async (
+      _input: RequestInfo | URL,
+      _init?: RequestInit,
+    ) => {
+      void _input;
+      void _init;
+      return new Response(JSON.stringify(responsesPayload(
+        annotated,
+        SEARCH_SOURCES,
+        [providerUrl],
+      )), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    await expect(
+      refreshDailyBrief({
+        apiKey: "test-api-key",
+        fetchImpl,
+        now: NOW,
+      }),
+    ).resolves.toMatchObject({
+      generatedAt: NOW.toISOString(),
+      meta: { mode: "ai" },
+    });
+  });
+
+  it("rejects an out-of-bounds provider citation annotation", async () => {
+    const annotated = candidate();
+    const providerUrl = "https://example.com/malformed-provider-citation";
+    annotated.sections.marketAndSentiment.sentences[0].citations[0].url =
+      providerUrl;
+    const fetchImpl = vi.fn(async (
+      _input: RequestInfo | URL,
+      _init?: RequestInit,
+    ) => {
+      void _input;
+      void _init;
+      return new Response(JSON.stringify(responsesPayload(
+        annotated,
+        SEARCH_SOURCES,
+        [providerUrl],
+        1_000_000,
+      )), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    await expect(
+      refreshDailyBrief({
+        apiKey: "test-api-key",
+        fetchImpl,
+        now: NOW,
+      }),
+    ).rejects.toMatchObject({ reason: "invalid_response" });
+  });
+
+  it("rejects a citation when a meaningful query selects different evidence", async () => {
+    const differentQuery = candidate();
+    differentQuery.sections.marketAndSentiment.sentences[0].citations[0].url =
+      `${MARKET_SOURCE}?period=1d`;
+    const fetchImpl = vi.fn(async (
+      _input: RequestInfo | URL,
+      _init?: RequestInit,
+    ) => {
+      void _input;
+      void _init;
+      return new Response(JSON.stringify(responsesPayload(differentQuery, [
+        `${MARKET_SOURCE}?period=5d&utm_source=chatgpt.com`,
+        ASSET_SOURCE,
+        SPCX_SOURCE,
+        FED_SOURCE,
+      ])), {
         status: 200,
         headers: { "content-type": "application/json" },
       });

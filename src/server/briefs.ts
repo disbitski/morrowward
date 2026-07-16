@@ -136,6 +136,69 @@ function safeHttpUrl(value: unknown): string | null {
   }
 }
 
+const TRACKING_QUERY_PARAMETERS = new Set([
+  "_hsenc",
+  "_hsmi",
+  "fbclid",
+  "gclid",
+  "mc_cid",
+  "mc_eid",
+  "msclkid",
+  "ref_src",
+  "srsltid",
+]);
+
+function evidenceUrlKey(value: unknown): string | null {
+  const safeUrl = safeHttpUrl(value);
+  if (!safeUrl) return null;
+
+  const url = new URL(safeUrl);
+  for (const key of [...url.searchParams.keys()]) {
+    const normalizedKey = key.toLowerCase();
+    if (
+      normalizedKey.startsWith("utm_") ||
+      TRACKING_QUERY_PARAMETERS.has(normalizedKey)
+    ) {
+      url.searchParams.delete(key);
+    }
+  }
+  url.searchParams.sort();
+  if (url.pathname.length > 1) {
+    url.pathname = url.pathname.replace(/\/+$/u, "");
+  }
+  return url.toString();
+}
+
+function evidenceUrlIsSupported(
+  value: unknown,
+  sourceUrls: Set<string>,
+): boolean {
+  const key = evidenceUrlKey(value);
+  if (!key) return false;
+  return [...sourceUrls].some((sourceUrl) => evidenceUrlKey(sourceUrl) === key);
+}
+
+function providerCitationUrl(annotation: unknown, text: string): string | null {
+  if (!isRecord(annotation) || annotation.type !== "url_citation") return null;
+  const url = safeHttpUrl(annotation.url);
+  const title =
+    typeof annotation.title === "string" ? annotation.title.trim() : "";
+  const start = annotation.start_index;
+  const end = annotation.end_index;
+  if (
+    !url ||
+    !title ||
+    !Number.isInteger(start) ||
+    !Number.isInteger(end) ||
+    (start as number) < 0 ||
+    (end as number) <= (start as number) ||
+    (end as number) > text.length
+  ) {
+    return null;
+  }
+  return url;
+}
+
 function easternCalendarDate(now: Date): string {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "America/New_York",
@@ -166,7 +229,8 @@ function extractWebEvidence(payload: unknown): WebEvidence | null {
   let completedSearchCalls = 0;
   let refused = false;
   const textPieces: string[] = [];
-  const sourceUrls = new Set<string>();
+  const searchSourceUrls = new Set<string>();
+  const providerCitationUrls = new Set<string>();
 
   for (const item of payload.output) {
     if (!isRecord(item)) continue;
@@ -176,7 +240,7 @@ function extractWebEvidence(payload: unknown): WebEvidence | null {
       if (action && Array.isArray(action.sources)) {
         for (const source of action.sources) {
           const url = isRecord(source) ? safeHttpUrl(source.url) : null;
-          if (url) sourceUrls.add(url);
+          if (url) searchSourceUrls.add(url);
         }
       }
       continue;
@@ -192,6 +256,12 @@ function extractWebEvidence(payload: unknown): WebEvidence | null {
         typeof part.text === "string"
       ) {
         textPieces.push(part.text);
+        if (Array.isArray(part.annotations)) {
+          for (const annotation of part.annotations) {
+            const url = providerCitationUrl(annotation, part.text);
+            if (url) providerCitationUrls.add(url);
+          }
+        }
       }
     }
   }
@@ -200,12 +270,15 @@ function extractWebEvidence(payload: unknown): WebEvidence | null {
     refused ||
     completedSearchCalls < 1 ||
     completedSearchCalls > MAX_WEB_SEARCH_CALLS ||
-    sourceUrls.size === 0 ||
+    searchSourceUrls.size === 0 ||
     textPieces.length === 0
   ) {
     return null;
   }
-  return { outputText: textPieces.join(""), sourceUrls };
+  return {
+    outputText: textPieces.join(""),
+    sourceUrls: new Set([...searchSourceUrls, ...providerCitationUrls]),
+  };
 }
 
 function allGeneratedText(generation: BriefGeneration): string {
@@ -237,8 +310,7 @@ function citationIsSupported(
   citation: BriefCitation,
   sourceUrls: Set<string>,
 ): boolean {
-  const url = safeHttpUrl(citation.url);
-  return Boolean(url && sourceUrls.has(url));
+  return evidenceUrlIsSupported(citation.url, sourceUrls);
 }
 
 function fedEventIsValid(
@@ -247,7 +319,7 @@ function fedEventIsValid(
   now: Date,
 ): boolean {
   const sourceUrl = safeHttpUrl(event.sourceUrl);
-  if (!sourceUrl || !sourceUrls.has(sourceUrl)) return false;
+  if (!sourceUrl || !evidenceUrlIsSupported(sourceUrl, sourceUrls)) return false;
   const hostname = new URL(sourceUrl).hostname.toLowerCase();
   if (
     hostname !== "federalreserve.gov" &&
@@ -305,13 +377,14 @@ function generationSupportFailure(
     const sourceUrl = safeHttpUrl(check.sourceUrl);
     if (
       check.status === "verified" &&
-      (!sourceUrl || !evidence.sourceUrls.has(sourceUrl))
+      (!sourceUrl ||
+        !evidenceUrlIsSupported(sourceUrl, evidence.sourceUrls))
     ) {
       return "asset_source_unsupported";
     }
     if (
       sourceUrl &&
-      !evidence.sourceUrls.has(sourceUrl)
+      !evidenceUrlIsSupported(sourceUrl, evidence.sourceUrls)
     ) {
       return "asset_source_unsupported";
     }
