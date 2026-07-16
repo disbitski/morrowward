@@ -66,9 +66,14 @@ The daily briefing is deliberately a scheduled publication job rather than an
 interactive visitor request. Vercel Production invokes the protected route once
 per day at 12:00 UTC. The route and Responses API request allow 150 seconds for
 required web research, use `store: false`, strict structured output, source
-records, and no more than four search calls. The server rejects unsupported
-citations, stale timestamps, incomplete identity checks, unverified Federal
-Reserve dates, individualized trading language, guarantees, and urgency.
+records, and no more than four search calls. The evidence binder accepts
+RFC 3339 timestamps, including numeric offsets, when no more than 36 hours old
+and no more than 15 minutes in the future. It removes only known click-tracking
+parameters and recognizes AP News variants only when their stable article IDs
+match. It omits unsupported sentences and downgrades unsupported internal
+identity checks, but publishes only when every section still has source-bound
+copy. Malformed output, unsupported Federal Reserve dates, individualized
+trading language, guarantees, and urgency fail closed.
 
 An accepted edition becomes exactly three source-linked UI sections:
 **Market & sentiment**, **Frontier assets**, and **$100K learning lens & Fed
