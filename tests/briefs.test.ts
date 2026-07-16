@@ -288,7 +288,7 @@ describe.sequential("sourced daily briefing generation", () => {
       void _input;
       void _init;
       return new Response(JSON.stringify(responsesPayload(candidate(), [
-        `${MARKET_SOURCE}/?utm_source=chatgpt.com&utm_medium=referral`,
+        `${MARKET_SOURCE}/?utm_source=chatgpt.com&utm_medium=referral&msockid=tracking-only`,
         ASSET_SOURCE,
         SPCX_SOURCE,
         FED_SOURCE,

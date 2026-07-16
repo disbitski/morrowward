@@ -146,6 +146,7 @@ const TRACKING_QUERY_PARAMETERS = new Set([
   "mc_cid",
   "mc_eid",
   "msclkid",
+  "msockid",
   "ref_src",
   "srsltid",
 ]);
