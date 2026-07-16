@@ -89,13 +89,15 @@ test("one-time historical welcome never autoplays and guides the next practice s
     dialog.getByRole("heading", { name: /Congratulations—you started your journey/i }),
   ).toBeFocused();
   await expect(dialog.getByText(/AI-generated historical interpretation/i).first()).toBeVisible();
-  await expect(dialog.getByText(/not Marcus Aurelius’s voice/i)).toBeVisible();
+  await expect(
+    dialog.getByText(/not (?:Marcus Aurelius|Benjamin Franklin)’s voice/i),
+  ).toBeVisible();
 
   const video = dialog.locator("video");
   await expect(video).not.toHaveAttribute("autoplay", /.*/u);
   await expect(video.locator('track[kind="captions"]')).toHaveAttribute(
     "src",
-    "/morrowward-marcus-welcome.en.vtt",
+    /^\/morrowward-(?:marcus|franklin)-welcome\.en\.vtt$/u,
   );
   await dialog.getByTestId("historical-greeting-play").click();
   await expect(video).toHaveAttribute("controls", "");
@@ -113,7 +115,12 @@ test("one-time historical welcome never autoplays and guides the next practice s
           "{}",
       ),
     ),
-  ).toMatchObject({ greetingId: "marcus-aurelius-v1", seen: true });
+  ).toMatchObject({
+    greetingId: expect.stringMatching(
+      /^(?:marcus-aurelius|benjamin-franklin)-v1$/u,
+    ),
+    seen: true,
+  });
 
   await page.reload();
   await page.waitForTimeout(900);

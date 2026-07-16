@@ -70,6 +70,11 @@ test("ships the local-first PWA and mission assets", async () => {
     access(new URL("public/morrowward-marcus-welcome.mp4", root)),
     access(new URL("public/morrowward-marcus-welcome.en.vtt", root)),
     access(new URL("public/morrowward-marcus-welcome-poster.jpg", root)),
+    access(new URL("public/morrowward-marcus-welcome.publication.json", root)),
+    access(new URL("public/morrowward-franklin-welcome.mp4", root)),
+    access(new URL("public/morrowward-franklin-welcome.en.vtt", root)),
+    access(new URL("public/morrowward-franklin-welcome-poster.jpg", root)),
+    access(new URL("public/morrowward-franklin-welcome.publication.json", root)),
   ]);
 
   const manifest = JSON.parse(manifestText);
@@ -82,6 +87,7 @@ test("ships the local-first PWA and mission assets", async () => {
   assert.match(serviceWorkerText, /\/assets\//);
   assert.match(serviceWorkerText, /\/api\//);
   assert.match(serviceWorkerText, /morrowward-marcus-welcome\.mp4/);
+  assert.match(serviceWorkerText, /morrowward-franklin-welcome\.mp4/);
 
   await assert.rejects(
     access(new URL("app/_sites-preview/SkeletonPreview.tsx", root)),

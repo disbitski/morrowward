@@ -12,6 +12,7 @@ import {
   assertReviewedCandidateUpload,
   assertVideoMatchesRequest,
   buildImageGenerationRequest,
+  buildNarrationDisclosure,
   buildTtsRequest,
   buildVideoGenerationRequest,
   createWebVttFromCharacterTimings,
@@ -31,6 +32,11 @@ import {
   validateCampaignManifest,
   validateMediaBuffer,
 } from "../scripts/grok/media-lib.mjs";
+
+const FRANKLIN_MANIFEST_PATH = new URL(
+  "../scripts/grok/manifests/morrowward-franklin-greeting.json",
+  import.meta.url,
+);
 
 function fakePng(width = 2048, height = 1152): Buffer {
   const buffer = Buffer.alloc(32);
@@ -127,6 +133,35 @@ describe("fresh Grok media helpers", () => {
     expect(manifest.playback.autoplay).toBe(false);
     expect(manifest.narration.voiceType).toBe("built-in");
     expect(prompts.narration).toBe(manifest.metadata.transcript);
+  });
+
+  it("loads an isolated Franklin campaign with generic edition credit", async () => {
+    const { manifest, prompts } = await loadCampaignManifest(
+      FRANKLIN_MANIFEST_PATH,
+    );
+
+    expect(manifest.campaignId).toBe("morrowward-franklin-greeting");
+    expect(manifest.image.promptFile).toBe(
+      "../prompts/franklin-image-candidates.txt",
+    );
+    expect(manifest.metadata.directQuote).toBe(
+      "Little strokes fell great oaks.",
+    );
+    expect(manifest.metadata.source).toMatchObject({
+      author: "Benjamin Franklin",
+      work: "Poor Richard Improved, 1750",
+      editionCredit: "Founders Online",
+      publicationYear: 1750,
+      archivalExactText: "Little Strokes,\nFell great Oaks.",
+      normalizationNote:
+        "The spoken quotation normalizes capitalization, the archival line break, and the comma; its wording and word order are unchanged.",
+      url: "https://founders.archives.gov/documents/Franklin/01-03-02-0176",
+    });
+    expect(prompts.narration).toBe(
+      "Thanks for using Morrowward. Dave asked for a little encouragement. Benjamin Franklin wrote, “Little strokes fell great oaks.” Small weekly steps can shape a long horizon.",
+    );
+    expect(prompts.image).toContain("colonial Philadelphia printshop at dawn");
+    expect(prompts.image).toContain("No readable text, pseudo-text");
   });
 
   it("binds run review policy to the exact campaign policy", () => {
@@ -288,6 +323,92 @@ describe("fresh Grok media helpers", () => {
     insecureSource.metadata.source.url = "http://example.com/quote";
     expect(() => validateCampaignManifest(insecureSource)).toThrow(
       /source\.url must be a valid HTTPS URL/,
+    );
+
+    const changedAuthor = structuredClone(manifest);
+    changedAuthor.metadata.source.author = "Abraham Lincoln";
+    expect(() => validateCampaignManifest(changedAuthor)).toThrow(
+      /source\.author must be named in transcript or directQuoteAttribution/,
+    );
+
+    const authorNamedOnlyInAttribution = structuredClone(manifest);
+    authorNamedOnlyInAttribution.metadata.transcript =
+      "A Stoic writer wrote, “I am rising to the work of a human being.” Small steps begin today.";
+    authorNamedOnlyInAttribution.metadata.directQuoteAttribution =
+      "Quote: Marcus Aurelius · Meditations 5.1 · George Long translation · View source";
+    expect(() =>
+      validateCampaignManifest(authorNamedOnlyInAttribution),
+    ).not.toThrow();
+  });
+
+  it("accepts legacy translation credit or generic edition credit, never mixed or partial", async () => {
+    const { manifest: marcusManifest } = await loadCampaignManifest(
+      DEFAULT_MANIFEST_PATH,
+    );
+    expect(() => validateCampaignManifest(marcusManifest)).not.toThrow();
+
+    const { manifest: franklinManifest } = await loadCampaignManifest(
+      FRANKLIN_MANIFEST_PATH,
+    );
+    expect(() => validateCampaignManifest(franklinManifest)).not.toThrow();
+
+    const partialGeneric = structuredClone(franklinManifest);
+    delete partialGeneric.metadata.source.editionCredit;
+    expect(() => validateCampaignManifest(partialGeneric)).toThrow(
+      /source\.editionCredit/,
+    );
+
+    const mixedCredits = structuredClone(franklinManifest);
+    mixedCredits.metadata.source.translator = "Not applicable";
+    mixedCredits.metadata.source.translationYear = 1750;
+    expect(() => validateCampaignManifest(mixedCredits)).toThrow(
+      /either translator\/translationYear or editionCredit\/publicationYear, but not both/,
+    );
+
+    const missingGenericAttribution = structuredClone(franklinManifest);
+    missingGenericAttribution.metadata.directQuoteAttribution =
+      "Quote: Benjamin Franklin · Poor Richard Improved, 1750 · View source";
+    expect(() => validateCampaignManifest(missingGenericAttribution)).toThrow(
+      /identify the source work and source credit/,
+    );
+
+    const changedArchivalWording = structuredClone(franklinManifest);
+    changedArchivalWording.metadata.source.archivalExactText =
+      "Little strokes can fell great oaks.";
+    expect(() => validateCampaignManifest(changedArchivalWording)).toThrow(
+      /must preserve source\.archivalExactText wording and word order/,
+    );
+
+    const missingNormalizationNote = structuredClone(franklinManifest);
+    delete missingNormalizationNote.metadata.source.normalizationNote;
+    expect(() => validateCampaignManifest(missingNormalizationNote)).toThrow(
+      /source\.normalizationNote/,
+    );
+
+    const falselyLegacyExact = structuredClone(franklinManifest);
+    falselyLegacyExact.metadata.source.publicDomainExactText =
+      falselyLegacyExact.metadata.directQuote;
+    expect(() => validateCampaignManifest(falselyLegacyExact)).toThrow(
+      /either publicDomainExactText or archivalExactText\/normalizationNote, but not both/,
+    );
+  });
+
+  it("builds narration disclosure from the selected campaign", async () => {
+    const { manifest: marcusManifest } = await loadCampaignManifest(
+      DEFAULT_MANIFEST_PATH,
+    );
+    const { manifest: franklinManifest } = await loadCampaignManifest(
+      FRANKLIN_MANIFEST_PATH,
+    );
+
+    expect(buildNarrationDisclosure(marcusManifest)).toBe(
+      `AI-generated narration using an xAI built-in voice. ${marcusManifest.metadata.voiceDisclosure}`,
+    );
+    expect(buildNarrationDisclosure(franklinManifest)).toBe(
+      "AI-generated narration using an xAI built-in voice. Built-in AI narrator — not Benjamin Franklin’s voice.",
+    );
+    expect(buildNarrationDisclosure(franklinManifest)).not.toContain(
+      "Marcus Aurelius",
     );
   });
 

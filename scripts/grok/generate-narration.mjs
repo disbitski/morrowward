@@ -4,6 +4,7 @@ import {
   DEFAULT_MANIFEST_PATH,
   XAI_API_BASE_URL,
   assertBuiltInVoice,
+  buildNarrationDisclosure,
   buildTtsRequest,
   createWebVttFromCharacterTimings,
   decodeTtsResponse,
@@ -127,8 +128,7 @@ try {
     voiceType: "built-in",
     historicalVoiceImitation: false,
     transcript: prompts.narration,
-    disclosure:
-      "AI-generated narration using an xAI built-in voice; it is not Marcus Aurelius's voice and does not imitate a historical recording.",
+    disclosure: buildNarrationDisclosure(manifest),
   };
   reviewWriteStarted = true;
   await writeJsonAtomic(reviewPath, reviewManifest);

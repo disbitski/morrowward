@@ -484,6 +484,14 @@ export function buildTtsRequest(manifest, text) {
   };
 }
 
+export function buildNarrationDisclosure(manifest) {
+  assertString(
+    manifest?.metadata?.voiceDisclosure,
+    "metadata.voiceDisclosure",
+  );
+  return `AI-generated narration using an xAI built-in voice. ${manifest.metadata.voiceDisclosure}`;
+}
+
 export async function assertBuiltInVoice(
   fetchImplementation,
   apiKey,
@@ -1022,6 +1030,26 @@ function assertString(value, field) {
   }
 }
 
+function normalizedWords(value) {
+  return (
+    value
+      .normalize("NFKC")
+      .toLocaleLowerCase("en-US")
+      .match(/[\p{L}\p{N}]+(?:['’][\p{L}\p{N}]+)*/gu)
+      ?.map((word) => word.replaceAll("’", "'"))
+      .join(" ") ?? ""
+  );
+}
+
+function includesNormalizedPhrase(value, phrase) {
+  const normalizedValue = normalizedWords(value);
+  const normalizedPhrase = normalizedWords(phrase);
+  return (
+    normalizedPhrase.length > 0 &&
+    ` ${normalizedValue} `.includes(` ${normalizedPhrase} `)
+  );
+}
+
 export function assertQuoteSourceConsistency(
   metadata,
   label = "Manifest metadata",
@@ -1043,34 +1071,107 @@ export function assertQuoteSourceConsistency(
     "author",
     "work",
     "location",
-    "translator",
-    "publicDomainExactText",
     "usage",
     "url",
   ]) {
     assertString(source[field], `${label}.source.${field}`);
   }
-  if (
-    !Number.isSafeInteger(source.translationYear) ||
-    source.translationYear < 1 ||
-    source.translationYear > 2100
-  ) {
-    throw new Error(`${label}.source.translationYear must be a valid year.`);
+
+  const usesLegacyExactText = source.publicDomainExactText !== undefined;
+  const usesNormalizedArchivalText =
+    source.archivalExactText !== undefined ||
+    source.normalizationNote !== undefined;
+  if (usesLegacyExactText === usesNormalizedArchivalText) {
+    throw new Error(
+      `${label}.source must include either publicDomainExactText or archivalExactText/normalizationNote, but not both.`,
+    );
   }
-  if (metadata.directQuote !== source.publicDomainExactText) {
+  if (usesLegacyExactText) {
+    assertString(
+      source.publicDomainExactText,
+      `${label}.source.publicDomainExactText`,
+    );
+  } else {
+    assertString(
+      source.archivalExactText,
+      `${label}.source.archivalExactText`,
+    );
+    assertString(
+      source.normalizationNote,
+      `${label}.source.normalizationNote`,
+    );
+  }
+
+  const usesLegacyTranslationCredit =
+    source.translator !== undefined || source.translationYear !== undefined;
+  const usesGenericEditionCredit =
+    source.editionCredit !== undefined || source.publicationYear !== undefined;
+  if (usesLegacyTranslationCredit === usesGenericEditionCredit) {
+    throw new Error(
+      `${label}.source must include either translator/translationYear or editionCredit/publicationYear, but not both.`,
+    );
+  }
+
+  let sourceCredit;
+  if (usesLegacyTranslationCredit) {
+    assertString(source.translator, `${label}.source.translator`);
+    if (
+      !Number.isSafeInteger(source.translationYear) ||
+      source.translationYear < 1 ||
+      source.translationYear > 2100
+    ) {
+      throw new Error(`${label}.source.translationYear must be a valid year.`);
+    }
+    sourceCredit = source.translator;
+  } else {
+    assertString(source.editionCredit, `${label}.source.editionCredit`);
+    if (
+      !Number.isSafeInteger(source.publicationYear) ||
+      source.publicationYear < 1 ||
+      source.publicationYear > 2100
+    ) {
+      throw new Error(`${label}.source.publicationYear must be a valid year.`);
+    }
+    sourceCredit = source.editionCredit;
+  }
+
+  if (
+    usesLegacyExactText &&
+    metadata.directQuote !== source.publicDomainExactText
+  ) {
     throw new Error(
       `${label}.directQuote must exactly match source.publicDomainExactText.`,
+    );
+  }
+  if (
+    usesNormalizedArchivalText &&
+    normalizedWords(metadata.directQuote) !==
+      normalizedWords(source.archivalExactText)
+  ) {
+    throw new Error(
+      `${label}.directQuote must preserve source.archivalExactText wording and word order after the documented normalization.`,
     );
   }
   if (!metadata.transcript.includes(metadata.directQuote)) {
     throw new Error(`${label}.transcript must include the exact direct quote.`);
   }
   if (
-    !metadata.directQuoteAttribution.includes(source.work) ||
-    !metadata.directQuoteAttribution.includes(source.translator)
+    !includesNormalizedPhrase(metadata.transcript, source.author) &&
+    !includesNormalizedPhrase(
+      metadata.directQuoteAttribution,
+      source.author,
+    )
   ) {
     throw new Error(
-      `${label}.directQuoteAttribution must identify the source work and translator.`,
+      `${label}.source.author must be named in transcript or directQuoteAttribution.`,
+    );
+  }
+  if (
+    !includesNormalizedPhrase(metadata.directQuoteAttribution, source.work) ||
+    !includesNormalizedPhrase(metadata.directQuoteAttribution, sourceCredit)
+  ) {
+    throw new Error(
+      `${label}.directQuoteAttribution must identify the source work and source credit.`,
     );
   }
   let sourceUrl;

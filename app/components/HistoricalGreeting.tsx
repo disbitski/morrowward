@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import franklinPublication from "../data/morrowward-franklin-welcome.publication.json";
 import marcusPublication from "../data/morrowward-marcus-welcome.publication.json";
 import {
   ArrowRight,
@@ -21,24 +22,38 @@ export type HistoricalGreeting = {
   identity: string;
   title: string;
   description: string;
+  publicationSrc: string;
   videoSrc: string;
   captionsSrc: string;
   posterSrc: string;
+  posterAlt: string;
   transcript: string;
   quotation: string;
   quotationSource: string;
+  sourcePublisher: string;
   sourceHref: string;
   voiceDisclosure: string;
 };
 
-export const GREETING_ROSTER_VERSION = "2026-07-15";
+export const GREETING_ROSTER_VERSION = "2026-07-16";
 export const GREETING_WELCOME_STORAGE_KEY =
   "morrowward.historical-greeting.v1";
+export const GREETING_VIDEO_PRELOAD = "none" as const;
 
-function publishedAssetPath(role: "video" | "captions" | "poster"): string {
-  const asset = marcusPublication.assets.find((entry) => entry.role === role);
+type GreetingPublication = {
+  assetId: string;
+  assets: ReadonlyArray<{ role: string; publicPath: string }>;
+};
+
+function publishedAssetPath(
+  publication: GreetingPublication,
+  role: "video" | "captions" | "poster",
+): string {
+  const asset = publication.assets.find((entry) => entry.role === role);
   if (!asset?.publicPath.startsWith("/")) {
-    throw new Error(`The approved ${role} publication asset is missing.`);
+    throw new Error(
+      `The approved ${role} asset is missing from ${publication.assetId}.`,
+    );
   }
   return asset.publicPath;
 }
@@ -54,14 +69,37 @@ export const GREETING_ROSTER: readonly HistoricalGreeting[] = [
       "Marcus Aurelius — Roman emperor and Stoic writer, 161–180 CE. A really cool historical dude.",
     title: "A small welcome for the road ahead",
     description: marcusPublication.disclosures.interpretation,
-    videoSrc: publishedAssetPath("video"),
-    captionsSrc: publishedAssetPath("captions"),
-    posterSrc: publishedAssetPath("poster"),
+    publicationSrc: "/morrowward-marcus-welcome.publication.json",
+    videoSrc: publishedAssetPath(marcusPublication, "video"),
+    captionsSrc: publishedAssetPath(marcusPublication, "captions"),
+    posterSrc: publishedAssetPath(marcusPublication, "poster"),
+    posterAlt:
+      "AI-generated historical interpretation of Marcus Aurelius in a Roman courtyard at dawn",
     transcript: marcusPublication.content.transcript,
     quotation: marcusPublication.content.directQuote,
     quotationSource: marcusPublication.content.attribution,
+    sourcePublisher: marcusPublication.content.source.publisher,
     sourceHref: marcusPublication.content.source.url,
     voiceDisclosure: marcusPublication.disclosures.voice,
+  },
+  {
+    id: "benjamin-franklin-v1",
+    identity:
+      "Benjamin Franklin — printer, writer, inventor, and civic builder. A really cool historical dude.",
+    title: "A small welcome for the road ahead",
+    description: franklinPublication.disclosures.interpretation,
+    publicationSrc: "/morrowward-franklin-welcome.publication.json",
+    videoSrc: publishedAssetPath(franklinPublication, "video"),
+    captionsSrc: publishedAssetPath(franklinPublication, "captions"),
+    posterSrc: publishedAssetPath(franklinPublication, "poster"),
+    posterAlt:
+      "AI-generated historical interpretation of Benjamin Franklin beside a printing press at dawn",
+    transcript: franklinPublication.content.transcript,
+    quotation: franklinPublication.content.directQuote,
+    quotationSource: franklinPublication.content.attribution,
+    sourcePublisher: franklinPublication.content.source.publisher,
+    sourceHref: franklinPublication.content.source.url,
+    voiceDisclosure: franklinPublication.disclosures.voice,
   },
 ] as const;
 
@@ -309,7 +347,7 @@ function HistoricalGreetingDialogContent({
             ref={videoRef}
             controls={started}
             playsInline
-            preload="metadata"
+            preload={GREETING_VIDEO_PRELOAD}
             poster={greeting.posterSrc}
             aria-label="15-second AI-generated historical welcome"
             onEnded={() => {
@@ -403,7 +441,7 @@ export function HistoricalGreetingReplayCard({
         <div className="historical-greeting-replay-art">
           <Image
             src={greeting.posterSrc}
-            alt="AI-generated historical interpretation of Marcus Aurelius in a Roman courtyard at dawn"
+            alt={greeting.posterAlt}
             width={1280}
             height={720}
             unoptimized
@@ -424,7 +462,7 @@ export function HistoricalGreetingReplayCard({
             <Play size={17} aria-hidden="true" /> Replay the welcome
           </button>
           <a href={greeting.sourceHref} target="_blank" rel="noreferrer">
-            Read the quoted passage at Project Gutenberg
+            Read the quoted passage at {greeting.sourcePublisher}
             <ExternalLink size={13} aria-hidden="true" />
             <span className="sr-only"> (opens in a new tab)</span>
           </a>

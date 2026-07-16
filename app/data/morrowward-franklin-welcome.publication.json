@@ -1,0 +1,80 @@
+{
+  "schemaVersion": 1,
+  "assetId": "morrowward-franklin-welcome",
+  "revision": "2026-07-16-r1",
+  "status": "approved",
+  "assets": [
+    {
+      "role": "video",
+      "filename": "morrowward-franklin-welcome.mp4",
+      "publicPath": "/morrowward-franklin-welcome.mp4",
+      "mediaType": "video/mp4",
+      "bytes": 6271263,
+      "sha256": "e261c75caead502f2da0efeb25a157f0273427d86495e9d2e39165e74c030b7f"
+    },
+    {
+      "role": "captions",
+      "filename": "morrowward-franklin-welcome.en.vtt",
+      "publicPath": "/morrowward-franklin-welcome.en.vtt",
+      "mediaType": "text/vtt; charset=utf-8",
+      "language": "en",
+      "bytes": 307,
+      "sha256": "f2be000a2065b8bae7a22315cc20952a3935e386608ed50b8fa12ec2f0389425"
+    },
+    {
+      "role": "poster",
+      "filename": "morrowward-franklin-welcome-poster.jpg",
+      "publicPath": "/morrowward-franklin-welcome-poster.jpg",
+      "mediaType": "image/jpeg",
+      "width": 1280,
+      "height": 720,
+      "bytes": 113283,
+      "sha256": "f007a175b2d894b90420a0b03dad315630094e85936e2aa86f41c307970dc113"
+    }
+  ],
+  "content": {
+    "transcript": "Thanks for using Morrowward. Dave asked for a little encouragement. Benjamin Franklin wrote, “Little strokes fell great oaks.” Small weekly steps can shape a long horizon.",
+    "directQuote": "Little strokes fell great oaks.",
+    "attribution": "Benjamin Franklin, Poor Richard Improved, 1750, August (VI Month); Founders Online",
+    "source": {
+      "publisher": "Founders Online",
+      "url": "https://founders.archives.gov/documents/Franklin/01-03-02-0176",
+      "usage": "The narration uses this short public-domain quotation with capitalization, archival line break, and comma normalized; its wording and word order are unchanged, and all surrounding words are original Morrowward copy."
+    }
+  },
+  "disclosures": {
+    "interpretation": "AI-generated historical interpretation of Benjamin Franklin. This is not an authentic likeness, archival recording, endorsement, or recreation of his voice.",
+    "voice": "AI-generated narration using an xAI built-in voice. It is not Benjamin Franklin’s voice and does not imitate a historical recording.",
+    "playback": "Optional media with user-initiated playback, English captions, a transcript, and a reduced-motion poster experience."
+  },
+  "generation": {
+    "provider": "xAI",
+    "image": {
+      "model": "grok-imagine-image-quality",
+      "resolution": "2k",
+      "aspectRatio": "16:9"
+    },
+    "video": {
+      "model": "grok-imagine-video-1.5",
+      "workflow": "image-to-video",
+      "durationSeconds": 15,
+      "resolution": "720p",
+      "aspectRatio": "16:9"
+    },
+    "narration": {
+      "service": "xAI Text to Speech",
+      "voiceId": "sal",
+      "voiceType": "built-in",
+      "language": "en"
+    }
+  },
+  "approval": {
+    "status": "approved",
+    "approvedBy": "Dave Isbitski",
+    "approvedAt": "2026-07-16T15:52:21Z",
+    "basis": [
+      "Codex/GPT original-resolution and frame-sequence review passed every hard gate and scored 29 of 30.",
+      "Human final review of the composed 15-second greeting: “Video is perfect!”"
+    ]
+  }
+}

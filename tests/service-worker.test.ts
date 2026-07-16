@@ -1,24 +1,59 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import { describe, expect, it, vi } from "vitest";
+import { GREETING_ROSTER } from "../app/components/HistoricalGreeting";
 
 const serviceWorkerSource = readFileSync(
   new URL("../public/sw.js", import.meta.url),
   "utf8",
 );
-const publicationBytes = readFileSync(
-  new URL(
-    "../public/morrowward-marcus-welcome.publication.json",
-    import.meta.url,
-  ),
-);
-const publicationRecord = JSON.parse(publicationBytes.toString("utf8")) as {
-  assets: Array<{ sha256: string }>;
+
+type ApprovedGreetingPublication = {
+  greetingId: string;
+  assetId: string;
+  revision: string;
+  publication: {
+    publicPath: string;
+    sha256: string;
+  };
+  assets: Array<{
+    role: string;
+    publicPath: string;
+    sha256: string;
+  }>;
 };
-const publicationSha256 = createHash("sha256")
-  .update(publicationBytes)
-  .digest("hex");
+
+type PublicationRecord = {
+  assetId: string;
+  revision: string;
+  status: string;
+  assets: ApprovedGreetingPublication["assets"];
+};
+
+const approvedPublicationRecords = readdirSync(
+  new URL("../app/data/", import.meta.url),
+)
+  .filter((filename) => filename.endsWith(".publication.json"))
+  .map((filename) => {
+    const appBytes = readFileSync(
+      new URL(`../app/data/${filename}`, import.meta.url),
+    );
+    const publicBytes = readFileSync(
+      new URL(`../public/${filename}`, import.meta.url),
+    );
+    const record = JSON.parse(appBytes.toString("utf8")) as PublicationRecord;
+    return {
+      filename,
+      appBytes,
+      publicBytes,
+      record,
+      publicationSha256: createHash("sha256")
+        .update(publicBytes)
+        .digest("hex"),
+    };
+  })
+  .filter(({ record }) => record.status === "approved");
 
 type CacheDouble = {
   addAll: (paths: string[]) => Promise<void>;
@@ -37,7 +72,10 @@ type CacheStorageDouble = {
 };
 
 type ServiceWorkerInternals = {
+  APPROVED_GREETING_PUBLICATIONS: ApprovedGreetingPublication[];
   CORE_APP_SHELL: string[];
+  OPTIONAL_GREETING_WARMUP: string[];
+  OPTIONAL_GREETING_VIDEOS: string[];
   OPTIONAL_GREETING_MEDIA: string[];
   MEDIA_CACHE: string;
   OPTIONAL_MEDIA_CACHE_TIMEOUT_MS: number;
@@ -115,10 +153,12 @@ function loadServiceWorker(
   runInNewContext(
     `${serviceWorkerSource}\n` +
       `globalThis.__morrowwardTest = {` +
-      `CORE_APP_SHELL, OPTIONAL_GREETING_MEDIA, MEDIA_CACHE, OPTIONAL_MEDIA_CACHE_TIMEOUT_MS, ` +
+      `APPROVED_GREETING_PUBLICATIONS, CORE_APP_SHELL, ` +
+      `OPTIONAL_GREETING_WARMUP, OPTIONAL_GREETING_VIDEOS, OPTIONAL_GREETING_MEDIA, ` +
+      `MEDIA_CACHE, OPTIONAL_MEDIA_CACHE_TIMEOUT_MS, ` +
       `precacheShell, precacheOptionalMedia, ` +
       `canCacheResponse, parseSingleByteRange, createByteRangeResponse, ` +
-      `handleMediaRequest, handleNetworkFirstRequest };`,
+      `handleMediaRequest, handleMediaFetchEvent, handleNetworkFirstRequest };`,
     sandbox,
     { filename: "public/sw.js" },
   );
@@ -130,14 +170,130 @@ function loadServiceWorker(
   };
 }
 
+function dispatchFetchEvent(
+  listeners: Map<string, (event: unknown) => void>,
+  request: Request,
+) {
+  const listener = listeners.get("fetch");
+  if (!listener) throw new Error("The service worker fetch listener is missing.");
+
+  const responseWork: Array<Promise<Response>> = [];
+  const lifetimeWork: Array<Promise<unknown>> = [];
+  let dispatching = true;
+  let respondWithCalledDuringDispatch = false;
+  let waitUntilCalledDuringDispatch = false;
+
+  listener({
+    request,
+    respondWith(work: Promise<Response>) {
+      respondWithCalledDuringDispatch = dispatching;
+      responseWork.push(Promise.resolve(work));
+    },
+    waitUntil(work: Promise<unknown>) {
+      waitUntilCalledDuringDispatch = dispatching;
+      lifetimeWork.push(Promise.resolve(work));
+    },
+  });
+  dispatching = false;
+
+  if (responseWork.length !== 1 || lifetimeWork.length !== 1) {
+    throw new Error("The media fetch event was not fully handled.");
+  }
+  return {
+    response: responseWork[0] as Promise<Response>,
+    lifetime: lifetimeWork[0] as Promise<unknown>,
+    respondWithCalledDuringDispatch,
+    waitUntilCalledDuringDispatch,
+  };
+}
+
 describe("Morrowward service worker", () => {
+  it("keeps every approved publication and roster asset registered together", () => {
+    const cache = createCacheDouble();
+    const cacheStorage = createCacheStorageDouble(cache);
+    const fetchImplementation = vi.fn(async () =>
+      new Response("unused"),
+    ) as unknown as typeof fetch;
+    const { internals } = loadServiceWorker(
+      fetchImplementation,
+      cacheStorage,
+    );
+
+    const expected = approvedPublicationRecords.map(
+      ({ filename, appBytes, publicBytes, record, publicationSha256 }) => {
+        expect(publicBytes.equals(appBytes)).toBe(true);
+        const greeting = GREETING_ROSTER.find(
+          (entry) => entry.publicationSrc === `/${filename}`,
+        );
+        if (!greeting) {
+          throw new Error(
+            `Approved publication ${filename} is missing from the greeting roster.`,
+          );
+        }
+        for (const asset of record.assets) {
+          const bytes = readFileSync(
+            new URL(`../public/${asset.publicPath.slice(1)}`, import.meta.url),
+          );
+          expect(createHash("sha256").update(bytes).digest("hex")).toBe(
+            asset.sha256,
+          );
+        }
+
+        return {
+          greetingId: greeting.id,
+          assetId: record.assetId,
+          revision: record.revision,
+          publication: {
+            publicPath: `/${filename}`,
+            sha256: publicationSha256,
+          },
+          assets: record.assets.map(({ role, publicPath, sha256 }) => ({
+            role,
+            publicPath,
+            sha256,
+          })),
+        };
+      },
+    );
+
+    const byAssetId = (
+      left: ApprovedGreetingPublication,
+      right: ApprovedGreetingPublication,
+    ) => left.assetId.localeCompare(right.assetId);
+    expect(
+      [...internals.APPROVED_GREETING_PUBLICATIONS].sort(byAssetId),
+    ).toEqual([...expected].sort(byAssetId));
+    expect(
+      internals.APPROVED_GREETING_PUBLICATIONS.map(
+        (publication) => publication.greetingId,
+      ).sort(),
+    ).toEqual(GREETING_ROSTER.map((greeting) => greeting.id).sort());
+
+    for (const greeting of GREETING_ROSTER) {
+      const registered = internals.APPROVED_GREETING_PUBLICATIONS.find(
+        (publication) => publication.greetingId === greeting.id,
+      );
+      expect(registered?.publication.publicPath).toBe(greeting.publicationSrc);
+      expect(registered?.assets.map((asset) => asset.publicPath)).toEqual(
+        expect.arrayContaining([
+          greeting.videoSrc,
+          greeting.captionsSrc,
+          greeting.posterSrc,
+        ]),
+      );
+    }
+  });
+
   it("installs the core shell even when every optional greeting file fails", async () => {
     const add = vi.fn(async () => undefined);
     const cache = createCacheDouble({ add });
     const cacheStorage = createCacheStorageDouble(cache);
     const fetchImplementation = vi.fn(async (input: RequestInfo | URL) => {
       const url = typeof input === "string" ? input : input.toString();
-      if (url.includes("morrowward-marcus-welcome")) {
+      if (
+        url.includes("morrowward-marcus-welcome") ||
+        url.includes("morrowward-franklin-welcome")
+      ) {
         throw new Error("optional media unavailable");
       }
       return new Response(
@@ -168,23 +324,41 @@ describe("Morrowward service worker", () => {
     expect(internals.OPTIONAL_GREETING_MEDIA).toContain(
       "/morrowward-marcus-welcome.mp4",
     );
-    for (const path of internals.OPTIONAL_GREETING_MEDIA) {
+    expect(internals.OPTIONAL_GREETING_VIDEOS).toEqual([
+      "/morrowward-marcus-welcome.mp4",
+      "/morrowward-franklin-welcome.mp4",
+    ]);
+    for (const videoPath of internals.OPTIONAL_GREETING_VIDEOS) {
+      expect(internals.OPTIONAL_GREETING_WARMUP).not.toContain(videoPath);
+    }
+    for (const path of internals.OPTIONAL_GREETING_WARMUP) {
       expect(fetchImplementation).toHaveBeenCalledWith(
         path,
         expect.objectContaining({ cache: "reload" }),
       );
     }
+    for (const videoPath of internals.OPTIONAL_GREETING_VIDEOS) {
+      expect(fetchImplementation).not.toHaveBeenCalledWith(
+        videoPath,
+        expect.anything(),
+      );
+    }
     expect(cacheStorage.open).toHaveBeenCalledWith(internals.MEDIA_CACHE);
-    expect(internals.MEDIA_CACHE).toContain("2026-07-15-r1");
-    expect(internals.MEDIA_CACHE).toContain(publicationSha256.slice(0, 8));
-    for (const asset of publicationRecord.assets) {
-      expect(internals.MEDIA_CACHE).toContain(asset.sha256.slice(0, 8));
+    for (const publication of internals.APPROVED_GREETING_PUBLICATIONS) {
+      expect(internals.MEDIA_CACHE).toContain(publication.assetId);
+      expect(internals.MEDIA_CACHE).toContain(publication.revision);
+      expect(internals.MEDIA_CACHE).toContain(
+        publication.publication.sha256.slice(0, 8),
+      );
+      for (const asset of publication.assets) {
+        expect(internals.MEDIA_CACHE).toContain(asset.sha256.slice(0, 8));
+      }
     }
     expect(add).toHaveBeenCalledWith("/_next/static/app.css");
     expect(add).toHaveBeenCalledWith("/assets/app.js");
   });
 
-  it("returns a successful network 206 untouched and never tries to cache it", async () => {
+  it("returns a successful network 206 untouched instead of caching the partial response", async () => {
     const put = vi.fn(async () => {
       throw new Error("a 206 must not be written to Cache Storage");
     });
@@ -220,6 +394,148 @@ describe("Morrowward service worker", () => {
     expect(put).not.toHaveBeenCalled();
   });
 
+  it("plays the first online ranges immediately, fills one full cache, and replays offline", async () => {
+    const origin = "https://morrowward.test";
+    const videoUrl = `${origin}/morrowward-marcus-welcome.mp4`;
+    const fullBody = Uint8Array.from([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    const stored = new Map<string, Response>();
+    const cacheKey = (request: Request | string) =>
+      request instanceof Request
+        ? request.url
+        : new URL(request, origin).href;
+    const match = vi.fn(async (request: Request | string) =>
+      stored.get(cacheKey(request))?.clone(),
+    );
+    const put = vi.fn(
+      async (request: Request | string, response: Response) => {
+        stored.set(cacheKey(request), response.clone());
+      },
+    );
+    const cache = createCacheDouble({ match, put });
+    const cacheStorage = createCacheStorageDouble(cache);
+
+    let offline = false;
+    let resolveFullFetch: ((response: Response) => void) | undefined;
+    const pendingFullFetch = new Promise<Response>((resolve) => {
+      resolveFullFetch = resolve;
+    });
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        void init;
+        const request =
+          input instanceof Request
+            ? input
+            : new Request(new URL(String(input), origin));
+        if (offline) throw new TypeError("offline");
+        const range = request.headers.get("range");
+        if (range === "bytes=0-2") {
+          return new Response(fullBody.slice(0, 3), {
+            status: 206,
+            headers: {
+              "content-range": "bytes 0-2/10",
+              "content-type": "video/mp4",
+            },
+          });
+        }
+        if (range === "bytes=3-5") {
+          return new Response(fullBody.slice(3, 6), {
+            status: 206,
+            headers: {
+              "content-range": "bytes 3-5/10",
+              "content-type": "video/mp4",
+            },
+          });
+        }
+        expect(request.headers.has("range")).toBe(false);
+        return pendingFullFetch;
+      },
+    );
+    const { listeners } = loadServiceWorker(
+      fetchMock as unknown as typeof fetch,
+      cacheStorage,
+    );
+
+    const firstPlay = dispatchFetchEvent(
+      listeners,
+      new Request(videoUrl, { headers: { range: "bytes=0-2" } }),
+    );
+    const concurrentPlay = dispatchFetchEvent(
+      listeners,
+      new Request(videoUrl, { headers: { range: "bytes=3-5" } }),
+    );
+
+    expect(firstPlay.respondWithCalledDuringDispatch).toBe(true);
+    expect(firstPlay.waitUntilCalledDuringDispatch).toBe(true);
+    expect(concurrentPlay.waitUntilCalledDuringDispatch).toBe(true);
+
+    const [firstResponse, concurrentResponse] = await Promise.all([
+      firstPlay.response,
+      concurrentPlay.response,
+    ]);
+    expect(firstResponse.status).toBe(206);
+    expect(firstResponse.headers.get("content-range")).toBe("bytes 0-2/10");
+    expect(concurrentResponse.status).toBe(206);
+    expect(concurrentResponse.headers.get("content-range")).toBe(
+      "bytes 3-5/10",
+    );
+
+    let cacheFillFinished = false;
+    void firstPlay.lifetime.then(() => {
+      cacheFillFinished = true;
+    });
+    await Promise.resolve();
+    expect(cacheFillFinished).toBe(false);
+
+    await vi.waitFor(() => {
+      const requests = fetchMock.mock.calls.map(([input]) =>
+        input instanceof Request
+          ? input
+          : new Request(new URL(String(input), origin)),
+      );
+      expect(requests.filter((request) => request.headers.has("range"))).toHaveLength(
+        2,
+      );
+      expect(
+        requests.filter((request) => !request.headers.has("range")),
+      ).toHaveLength(1);
+    });
+    const fullFetchCall = fetchMock.mock.calls.find(([input]) => {
+      const request =
+        input instanceof Request
+          ? input
+          : new Request(new URL(String(input), origin));
+      return !request.headers.has("range");
+    });
+    expect(fullFetchCall?.[1]).toEqual(
+      expect.objectContaining({ cache: "reload" }),
+    );
+
+    resolveFullFetch?.(
+      new Response(fullBody, {
+        status: 200,
+        headers: { "content-type": "video/mp4", etag: '"approved"' },
+      }),
+    );
+    await Promise.all([firstPlay.lifetime, concurrentPlay.lifetime]);
+    expect(put).toHaveBeenCalledTimes(1);
+
+    offline = true;
+    const networkCallsBeforeReplay = fetchMock.mock.calls.length;
+    const offlineReplay = dispatchFetchEvent(
+      listeners,
+      new Request(videoUrl, { headers: { range: "bytes=6-8" } }),
+    );
+    const replayResponse = await offlineReplay.response;
+    await offlineReplay.lifetime;
+
+    expect(replayResponse.status).toBe(206);
+    expect(replayResponse.headers.get("content-range")).toBe("bytes 6-8/10");
+    expect(Array.from(new Uint8Array(await replayResponse.arrayBuffer()))).toEqual(
+      [6, 7, 8],
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(networkCallsBeforeReplay);
+  });
+
   it("bounds background optional-media warming without delaying core install", async () => {
     vi.useFakeTimers();
     try {
@@ -247,7 +563,7 @@ describe("Morrowward service worker", () => {
 
       await expect(warm).resolves.toBeUndefined();
       expect(internals.OPTIONAL_MEDIA_CACHE_TIMEOUT_MS).toBe(10_000);
-      expect(aborted).toHaveLength(internals.OPTIONAL_GREETING_MEDIA.length);
+      expect(aborted).toHaveLength(internals.OPTIONAL_GREETING_WARMUP.length);
     } finally {
       vi.useRealTimers();
     }

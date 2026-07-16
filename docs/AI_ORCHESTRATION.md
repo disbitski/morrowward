@@ -64,10 +64,10 @@ Primary references: [OpenAI web search](https://developers.openai.com/api/docs/g
 
 ## Why xAI is used for selected media
 
-The optional pipeline is prepared to use xAI's Grok Imagine image and video APIs
+The optional pipeline uses xAI's Grok Imagine image and video APIs
 as specialized creative tools for motivational media. Codex owns the campaign
 brief, prompts, generation calls, validation rules, review rubric, and any
-product integration. If selected media ships, it will never supply a quote,
+product integration. The selected media never supplies a quote,
 market price, projection, risk score, or financial recommendation.
 
 The complete pipeline was authored from scratch in `scripts/grok/` during this
@@ -92,13 +92,45 @@ real voice. Authentic quotations are kept short, attributed to a specific work,
 and checked against a public-domain or primary source. Original connective
 dialogue is explicitly part of the interpretation.
 
-The proposed first campaign uses Marcus Aurelius and a line from *Meditations* 5.1 in the
-public-domain George Long translation: “I am rising to the work of a human
-being.” Any accepted media must also provide a transcript/captions, a non-motion
-poster, and user-controlled playback with no autoplay.
+The approved roster contains two 15-second interpretations:
 
-Source: [Project Gutenberg, *The Thoughts of the Emperor Marcus Aurelius
-Antoninus*](https://www.gutenberg.org/ebooks/6920).
+- Marcus Aurelius uses “I am rising to the work of a human being.” from
+  *Meditations* 5.1 in the public-domain George Long translation. Source:
+  [Project Gutenberg, *The Thoughts of the Emperor Marcus Aurelius
+  Antoninus*](https://www.gutenberg.org/ebooks/6920).
+- Benjamin Franklin uses “Little strokes fell great oaks.” from *Poor Richard
+  Improved, 1750*. The Founders Online transcription prints “Little Strokes,”
+  and “Fell great Oaks.” on separate lines; Morrowward normalized only
+  capitalization, the comma, and that line break. Source:
+  [Founders Online](https://founders.archives.gov/documents/Franklin/01-03-02-0176).
+
+Each accepted asset includes exact transcript captions, a non-motion poster,
+and user-controlled playback with no autoplay. One approved greeting is
+randomly assigned once per browser and saved locally, keeping the first-run
+experience stable. The assigned greeting remains replayable from Our Why.
+
+## Human judgment in the Franklin pass
+
+The Franklin campaign generated four fresh 2816×1584 stills. Codex selected
+image 3 with a 30/30 original-resolution review, then evaluated three motion
+paths:
+
+1. The first Grok animation showed minor incidental, nonsynchronized mouth
+   movement and scored 29/30 after a complete frame-sequence review.
+2. A stricter Grok retry was rejected because its facial and mouth movement was
+   more pronounced.
+3. A deterministic still-motion fallback was technically valid but Dave
+   rejected its creative result.
+
+The final decision returned to the stronger first animation. That does not
+present Franklin as speaking: the provider video's audio was discarded, a
+separate built-in xAI **Sal** narrator supplies the disclosed voice track,
+captions match the exact narration, and the interface identifies the visual as
+an AI-generated historical interpretation. Dave approved the exact composed
+video SHA-256
+`e261c75caead502f2da0efeb25a157f0273427d86495e9d2e39165e74c030b7f`
+at `2026-07-16T15:52:21Z` with “Video is perfect!” The finished asset is
+1280×720 and 15.041667 seconds.
 
 ## Review gates
 
@@ -112,7 +144,9 @@ Codex and Dave review original-resolution outputs for:
 - truthful AI labeling, source attribution, and non-advice boundaries; and
 - file size, format, loading behavior, and offline fallback.
 
-Only selected, optimized derivatives are eligible for `public/`. Raw candidates
+Only selected, optimized derivatives are eligible for `public/`. Sanitized
+publication records bind each approved MP4, caption file, poster, transcript,
+quotation source, generation provenance, and human approval. Raw candidates
 remain ignored in `.media-review/`, and secrets remain server- or local-script
 only.
 
@@ -122,7 +156,8 @@ The media scripts require `XAI_API_KEY` only in the local shell. They print no
 secret values, validate inputs before generation, bound the number and duration
 of requests, save machine-readable manifests, and fail without silently
 inventing successful output. The key is not used by the browser and is not
-needed to run, test, or judge Morrowward.
+needed to run, test, or judge Morrowward. Both approved welcomes are static
+public assets after publication; the app has no xAI runtime dependency.
 
 Official API references:
 

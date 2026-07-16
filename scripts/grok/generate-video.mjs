@@ -161,6 +161,7 @@ try {
     width: videoProbe.video.width,
     height: videoProbe.video.height,
     durationSeconds: videoProbe.durationSeconds,
+    prompt: prompts[mode],
     sourceImage,
     aiInterpretationBadge: manifest.metadata.aiInterpretationBadge,
     disclosure: manifest.metadata.historicalFigureDisclosure,

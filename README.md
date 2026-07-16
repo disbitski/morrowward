@@ -56,7 +56,7 @@ The mission page connects the product to the childhood story behind it, while th
 - Structured GPT-5.6 explanations with a title, key ideas, assumptions, a safe simulator activity, and deterministic related questions
 - Guided questions send an explicit bounded education topic; freeform questions are classified locally without sending holdings, balances, or identity
 - Educational daily brief separating facts, sentiment, uncertainty, and takeaway
-- An optional 15-second historical welcome with explicit playback, captions, transcript, primary quote source, visible AI disclosures, a permanent Mission replay, and a versioned approved-greeting roster
+- Two optional 15-second historical welcomes with explicit playback, captions, transcripts, primary quote sources, visible AI disclosures, stable randomized assignment, permanent Mission replay, and a versioned approved-greeting roster
 - Versioned IndexedDB persistence with automatic in-memory fallback
 - Validated JSON export, import, and complete local reset
 - Installable PWA shell with useful offline fallbacks
@@ -212,9 +212,11 @@ The approach follows OpenAI’s recommendation to combine model safeguards with 
 
 ### Codex-led specialist media
 
-The Marcus Aurelius welcome demonstrates a second kind of agentic workflow. Codex on GPT-5.6 designed and ran a fresh, hackathon-local campaign pipeline, delegated image, video, and built-in narration generation to xAI models suited to those media jobs, then independently inspected the original-resolution candidates and the finished motion sequence against committed hard gates. Dave retained the final human approval gate.
+The approved Marcus Aurelius and Benjamin Franklin welcomes demonstrate a second kind of agentic workflow. Codex on GPT-5.6 designed and ran a fresh, hackathon-local campaign pipeline, delegated image, video, and built-in narration generation to xAI models suited to those media jobs, then independently inspected the original-resolution candidates and complete motion sequences against committed hard gates. Dave retained the final human approval gate.
 
-The shipped asset is optional and never calls xAI at runtime. A sanitized [publication manifest](public/morrowward-marcus-welcome.publication.json) binds the exact MP4, captions, and poster hashes to the transcript, public-domain quotation source, model provenance, AI-interpretation disclosures, and final approval. The reproducible generation and validation workflow lives in [`scripts/grok`](scripts/grok/README.md); raw provider responses and rejected candidates remain outside Git in ignored private review storage.
+The Franklin pass also records why human judgment matters. Codex selected image 3 from four fresh 2816×1584 stills with a 30/30 review. The first Grok animation had minor incidental, nonsynchronized mouth motion and passed the complete frame review at 29/30. A stricter retry produced more pronounced facial and mouth movement and was rejected; a technically valid deterministic still-motion fallback was also rejected because its creative result did not work. Dave chose the stronger first animation after reviewing the complete composition. Morrowward does not present Franklin as speaking: provider-video audio is discarded, a separate xAI built-in **Sal** narrator supplies the disclosed voice track, captions reproduce the exact transcript, and the interface labels the figure as an AI-generated historical interpretation. The quotation “Little strokes fell great oaks.” was checked against [Founders Online, *Poor Richard Improved, 1750*](https://founders.archives.gov/documents/Franklin/01-03-02-0176); only archival capitalization, comma, and line-break formatting were normalized.
+
+Both assets are optional and never call xAI at runtime. Sanitized publication manifests for [Marcus Aurelius](public/morrowward-marcus-welcome.publication.json) and [Benjamin Franklin](public/morrowward-franklin-welcome.publication.json) bind the exact MP4, captions, and poster hashes to each transcript, primary quotation source, model provenance, AI-interpretation disclosures, and final approval. One approved greeting is randomly assigned once per browser and saved locally so the experience remains stable; playback is always user initiated, and the assigned welcome can be replayed from Our Why. The reproducible generation and validation workflow lives in [`scripts/grok`](scripts/grok/README.md); raw provider responses and rejected candidates remain outside Git in ignored private review storage.
 
 ## API
 

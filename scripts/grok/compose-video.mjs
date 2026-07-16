@@ -5,7 +5,6 @@ import {
   DEFAULT_MANIFEST_PATH,
   assertNarrationFitsVisual,
   assertReviewPolicyMatchesCampaign,
-  assertReviewScores,
   assertVideoMatchesRequest,
   extensionForMimeType,
   loadCampaignManifest,
@@ -16,6 +15,10 @@ import {
   validateMediaBuffer,
   writeJsonAtomic,
 } from "./media-lib.mjs";
+import {
+  assertCompositionSourceProbe,
+  assertCompositionSourceVideoRecord,
+} from "./composition-source.mjs";
 import {
   acquireCompositionLock,
   assertCompositionOutputsAvailable,
@@ -125,36 +128,32 @@ if (matchingVideoRecords.length !== 1) {
   );
 }
 const [sourceVideoRecord] = matchingVideoRecords;
-if (!["image-to-video", "text-to-video"].includes(sourceVideoRecord.id)) {
-  throw new Error("Composition source video has an invalid generated-video id.");
-}
-const exactVideoFilename = `videos/${sourceVideoRecord.id}${extensionForMimeType(sourceVideoRecord.mimeType)}`;
-assertExactRunArtifactPath({
+const sourceValidation = assertCompositionSourceVideoRecord({
+  sourceVideoRecord,
+  reviewManifest,
   runDirectory,
-  actualPath: videoPath,
-  recordedFilename: sourceVideoRecord.filename,
-  expectedFilename: exactVideoFilename,
-  label: "Composition source video",
+  videoPath,
 });
-if (sourceVideoRecord.review?.hardGatesPassed !== true) {
-  throw new Error(
-    "Composition source video must pass its recorded hard-gate review first.",
+if (sourceValidation.sourceImage) {
+  const sourceImagePath = await resolveMediaReviewPath(
+    resolve(runDirectory, sourceValidation.sourceImage.path),
+    "Composition deterministic source image",
   );
-}
-assertReviewScores(
-  sourceVideoRecord.review,
-  reviewManifest.reviewPolicy,
-  "The composition source video",
-);
-if (sourceVideoRecord.requestedResolution !== "720p") {
-  throw new Error("Composition source must record a requested 720p resolution.");
-}
-if (
-  !Number.isFinite(sourceVideoRecord.requestedDurationSeconds) ||
-  sourceVideoRecord.requestedDurationSeconds <= 0
-) {
-  throw new Error(
-    "Composition source is missing its positive requested video duration.",
+  const sourceImageBuffer = await readFile(sourceImagePath);
+  validateMediaBuffer(
+    sourceImageBuffer,
+    sourceValidation.sourceImage.mimeType,
+    { kind: "image", minimumBytes: 32 },
+  );
+  assertRecordedSha256(
+    sourceImageBuffer,
+    sourceValidation.sourceImage.sha256,
+    "Composition deterministic source image",
+  );
+  assertRecordedByteLength(
+    sourceImageBuffer,
+    sourceValidation.sourceImage.bytes,
+    "Composition deterministic source image",
   );
 }
 
@@ -295,10 +294,7 @@ if (transcriptBuffer.toString("utf8") !== `${narrationRecord.transcript}\n`) {
 }
 
 const sourceVideoProbe = await probeMediaFile(videoPath);
-assertVideoMatchesRequest(sourceVideoProbe, {
-  expectedDurationSeconds: sourceVideoRecord.requestedDurationSeconds,
-  label: "Composition source video",
-});
+assertCompositionSourceProbe(sourceVideoRecord, sourceVideoProbe);
 const narrationProbe = await probeMediaFile(audioPath);
 const narrationFit = assertNarrationFitsVisual(
   sourceVideoProbe,

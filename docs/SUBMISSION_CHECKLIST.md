@@ -12,6 +12,8 @@
 - [x] API-offline and quote-offline fallbacks are verified.
 - [x] Daily GPT-5.6 quote batching, required web search, strict per-asset source/schema/time rejection, eleven-asset allowlist, durable snapshot/lock behavior, self-healing first load, bounded observation-only rechecks, freshness, and synthetic fallback are covered by the July 15 passing local suite.
 - [x] Education Center has four paths, 48 level-specific prompts, explicit topic payloads, deterministic follow-ups, source-tier labels, verified supplemental Grokipedia links, and no retired “may be offered later” copy.
+- [x] Marcus Aurelius and Benjamin Franklin welcomes have approved publication records binding exact video, captions, poster, transcript, primary quotation source, AI disclosures, generation provenance, and Dave's final approval; the app makes no xAI runtime call.
+- [x] The two-entry greeting roster assigns one approved welcome randomly once per browser, preserves that local assignment, never autoplays, and offers user-controlled playback and replay from Our Why.
 - [ ] Production has one complete KV/Upstash REST credential pair so the daily quote snapshot and 12-hour distributed `NX` retry guard are shared across serverless instances.
 - [ ] iPhone-sized and macOS-sized PWA flows are verified.
 - [x] `npm run test:e2e` passes its desktop Chrome and mobile Pixel 7 projects from a production build.
@@ -42,7 +44,7 @@ Final README link: `https://morrowward.vercel.app`. Commit preview URLs are expe
 - [ ] Repository URL added.
 - [ ] Website URL added.
 - [ ] Reconfirm `/feedback` in the primary Codex build task and add Session ID `019f62f7-1709-7e11-8e8f-70951e9a2f7f` to Devpost.
-- [ ] Built-with list includes Codex, GPT-5.6, OpenAI Responses API web search, React, TypeScript, Dexie, Vercel Cron, Redis/KV-compatible storage, Vercel, and—if selected generated media ships—the xAI image/video/TTS APIs.
+- [ ] Built-with list includes Codex, GPT-5.6, OpenAI Responses API web search, React, TypeScript, Dexie, Vercel Cron, Redis/KV-compatible storage, Vercel, and the xAI image/video/TTS APIs used to create the approved static welcome assets.
 
 ## Video
 
@@ -53,7 +55,7 @@ Final README link: `https://morrowward.vercel.app`. Commit preview URLs are expe
 - [ ] Audio explicitly explains how GPT-5.6 was used.
 - [ ] Product is shown working; no slides-only substitute.
 - [ ] Show the stable web app plus brief iPhone simulator and macOS companion-shell proof without implying a full native rewrite or App Store readiness.
-- [ ] If historical-figure media appears, the visible AI-interpretation label, source attribution, captions/transcript, and user-controlled playback are shown or readily discoverable.
+- [ ] If an approved historical welcome appears, show or make readily discoverable its AI-interpretation label, separate narrator disclosure, primary quote attribution, captions/transcript, and user-controlled playback; do not imply that the depicted figure is speaking.
 
 ## Final verification
 

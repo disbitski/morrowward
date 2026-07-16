@@ -1,10 +1,82 @@
 const CACHE_PREFIX = "morrowward-";
-const SHELL_CACHE = "morrowward-shell-v6";
-const RUNTIME_CACHE = "morrowward-runtime-v6";
-// The publication JSON and approved asset hash prefixes bind this cache to one
-// exact bundle. Any metadata or media change must use a new cache name.
-const MEDIA_CACHE =
-  "morrowward-media-marcus-2026-07-15-r1-9828fb89-4a254a29-b2e5b45d-1d980a1f";
+const SHELL_CACHE = "morrowward-shell-v7";
+const RUNTIME_CACHE = "morrowward-runtime-v7";
+// Keep approved publications in one registry. The derived paths decide what
+// the worker may serve, while every publication and asset hash contributes to
+// the cache name. Parity tests fail if a reviewed roster entry or publication
+// record is added without updating this registry.
+const APPROVED_GREETING_PUBLICATIONS = [
+  {
+    greetingId: "marcus-aurelius-v1",
+    assetId: "morrowward-marcus-welcome",
+    revision: "2026-07-15-r1",
+    publication: {
+      publicPath: "/morrowward-marcus-welcome.publication.json",
+      sha256:
+        "9828fb899d8651aeecb0e20b77e6e9349bafb2f33a41fb3ee20e1ef93ffae7e3",
+    },
+    assets: [
+      {
+        role: "video",
+        publicPath: "/morrowward-marcus-welcome.mp4",
+        sha256:
+          "4a254a2983237eec3bffa97d601413884924c8ff42b585aad6f2560a1a627728",
+      },
+      {
+        role: "captions",
+        publicPath: "/morrowward-marcus-welcome.en.vtt",
+        sha256:
+          "b2e5b45dd0c8584bab44ad281bb78223ff5ec04387a72c48deb6b897f8be97a3",
+      },
+      {
+        role: "poster",
+        publicPath: "/morrowward-marcus-welcome-poster.jpg",
+        sha256:
+          "1d980a1fd25d3bc199dea81778b367ddab905a6e3c12748d1e9bc4b3cc527764",
+      },
+    ],
+  },
+  {
+    greetingId: "benjamin-franklin-v1",
+    assetId: "morrowward-franklin-welcome",
+    revision: "2026-07-16-r1",
+    publication: {
+      publicPath: "/morrowward-franklin-welcome.publication.json",
+      sha256:
+        "26006f24e3ebfa2a5d28f3c084f801a45c4bc9dfd9272fd694e47ddb2ac56d75",
+    },
+    assets: [
+      {
+        role: "video",
+        publicPath: "/morrowward-franklin-welcome.mp4",
+        sha256:
+          "e261c75caead502f2da0efeb25a157f0273427d86495e9d2e39165e74c030b7f",
+      },
+      {
+        role: "captions",
+        publicPath: "/morrowward-franklin-welcome.en.vtt",
+        sha256:
+          "f2be000a2065b8bae7a22315cc20952a3935e386608ed50b8fa12ec2f0389425",
+      },
+      {
+        role: "poster",
+        publicPath: "/morrowward-franklin-welcome-poster.jpg",
+        sha256:
+          "f007a175b2d894b90420a0b03dad315630094e85936e2aa86f41c307970dc113",
+      },
+    ],
+  },
+];
+const MEDIA_CACHE_FINGERPRINT = APPROVED_GREETING_PUBLICATIONS.map(
+  (publication) =>
+    [
+      publication.assetId,
+      publication.revision,
+      publication.publication.sha256.slice(0, 8),
+      ...publication.assets.map((asset) => asset.sha256.slice(0, 8)),
+    ].join("-"),
+).join("-");
+const MEDIA_CACHE = `${CACHE_PREFIX}media-${MEDIA_CACHE_FINGERPRINT}`;
 const MAX_RUNTIME_ENTRIES = 80;
 const OPTIONAL_MEDIA_CACHE_TIMEOUT_MS = 10_000;
 
@@ -19,16 +91,31 @@ const CORE_APP_SHELL = [
 ];
 
 // The greeting enriches the experience but is not required to use the app.
-// Cache each file independently so a large-media/CDN failure cannot block the
-// service-worker install or the deterministic financial simulator.
+// Warm only lightweight provenance, poster, and caption files. MP4s are cached
+// lazily after a person chooses to play one, avoiding a multi-video download on
+// first navigation as the reviewed historical roster grows.
+const OPTIONAL_GREETING_WARMUP = APPROVED_GREETING_PUBLICATIONS.flatMap(
+  (publication) => [
+    publication.publication.publicPath,
+    ...publication.assets
+      .filter((asset) => asset.role !== "video")
+      .map((asset) => asset.publicPath),
+  ],
+);
+const OPTIONAL_GREETING_VIDEOS = APPROVED_GREETING_PUBLICATIONS.flatMap(
+  (publication) =>
+    publication.assets
+      .filter((asset) => asset.role === "video")
+      .map((asset) => asset.publicPath),
+);
 const OPTIONAL_GREETING_MEDIA = [
-  "/morrowward-marcus-welcome.publication.json",
-  "/morrowward-marcus-welcome-poster.jpg",
-  "/morrowward-marcus-welcome.mp4",
-  "/morrowward-marcus-welcome.en.vtt",
+  ...OPTIONAL_GREETING_WARMUP,
+  ...OPTIONAL_GREETING_VIDEOS,
 ];
 const OPTIONAL_GREETING_PATHS = new Set(OPTIONAL_GREETING_MEDIA);
+const OPTIONAL_GREETING_VIDEO_PATHS = new Set(OPTIONAL_GREETING_VIDEOS);
 let optionalMediaCacheTask = null;
+const fullMediaCacheTasks = new Map();
 
 async function precacheShell() {
   const cache = await caches.open(SHELL_CACHE);
@@ -63,7 +150,7 @@ async function precacheOptionalMedia() {
     const cacheWork = (async () => {
       const cache = await caches.open(MEDIA_CACHE);
       await Promise.allSettled(
-        OPTIONAL_GREETING_MEDIA.map(async (path) => {
+        OPTIONAL_GREETING_WARMUP.map(async (path) => {
           if (await cache.match(path)) return;
           const response = await fetch(path, {
             cache: "reload",
@@ -164,6 +251,42 @@ function fullMediaRequest(request) {
   });
 }
 
+function ensureFullGreetingVideoCached(request) {
+  const cacheRequest = fullMediaRequest(request);
+  const url = new URL(cacheRequest.url);
+  if (
+    url.origin !== self.location.origin ||
+    !OPTIONAL_GREETING_VIDEO_PATHS.has(url.pathname)
+  ) {
+    return Promise.resolve(false);
+  }
+
+  const existing = fullMediaCacheTasks.get(cacheRequest.url);
+  if (existing) return existing;
+
+  const task = (async () => {
+    const cached = await safeMediaCacheMatch(cacheRequest);
+    if (cached?.status === 200) return true;
+
+    try {
+      const response = await fetch(cacheRequest, { cache: "reload" });
+      if (response.status !== 200) return false;
+      return await safePutMedia(cacheRequest, response);
+    } catch {
+      return false;
+    }
+  })();
+
+  fullMediaCacheTasks.set(cacheRequest.url, task);
+  const clearTask = () => {
+    if (fullMediaCacheTasks.get(cacheRequest.url) === task) {
+      fullMediaCacheTasks.delete(cacheRequest.url);
+    }
+  };
+  void task.then(clearTask, clearTask);
+  return task;
+}
+
 function parseSingleByteRange(rangeHeader, totalBytes) {
   if (!Number.isSafeInteger(totalBytes) || totalBytes <= 0) return null;
   const match = /^bytes\s*=\s*(\d*)-(\d*)$/iu.exec(rangeHeader.trim());
@@ -235,7 +358,7 @@ function offlineResponse() {
   });
 }
 
-async function handleRangeMediaRequest(request) {
+async function handleRangeMediaRequest(request, scheduleBackground) {
   const rangeHeader = request.headers.get("range");
   const cacheRequest = fullMediaRequest(request);
   let networkResponse = null;
@@ -248,9 +371,14 @@ async function handleRangeMediaRequest(request) {
   try {
     networkResponse = await fetch(request);
 
-    // A 206 is already the exact response the media element requested. Cache
-    // storage rejects partial responses, so return it untouched and uncached.
-    if (networkResponse.status === 206) return networkResponse;
+    // A 206 is already the exact response the media element requested. Return
+    // it untouched so playback is never delayed. Cache Storage cannot store
+    // partial responses, so the fetch-event lifetime separately keeps one
+    // deduplicated, no-Range GET alive for a future offline replay.
+    if (networkResponse.status === 206) {
+      scheduleBackground?.(ensureFullGreetingVideoCached(cacheRequest));
+      return networkResponse;
+    }
 
     if (networkResponse.status === 200) {
       const rangeSource = networkResponse.clone();
@@ -286,10 +414,28 @@ async function handleFullMediaRequest(request) {
   }
 }
 
-async function handleMediaRequest(request) {
+async function handleMediaRequest(request, scheduleBackground) {
   return request.headers.has("range")
-    ? handleRangeMediaRequest(request)
+    ? handleRangeMediaRequest(request, scheduleBackground)
     : handleFullMediaRequest(request);
+}
+
+function handleMediaFetchEvent(event) {
+  const backgroundTasks = [];
+  const responsePromise = handleMediaRequest(event.request, (task) => {
+    backgroundTasks.push(task);
+  });
+
+  // Both lifecycle methods are called synchronously during event dispatch.
+  // The response promise resolves as soon as the requested 206 is available;
+  // only waitUntil observes the later full-file cache task.
+  event.respondWith(responsePromise);
+  event.waitUntil(
+    responsePromise
+      .catch(() => undefined)
+      .then(() => Promise.allSettled(backgroundTasks))
+      .then(() => undefined),
+  );
 }
 
 async function handleCacheFirstRequest(request) {
@@ -362,13 +508,12 @@ self.addEventListener("fetch", (event) => {
   }
 
   if (OPTIONAL_GREETING_PATHS.has(url.pathname)) {
-    event.respondWith(handleMediaRequest(event.request));
+    handleMediaFetchEvent(event);
     return;
   }
 
-  // Warm the immutable greeting bundle only after the core worker is already
-  // installed. waitUntil keeps this optional background work alive without
-  // delaying the navigation response or risking the core install.
+  // Warm only lightweight approved greeting metadata after the core worker is
+  // installed. Videos remain lazy until explicit playback.
   if (event.request.mode === "navigate") {
     event.waitUntil(ensureOptionalMediaCached());
   }
