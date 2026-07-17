@@ -439,7 +439,7 @@ Codex was used for the majority of the project’s core functionality:
 - Generating unit, property, persistence, API, safety, browser, and accessibility checks
 - Reviewing privacy boundaries, credential handling, degraded-network behavior, and documentation
 - Orchestrating bounded subagents for market contracts, accessible UI, media tooling, integration, and adversarial review while the primary Sol session retained consolidation responsibility
-- Maintaining the dated [build journal](docs/BUILD_JOURNAL.md) and a repeatable [demo script](docs/DEMO_SCRIPT.md)
+- Maintaining the dated [build journal](docs/BUILD_JOURNAL.md) as a first-class project artifact
 
 Key decisions are documented in the build journal rather than hidden in a final retrospective. The separate [AI orchestration and media provenance note](docs/AI_ORCHESTRATION.md) explains the role boundaries, fresh xAI tooling, historical-figure disclosure, and human/Codex review gates.
 
