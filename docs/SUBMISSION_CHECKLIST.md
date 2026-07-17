@@ -11,7 +11,7 @@
 - [x] Commit `74f77ad` passes a clean-clone `npm install`, 122 tests, lint, Grok dry run, vinext production build, and Vercel/Next production build using the README workflow.
 - [x] No credentials, personal portfolio data, or private reference folders appear in Git history.
 - [x] Final July 17 privacy gate covers the current tree, every local and remote Git ref, ignored local files, built Apple products, tracked-media metadata, representative video frames, and the public client bundle. It found no credential, private key, personal contact detail, machine-local path, signing team/profile, or private deployment identifier.
-- [ ] Confirm whether the small, partially obscured background people in Dave's intentionally published age-ten photograph should remain intact or be blurred/cropped before the repository becomes public.
+- [x] Preserve Dave's age-ten family photograph intact; Dave reviewed the partially visible background figure, identified him as his brother, and explicitly approved the original image for publication.
 - [x] Demo seed state works without network access or live market conditions.
 - [x] API-offline and quote-offline fallbacks are verified.
 - [x] Daily GPT-5.6 quote batching, required web search, strict per-asset source/schema/time rejection, eleven-asset allowlist, durable snapshot/lock behavior, self-healing first load, bounded observation-only rechecks, freshness, and synthetic fallback are covered by the July 15 passing local suite.
