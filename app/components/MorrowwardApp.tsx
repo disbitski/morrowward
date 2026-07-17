@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import {
-  AppWindowMac,
   ArrowRight,
   Bitcoin,
   BookOpen,
@@ -20,6 +19,7 @@ import {
   Home,
   Info,
   Landmark,
+  LaptopMinimal,
   Leaf,
   Lightbulb,
   LineChart,
@@ -2078,7 +2078,7 @@ function MissionView({
               target="_blank"
               rel="noopener noreferrer"
             >
-              <span className="roadmap-source-icon"><AppWindowMac size={31} strokeWidth={1.7} aria-hidden="true" /></span>
+              <span className="roadmap-source-icon"><LaptopMinimal size={32} strokeWidth={1.7} aria-hidden="true" /></span>
               <div className="roadmap-source-copy">
                 <span className="roadmap-source-platform">macOS</span>
                 <h3>Morrowward for Mac</h3>
