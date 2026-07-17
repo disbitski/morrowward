@@ -62,6 +62,7 @@ import {
   calculateHabitProgress,
   calculateProjection,
   calculateProjectionScenarios,
+  canonicalizeVanguardProductUrl,
   createHabitLog,
   depositWeeklyContribution,
   formatAssetMicroUnits,
@@ -719,7 +720,7 @@ function safeBriefSourceUrl(value: unknown): string | null {
       return null;
     }
     url.hash = "";
-    return url.toString();
+    return canonicalizeVanguardProductUrl(url.toString());
   } catch {
     return null;
   }

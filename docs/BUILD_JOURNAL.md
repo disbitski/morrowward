@@ -324,6 +324,14 @@ Production deployment `dpl_GfhpHgfLfuvMWUPSDTafMxboUUaR` then published the firs
 
 The production-hardening close reached **263 passing unit/integration tests across 25 files**, clean full-project ESLint and TypeScript checks, repeated clean Vercel builds, the already-passing 12 desktop/mobile Playwright journeys, and a live stable-alias API acceptance check. The safe evergreen edition remained visible throughout every rejected attempt and was replaced only after the complete sourced edition passed.
 
+### Unreliable Vanguard routes became a tested compatibility boundary
+
+Dave's final link check found that the individual-investor VTI and BND profile routes could return 404 pages in a normal browser, including citations already stored in the successful daily briefing. Morrowward moved its two static Practice destinations to Vanguard's current public advisor product pages and added a deliberately narrow compatibility map for only those retired profile paths. Future briefing publications canonicalize those citations on the server, while the client applies the same map when reading an already-cached edition. That second boundary repaired the current live brief immediately after deployment without paying for or waiting on another GPT generation.
+
+The same pass rebuilt the public README gallery directly from the stable Production URL. Its reproducible Playwright capture now waits for decoded imagery, the completed sourced brief, and the completed daily quote snapshot before taking images. The gallery covers all five web pages, the final horizon artwork and live-source presentation, desktop and mobile layouts, and all four themes. It also preserves focused closeups of the daily briefing, Practice market, Market Journey, and SPCX educational sheet. Native iPhone and Mac captures remain explicitly reserved for the companion-shell build rather than being mocked ahead of the code.
+
+The link-and-gallery close reached **264 passing unit/integration tests across 25 files**, clean full-project ESLint and TypeScript checks, clean vinext and Next/Vercel production builds, and all **12 Playwright journeys** across desktop and mobile Chrome.
+
 ## July 17 — Shared iOS and macOS companion shells
 
 - Create the fresh `apple/` project and shared SwiftUI/WebKit source.

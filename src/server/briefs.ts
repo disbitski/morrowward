@@ -9,6 +9,7 @@ import {
   type BriefSection,
   type DailyBriefResponse,
 } from "../contracts";
+import { canonicalizeVanguardProductUrl } from "../domain/external-links";
 import { OPENAI_MODEL } from "./openai";
 import {
   claimDailyBriefRefresh,
@@ -581,7 +582,8 @@ function uniqueSources(
   const sources = new Map<string, BriefCitation>();
   for (const sentence of sentences) {
     for (const citation of sentence.citations) {
-      const url = safeHttpUrl(citation.url);
+      const safeUrl = safeHttpUrl(citation.url);
+      const url = safeUrl ? canonicalizeVanguardProductUrl(safeUrl) : null;
       if (url && !sources.has(url)) {
         sources.set(url, { title: citation.title, url });
       }

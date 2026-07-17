@@ -66,7 +66,7 @@ describe("UI API adapters", () => {
           category: "Broad U.S. equity ETF",
           educationalRisk: "medium",
           summary: "A broad educational fund example.",
-          learnMoreUrl: "https://investor.vanguard.com/investment-products/etfs/profile/vti",
+          learnMoreUrl: "https://advisors.vanguard.com/investments/products/vti/vanguard-total-stock-market-etf",
         },
         history: {
           range: "1y",
@@ -237,7 +237,7 @@ describe("UI API adapters", () => {
           category: "Broad U.S. equity ETF",
           educationalRisk: "medium",
           summary: "A broad educational fund example.",
-          learnMoreUrl: "https://investor.vanguard.com/investment-products/etfs/profile/vti",
+          learnMoreUrl: "https://advisors.vanguard.com/investments/products/vti/vanguard-total-stock-market-etf",
         },
       }],
       allowlist: ["VTI"],
@@ -336,7 +336,17 @@ describe("UI API adapters", () => {
           id: "market-and-sentiment",
           title: "Market & sentiment",
           body: "Verified market context.",
-          sources: [{ title: "Market source", url: "https://example.com/market#today" }],
+          sources: [
+            {
+              title: "Vanguard VTI profile",
+              url: "https://investor.vanguard.com/investment-products/etfs/profile/vti",
+            },
+            {
+              title: "Vanguard BND profile",
+              url: "https://investor.vanguard.com/investment-products/etfs/profile/bnd?utm_source=brief",
+            },
+            { title: "Market source", url: "https://example.com/market#today" },
+          ],
         },
         {
           id: "frontier-assets",
@@ -369,6 +379,14 @@ describe("UI API adapters", () => {
       "learning-lens-and-fed-watch",
     ]);
     expect(brief.sections[0].sources).toEqual([
+      {
+        title: "Vanguard VTI profile",
+        url: "https://advisors.vanguard.com/investments/products/vti/vanguard-total-stock-market-etf",
+      },
+      {
+        title: "Vanguard BND profile",
+        url: "https://advisors.vanguard.com/investments/products/bnd/vanguard-total-bond-market-etf",
+      },
       { title: "Market source", url: "https://example.com/market" },
     ]);
     expect(brief.generatedAt).toBe("2026-07-15T12:00:00.000Z");

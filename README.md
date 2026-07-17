@@ -22,19 +22,55 @@ Morrowward carries that lesson into financial literacy: a modest action repeated
 
 ## Product preview
 
-![Morrowward Horizon theme dashboard showing the long-term illustration](docs/screenshots/today-horizon-desktop.png)
+These captures come from the stable production build and show the same responsive experience judges can open from the demo link above.
 
-![Morrowward Market Journey lab in the Space theme showing a synthetic late-decline path](docs/screenshots/market-journey-space-desktop.png)
+### Web experience
 
-![Morrowward Practice market in the Space theme showing eleven labeled educational assets](docs/screenshots/practice-market-space-desktop.png)
+**Today · Horizon theme**
 
-![Morrowward Education Center in the Space theme showing four guided learning paths](docs/screenshots/education-center-space-desktop.png)
+![Morrowward Today dashboard in the Horizon theme with the final future-horizon artwork and long-term illustration](docs/screenshots/today-horizon-desktop.png)
 
-The mission page connects the product to the childhood story behind it, while the mobile experience keeps simulated investing clearly separated from real money.
+**My horizon · Dawn theme**
 
-| Mission story | Mobile SPCX detail sheet |
+![Morrowward My Horizon page in the light Dawn theme with editable plan inputs and three illustrative scenarios](docs/screenshots/horizon-plan-dawn-desktop.png)
+
+**Practice · Space theme**
+
+![Morrowward Practice page in the Space theme with simulated balances and the sourced daily practice market](docs/screenshots/practice-space-desktop.png)
+
+**Learn · Space theme**
+
+![Morrowward Education Center in the Space theme with four guided learning paths and Ask Morrow](docs/screenshots/education-center-space-desktop.png)
+
+**Our why · Alchemy theme**
+
+![Morrowward mission page in the Alchemy theme showing Dave at age ten with his Commodore 64](docs/screenshots/mission-story-desktop.png)
+
+### Feature closeups
+
+The daily briefing keeps verified facts, frontier-asset context, uncertainty, sources, and the hypothetical $100K learning lens visibly separated.
+
+![Morrowward source-backed daily financial briefing with three concise sections and inline citations](docs/screenshots/daily-brief-horizon-desktop.png)
+
+| Market Journey lab | SPCX educational detail sheet |
 | --- | --- |
-| ![Dave at age ten with his Commodore 64 in the Morrowward mission page](docs/screenshots/mission-story-desktop.png) | ![Morrowward SPCX educational detail sheet on a mobile viewport](docs/screenshots/spcx-detail-mobile.png) |
+| ![Morrowward Market Journey lab in the Space theme showing a synthetic late-decline path](docs/screenshots/market-journey-space-desktop.png) | ![Morrowward SPCX educational detail sheet with a bounded one-year teaching path](docs/screenshots/spcx-detail-space-desktop.png) |
+
+### Responsive mobile experience
+
+| Today · Horizon | My horizon · Dawn |
+| --- | --- |
+| ![Morrowward Today dashboard on a mobile viewport in the Horizon theme](docs/screenshots/today-horizon-mobile.png) | ![Morrowward My Horizon page on a mobile viewport in the Dawn theme](docs/screenshots/horizon-plan-dawn-mobile.png) |
+
+| Practice · Alchemy | Learn · Space |
+| --- | --- |
+| ![Morrowward Practice page on a mobile viewport in the Alchemy theme](docs/screenshots/practice-mobile.png) | ![Morrowward Education Center on a mobile viewport in the Space theme](docs/screenshots/education-center-space-mobile.png) |
+
+| Our why · Space | SPCX detail · Alchemy |
+| --- | --- |
+| ![Morrowward mission page on a mobile viewport in the Space theme](docs/screenshots/mission-space-mobile.png) | ![Morrowward SPCX educational detail sheet on a mobile viewport in the Alchemy theme](docs/screenshots/spcx-detail-mobile.png) |
+
+Native iPhone and Mac companion screenshots will join this gallery after those lightweight shells are built.
 
 ## What works
 

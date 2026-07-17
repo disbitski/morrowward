@@ -15,6 +15,14 @@ const ASSET_SOURCE = "https://example.com/frontier-assets";
 const SPCX_SOURCE = "https://www.nasdaq.com/market-activity/stocks/spcx";
 const FED_SOURCE =
   "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm";
+const LEGACY_VANGUARD_VTI_SOURCE =
+  "https://investor.vanguard.com/investment-products/etfs/profile/vti";
+const CURRENT_VANGUARD_VTI_SOURCE =
+  "https://advisors.vanguard.com/investments/products/vti/vanguard-total-stock-market-etf";
+const LEGACY_VANGUARD_BND_SOURCE =
+  "https://investor.vanguard.com/investment-products/etfs/profile/bnd";
+const CURRENT_VANGUARD_BND_SOURCE =
+  "https://advisors.vanguard.com/investments/products/bnd/vanguard-total-bond-market-etf";
 const SEARCH_SOURCES = [MARKET_SOURCE, ASSET_SOURCE, SPCX_SOURCE, FED_SOURCE];
 
 function candidate(): BriefGeneration {
@@ -215,6 +223,51 @@ describe.sequential("sourced daily briefing generation", () => {
 
     expect(JSON.stringify(brief)).not.toContain("You should buy immediately.");
     expect(brief.meta.mode).toBe("ai");
+  });
+
+  it("publishes Vanguard's current product page for a supported legacy citation", async () => {
+    const legacyCitation = candidate();
+    legacyCitation.sections.marketAndSentiment.sentences[0].citations = [
+      {
+        title: "Vanguard VTI profile",
+        url: LEGACY_VANGUARD_VTI_SOURCE,
+      },
+      {
+        title: "Vanguard BND profile",
+        url: LEGACY_VANGUARD_BND_SOURCE,
+      },
+    ];
+    const fetchImpl = vi.fn(async () =>
+      new Response(JSON.stringify(responsesPayload(
+        legacyCitation,
+        [
+          ...SEARCH_SOURCES,
+          LEGACY_VANGUARD_VTI_SOURCE,
+          LEGACY_VANGUARD_BND_SOURCE,
+        ],
+      )), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      }));
+
+    const brief = await refreshDailyBrief({
+      apiKey: "test-api-key",
+      fetchImpl,
+      now: NOW,
+    });
+
+    expect(brief.sections[0].sources).toEqual([
+      {
+        title: "Vanguard VTI profile",
+        url: CURRENT_VANGUARD_VTI_SOURCE,
+      },
+      {
+        title: "Vanguard BND profile",
+        url: CURRENT_VANGUARD_BND_SOURCE,
+      },
+    ]);
+    expect(JSON.stringify(brief)).not.toContain(LEGACY_VANGUARD_VTI_SOURCE);
+    expect(JSON.stringify(brief)).not.toContain(LEGACY_VANGUARD_BND_SOURCE);
   });
 
   it("accepts a same-day market observation timestamp", async () => {

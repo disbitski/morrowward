@@ -1,4 +1,8 @@
 import {
+  VANGUARD_BND_PRODUCT_URL,
+  VANGUARD_VTI_PRODUCT_URL,
+} from "./external-links";
+import {
   MICRO_UNITS_PER_ASSET,
   DomainValidationError,
   MAX_SAFE_CENTS,
@@ -18,8 +22,7 @@ export const PRACTICE_ASSETS = [
     educationalRisk: "medium",
     summary:
       "An exchange-traded fund designed to represent a broad cross-section of the U.S. stock market.",
-    learnMoreUrl:
-      "https://investor.vanguard.com/investment-products/etfs/profile/vti",
+    learnMoreUrl: VANGUARD_VTI_PRODUCT_URL,
   },
   {
     symbol: "BND",
@@ -29,8 +32,7 @@ export const PRACTICE_ASSETS = [
     educationalRisk: "lower",
     summary:
       "An exchange-traded fund designed to represent a broad basket of U.S. investment-grade bonds.",
-    learnMoreUrl:
-      "https://investor.vanguard.com/investment-products/etfs/profile/bnd",
+    learnMoreUrl: VANGUARD_BND_PRODUCT_URL,
   },
   {
     symbol: "AAPL",
