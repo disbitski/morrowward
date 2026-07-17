@@ -134,8 +134,8 @@ test("one-time historical welcome never autoplays and guides the next practice s
   const macSource = page.getByTestId("mission-source-mac");
   await expect(iphoneSource.getByRole("heading", { name: "Morrowward for iPhone" })).toBeVisible();
   await expect(macSource.getByRole("heading", { name: "Morrowward for Mac" })).toBeVisible();
-  await expect(iphoneSource.getByText(/Source link coming after the build/i)).toBeVisible();
-  await expect(macSource.getByText(/Source link coming after the build/i)).toBeVisible();
+  await expect(iphoneSource.getByText(/Source publishes with the repo on July 20/i)).toBeVisible();
+  await expect(macSource.getByText(/Source publishes with the repo on July 20/i)).toBeVisible();
   await expect(iphoneSource.locator("a, button, [role='button'], [tabindex]")).toHaveCount(0);
   await expect(macSource.locator("a, button, [role='button'], [tabindex]")).toHaveCount(0);
   const followDave = page.getByTestId("mission-follow-dave");

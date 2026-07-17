@@ -25,18 +25,28 @@
 ## Apple companion shells
 
 - [x] About page uses the polished three-card companion layout for **Morrowward for iPhone**, **Morrowward for Mac**, and **Follow Dave online**.
-- [ ] Keep the iPhone and Mac source cards intentionally informational, non-interactive, and free of placeholder URLs until their exact local source folders exist. Turn them into links only after the corresponding GitHub folder links resolve from the public repository.
+- [x] The iPhone and Mac source cards remain intentionally informational, non-interactive, and free of placeholder URLs while GitHub is private. Turn them into links only after the corresponding public GitHub folder URLs resolve on July 20.
 - [x] **Follow Dave online** links to `https://thedavedev.com`.
-- [ ] Do not use App Store download badges or availability claims for companion builds distributed as source.
-- [ ] Fresh `apple/` project contains shared SwiftUI/WebKit code for iOS and macOS targets.
-- [ ] Debug origin is configurable for the local server; Release uses `https://morrowward.vercel.app`.
-- [ ] No OpenAI key, Vercel token, protected-preview URL, or bypass credential appears in the project or built products.
-- [ ] External educational links open in the system browser; Morrowward-origin navigation remains inside the shell.
-- [ ] iPhone 17 Pro simulator build and launch pass.
-- [ ] Unsigned local macOS build and launch pass.
-- [ ] App icon, loading, offline/error, retry, privacy/about, keyboard, Reduce Motion, and VoiceOver smoke checks pass.
-- [ ] Local plan/practice data survives complete app termination and relaunch.
-- [ ] README documents XcodeGen, local-server testing, Release origin, simulator, unsigned Mac build, and optional physical-device signing.
+- [x] No App Store download badge or availability claim is used for companion builds distributed as source.
+- [x] Fresh `apple/` project contains shared SwiftUI/WebKit code plus separate iPhone and Mac entry points.
+- [x] Fresh generated app-icon assets, a reproducible icon generator, and branded loading/error/retry states exist in source.
+- [x] Debug origin is allowlisted and configurable for the local server; Release is pinned to `https://morrowward.vercel.app`.
+- [x] Final July 17 secret scan confirms no OpenAI key, Vercel token, protected-preview URL, or bypass credential appears in Apple source or built Apple products.
+- [x] The tested source navigation policy keeps the exact Morrowward origin inside the shell, rejects lookalikes/downgrades/wrong ports, and implements system-browser handoff for user-activated external educational HTTP(S) links.
+- [x] iPhone 17 Pro Simulator Release build and Production launch pass.
+- [x] Ad-hoc signed macOS Release build and launch pass; strict signature verification and expected sandbox/network/user-selected-file entitlements pass.
+- [x] Both built products contain their generated app-icon assets and privacy manifest; branded loading and error/retry states exist in shared source.
+- [x] Local plan data survives complete app termination and relaunch in the 1/1 passing iPhone and 1/1 passing Mac Production UI journeys.
+- [x] Native origin and backup-payload unit suite passes 7/7.
+- [x] Actual iPhone and Mac runtime captures are saved under `docs/screenshots/` and embedded in the root README.
+- [ ] Force the native offline/error state and verify Retry recovers on iPhone and Mac.
+- [ ] Exercise native JSON export and confirm Apple's standard save panel and valid saved file on iPhone and Mac.
+- [ ] Exercise JSON import through the system file-input panel and confirm the restored plan on iPhone and Mac.
+- [ ] Open an external educational source and confirm system-browser handoff on iPhone and Mac.
+- [ ] Verify historical welcome video playback and captions in both shells.
+- [ ] Verify warmed offline reload after one successful online load in both shells.
+- [ ] Complete keyboard, Reduce Motion, and VoiceOver smoke checks on the applicable Apple targets.
+- [x] Root and Apple READMEs document the shared architecture, XcodeGen, local-server testing, Release origin, Simulator, unsigned and ad-hoc signed Mac verification, and optional physical-device signing.
 
 Earlier protected preview verified July 14: `https://morrowward-qui11xo7k-thedavedev.vercel.app`. Anonymous requests redirect to Vercel Authentication. Its health route reports GPT-5.6 configured, and its deployed GPT-5.6 educator response was verified. The July 15 market-milestone preview is recorded below. The stable production alias moved to public-but-unannounced integration testing on July 16; protected previews remain private.
 

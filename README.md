@@ -31,6 +31,22 @@ Using the vocabulary of the [AI Fluency Framework](https://www.anthropic.com/ai-
 
 The recurring [Description–Discernment loop](https://www.anthropic.com/ai-fluency/description-discernment-loop) was simple: Dave described the next outcome, Codex built and verified it, Dave exercised the real experience, and both refined the result from evidence. The journal may therefore be as useful to judges as the finished code: it shows not only what Codex accelerated, but where human context, taste, responsibility, and judgment materially changed the product.
 
+## Apple companions
+
+Morrowward now includes fresh iPhone and Mac companion source created during Build Week. Two small platform entry points share one SwiftUI/WebKit implementation, preserve the complete web product instead of splitting it into rushed rewrites, and use the stable [`https://morrowward.vercel.app`](https://morrowward.vercel.app) Release origin. Plans and practice holdings remain in each app's private persistent WebKit store. Neither target needs an OpenAI key or Vercel credential; AI remains behind the same server-side endpoints as the web app.
+
+- **[Apple setup, architecture, and security boundaries →](apple/README.md)**
+- **[Morrowward for iPhone source →](apple/Apps/iPhone/)**
+- **[Morrowward for Mac source →](apple/Apps/Mac/)**
+
+These are honestly labeled source-distributed companion shells, not App Store releases or claims of two full native rewrites. Native loading and retry states, an exact-origin navigation policy, and system-browser handoff add the platform value needed for the demonstration while Morrowward remains the same tested local-first product. The two About-page source cards remain informational until the private repository becomes public and their final GitHub URLs can be verified on July 20.
+
+Runtime verification on July 17 produced clean Release builds for both targets, 7/7 passing native policy and backup-payload unit tests, and 1/1 passing production persistence journey on each platform. The iPhone journey ran in an iPhone 17 Pro Simulator; the ad-hoc signed Mac Release launched successfully and its sandbox, network-client, and user-selected file-access entitlements were inspected. These captures come from those real companion runs:
+
+| iPhone companion | Mac companion |
+| --- | --- |
+| ![Morrowward iPhone companion showing the production Today experience in an iPhone 17 Pro Simulator](docs/screenshots/morrowward-iphone-companion.png) | ![Morrowward Mac companion showing the production Today experience in a native macOS window](docs/screenshots/morrowward-mac-companion.png) |
+
 ## Why it exists
 
 At age ten, I was diagnosed with Type 1 diabetes and learned early that my future would require preparation. That same year, money saved from a paper route bought my first Commodore 64. Small daily experiments in BASIC started a path into technology that changed my life and my family’s future.
@@ -87,7 +103,7 @@ The daily briefing keeps verified facts, frontier-asset context, uncertainty, so
 | --- | --- |
 | ![Morrowward mission page on a mobile viewport in the Space theme](docs/screenshots/mission-space-mobile.png) | ![Morrowward SPCX educational detail sheet on a mobile viewport in the Alchemy theme](docs/screenshots/spcx-detail-mobile.png) |
 
-Native iPhone and Mac companion screenshots will join this gallery after those lightweight shells are built.
+The native companion captures and their verification evidence are documented with the fresh shared source in the [Apple companion project](apple/README.md).
 
 ## What works
 
@@ -381,6 +397,7 @@ No test sends a real OpenAI request or places a real financial transaction.
 
 - **iPhone/iPad:** open the deployed site in Safari, choose Share, then **Add to Home Screen**.
 - **macOS:** use the browser’s install option when available, or Safari’s **Add to Dock**.
+- **Apple source companions:** follow the [Apple project instructions](apple/README.md) to run the iPhone target in Simulator or build the local unsigned Mac target.
 - The installable experience uses the same local data and deterministic engine as the website.
 
 ## Educational sources
@@ -439,7 +456,7 @@ Vercel gives every commit deployment a unique immutable preview URL, so seeing t
 - Optional Robinhood read-only portfolio import using an official, user-controlled integration
 - Options and LEAPS education with payoff simulation—not trade execution
 - Email or notification delivery for daily educational briefs
-- Native iOS and macOS clients sharing the deterministic core
+- Deeper native iOS and macOS clients sharing the deterministic core; the Build Week deliverables are intentionally lightweight SwiftUI/WebKit companion shells
 - Optional user-selectable educational data sources with explicit provenance and freshness contracts
 - Optional ChatGPT companion through the Apps SDK/MCP model
 
@@ -452,6 +469,7 @@ Vercel gives every commit deployment a unique immutable preview URL, so seeing t
 - `src/server/` — AI boundary, safety, rate limits, quotes, and briefs
 - `tests/` — unit, property, persistence, and API safety tests
 - `scripts/grok/` — fresh, consent-gated xAI media generation and validation pipeline
+- `apple/` — one fresh shared SwiftUI/WebKit companion project with iPhone and Mac targets
 - `docs/` — build journal, project description, demo script, and submission checklist
 
 ## License and attribution

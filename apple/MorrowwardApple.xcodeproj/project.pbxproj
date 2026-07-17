@@ -1,0 +1,844 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		15EB05D220C7FC38C6E34A93 /* MorrowwardBackupBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 237C936EBC35FAE7DDC25236 /* MorrowwardBackupBridge.swift */; };
+		1746088662EB6D565763BF98 /* MorrowwardEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D09D8BD9EF87814BD13C76 /* MorrowwardEnvironment.swift */; };
+		174E8FDD24C809D066BA54CF /* MorrowwardMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DAE102E72FBBE320DE4B211 /* MorrowwardMark.swift */; };
+		2EBEB36E28B1873DC517BE14 /* SystemURLLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE25DCFEAB31A0511C9ABCE /* SystemURLLauncher.swift */; };
+		3503ADDA4BEB5EE761F383FF /* SystemURLLauncher.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE25DCFEAB31A0511C9ABCE /* SystemURLLauncher.swift */; };
+		3C76F889C1045E030244EF93 /* MorrowwardBackupPayloadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2167832534A9A118E58AD93 /* MorrowwardBackupPayloadTests.swift */; };
+		5BBF447026193DDC4446F721 /* MorrowwardNavigationDecider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3AE6DF7CAB83AD09AC391BE /* MorrowwardNavigationDecider.swift */; };
+		5C4E07BD1B55A3B406AB1111 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4593889D0FF8846F56CBE78D /* PrivacyInfo.xcprivacy */; };
+		5F6B626A3C8DC5F362413A26 /* MorrowwardBackupDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 453377315822029FBC6F630E /* MorrowwardBackupDocument.swift */; };
+		6479EAC03AE1F2B310ECD384 /* MorrowwardMark.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DAE102E72FBBE320DE4B211 /* MorrowwardMark.swift */; };
+		67EBA9D7012258F3A2BAF1FC /* MorrowwardBrowserModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F648929459D891287AF50B72 /* MorrowwardBrowserModel.swift */; };
+		7303B51D3652E577C7ADAAFB /* MorrowwardCompanionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9468DF3A6ABD5DE89E2D6DFD /* MorrowwardCompanionView.swift */; };
+		74E468CF340F048019D88E65 /* MorrowwardNavigationDecider.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3AE6DF7CAB83AD09AC391BE /* MorrowwardNavigationDecider.swift */; };
+		7FE1F270C0DAC5EC705C80D3 /* MorrowwardBrowserModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F648929459D891287AF50B72 /* MorrowwardBrowserModel.swift */; };
+		84C011C98F9FEFFCBF07F35B /* MorrowwardIOSUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B0DC7C5C51BD3502DB839EE /* MorrowwardIOSUITests.swift */; };
+		8FCBF4F5B86184EC71F4B870 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 4593889D0FF8846F56CBE78D /* PrivacyInfo.xcprivacy */; };
+		94E9FD31B1588FC2FC4E0D1B /* MorrowwardBackupBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 237C936EBC35FAE7DDC25236 /* MorrowwardBackupBridge.swift */; };
+		AA4AD995C08E85CC510F6D2C /* MorrowwardBackupDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 453377315822029FBC6F630E /* MorrowwardBackupDocument.swift */; };
+		B5CC40E8D05ADF49BA3101B8 /* MorrowwardIOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = E40A996CFD55535FFB1D9D4C /* MorrowwardIOSApp.swift */; };
+		BDFF1AC7CFD44E0369B1F3A6 /* MorrowwardEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2D09D8BD9EF87814BD13C76 /* MorrowwardEnvironment.swift */; };
+		BE4A70A49EE034570A31CEC1 /* MorrowwardMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E32F8B16B6C1AF2380EF249 /* MorrowwardMacApp.swift */; };
+		C16B75FBC3573B099F410FE0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 720854FF357E3BB45AD41FF9 /* Assets.xcassets */; };
+		C8657FEF53D592BF7EF84946 /* MorrowwardOriginPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BCC9F614C7AF2DC4931C8E0 /* MorrowwardOriginPolicy.swift */; };
+		CAD9A7C82B90783D0C37FD4C /* MorrowwardOriginPolicyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 805A4DC02A3C3CC9DB375769 /* MorrowwardOriginPolicyTests.swift */; };
+		CF8B109E5F7825F31BB7D6F5 /* MorrowwardOriginPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BCC9F614C7AF2DC4931C8E0 /* MorrowwardOriginPolicy.swift */; };
+		EB050789C1C59CDCA72004B7 /* MorrowwardMacUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F9462FF9A071B915ADA378C /* MorrowwardMacUITests.swift */; };
+		EC5C16BF4BF2A1C05A413375 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 44956144D83DE61635F0AA35 /* Assets.xcassets */; };
+		FEA2C0A66105DB79CEF1C746 /* MorrowwardCompanionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9468DF3A6ABD5DE89E2D6DFD /* MorrowwardCompanionView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		128510F2EA46C3BF89D894A5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3F739F1690A1E1A296823C1E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 13F715AD76436D6086F0581A;
+			remoteInfo = "Morrowward-macOS";
+		};
+		8B9F09723D24E79473947B34 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3F739F1690A1E1A296823C1E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7EBC8D2E6054729E56253252;
+			remoteInfo = "Morrowward-iOS";
+		};
+		E01E41684FAF4AEA9C50D021 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3F739F1690A1E1A296823C1E /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 13F715AD76436D6086F0581A;
+			remoteInfo = "Morrowward-macOS";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		237C936EBC35FAE7DDC25236 /* MorrowwardBackupBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorrowwardBackupBridge.swift; sourceTree = "<group>"; };
+		2F9462FF9A071B915ADA378C /* MorrowwardMacUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorrowwardMacUITests.swift; sourceTree = "<group>"; };
+		3B0DC7C5C51BD3502DB839EE /* MorrowwardIOSUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorrowwardIOSUITests.swift; sourceTree = "<group>"; };
+		3BCC9F614C7AF2DC4931C8E0 /* MorrowwardOriginPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorrowwardOriginPolicy.swift; sourceTree = "<group>"; };
+		44956144D83DE61635F0AA35 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		453377315822029FBC6F630E /* MorrowwardBackupDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorrowwardBackupDocument.swift; sourceTree = "<group>"; };
+		4593889D0FF8846F56CBE78D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		5198309264FEABFFFE98618A /* Morrowward-macOS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Morrowward-macOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		58F7B955D061BBBC042E6DD2 /* MorrowwardTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MorrowwardTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		720854FF357E3BB45AD41FF9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		7D06789A52793ADB9BB4EAEE /* Morrowward-iOS.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "Morrowward-iOS.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		7E532401453B42D63E99C123 /* MorrowwardMacUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MorrowwardMacUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		805A4DC02A3C3CC9DB375769 /* MorrowwardOriginPolicyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorrowwardOriginPolicyTests.swift; sourceTree = "<group>"; };
+		83FCCDF868D684C39110E27E /* MorrowwardIOSUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = MorrowwardIOSUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8DAE102E72FBBE320DE4B211 /* MorrowwardMark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorrowwardMark.swift; sourceTree = "<group>"; };
+		8E32F8B16B6C1AF2380EF249 /* MorrowwardMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorrowwardMacApp.swift; sourceTree = "<group>"; };
+		9468DF3A6ABD5DE89E2D6DFD /* MorrowwardCompanionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorrowwardCompanionView.swift; sourceTree = "<group>"; };
+		A2167832534A9A118E58AD93 /* MorrowwardBackupPayloadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorrowwardBackupPayloadTests.swift; sourceTree = "<group>"; };
+		B2D09D8BD9EF87814BD13C76 /* MorrowwardEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorrowwardEnvironment.swift; sourceTree = "<group>"; };
+		E3AE6DF7CAB83AD09AC391BE /* MorrowwardNavigationDecider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorrowwardNavigationDecider.swift; sourceTree = "<group>"; };
+		E40A996CFD55535FFB1D9D4C /* MorrowwardIOSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorrowwardIOSApp.swift; sourceTree = "<group>"; };
+		F648929459D891287AF50B72 /* MorrowwardBrowserModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MorrowwardBrowserModel.swift; sourceTree = "<group>"; };
+		FBE25DCFEAB31A0511C9ABCE /* SystemURLLauncher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemURLLauncher.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		0A71C06D1AD191CCD8447C1D /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7D06789A52793ADB9BB4EAEE /* Morrowward-iOS.app */,
+				5198309264FEABFFFE98618A /* Morrowward-macOS.app */,
+				83FCCDF868D684C39110E27E /* MorrowwardIOSUITests.xctest */,
+				7E532401453B42D63E99C123 /* MorrowwardMacUITests.xctest */,
+				58F7B955D061BBBC042E6DD2 /* MorrowwardTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		0BE5006614AFA4995E0645DA /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				3B0DC7C5C51BD3502DB839EE /* MorrowwardIOSUITests.swift */,
+			);
+			path = iOS;
+			sourceTree = "<group>";
+		};
+		25202E5F4F960D735B3341D4 /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				0BE5006614AFA4995E0645DA /* iOS */,
+				9905B11E50B36E1CB968776A /* Mac */,
+			);
+			path = UITests;
+			sourceTree = "<group>";
+		};
+		3A7E9EA149A8493337146FBF /* macOS */ = {
+			isa = PBXGroup;
+			children = (
+				44956144D83DE61635F0AA35 /* Assets.xcassets */,
+			);
+			path = macOS;
+			sourceTree = "<group>";
+		};
+		3DFD4D1F2ABA0EE40F052615 /* Mac */ = {
+			isa = PBXGroup;
+			children = (
+				8E32F8B16B6C1AF2380EF249 /* MorrowwardMacApp.swift */,
+			);
+			path = Mac;
+			sourceTree = "<group>";
+		};
+		3E0B7BCE3F3E27DFA24AA6CA /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				720854FF357E3BB45AD41FF9 /* Assets.xcassets */,
+			);
+			path = iOS;
+			sourceTree = "<group>";
+		};
+		43E956AE42F52D71F7C3096C = {
+			isa = PBXGroup;
+			children = (
+				550C07B8E865F0385112822F /* Apps */,
+				ADD636CFE2AFF0A00FDE65F9 /* Resources */,
+				D25011A7BB7A1665A02AA094 /* Sources */,
+				EAA6AD6965D41140C09E3C91 /* Tests */,
+				25202E5F4F960D735B3341D4 /* UITests */,
+				0A71C06D1AD191CCD8447C1D /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		550C07B8E865F0385112822F /* Apps */ = {
+			isa = PBXGroup;
+			children = (
+				7B4A484844737627916765A5 /* iPhone */,
+				3DFD4D1F2ABA0EE40F052615 /* Mac */,
+			);
+			path = Apps;
+			sourceTree = "<group>";
+		};
+		7B4A484844737627916765A5 /* iPhone */ = {
+			isa = PBXGroup;
+			children = (
+				E40A996CFD55535FFB1D9D4C /* MorrowwardIOSApp.swift */,
+			);
+			path = iPhone;
+			sourceTree = "<group>";
+		};
+		9905B11E50B36E1CB968776A /* Mac */ = {
+			isa = PBXGroup;
+			children = (
+				2F9462FF9A071B915ADA378C /* MorrowwardMacUITests.swift */,
+			);
+			path = Mac;
+			sourceTree = "<group>";
+		};
+		ADD636CFE2AFF0A00FDE65F9 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				4593889D0FF8846F56CBE78D /* PrivacyInfo.xcprivacy */,
+				3E0B7BCE3F3E27DFA24AA6CA /* iOS */,
+				3A7E9EA149A8493337146FBF /* macOS */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		AFCED88C4925E3B5A1C1CC1D /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				237C936EBC35FAE7DDC25236 /* MorrowwardBackupBridge.swift */,
+				453377315822029FBC6F630E /* MorrowwardBackupDocument.swift */,
+				F648929459D891287AF50B72 /* MorrowwardBrowserModel.swift */,
+				9468DF3A6ABD5DE89E2D6DFD /* MorrowwardCompanionView.swift */,
+				B2D09D8BD9EF87814BD13C76 /* MorrowwardEnvironment.swift */,
+				8DAE102E72FBBE320DE4B211 /* MorrowwardMark.swift */,
+				E3AE6DF7CAB83AD09AC391BE /* MorrowwardNavigationDecider.swift */,
+				3BCC9F614C7AF2DC4931C8E0 /* MorrowwardOriginPolicy.swift */,
+				FBE25DCFEAB31A0511C9ABCE /* SystemURLLauncher.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		D25011A7BB7A1665A02AA094 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				AFCED88C4925E3B5A1C1CC1D /* Shared */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		EAA6AD6965D41140C09E3C91 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				A2167832534A9A118E58AD93 /* MorrowwardBackupPayloadTests.swift */,
+				805A4DC02A3C3CC9DB375769 /* MorrowwardOriginPolicyTests.swift */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		13F715AD76436D6086F0581A /* Morrowward-macOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CCA08D3CD319A71FF5119819 /* Build configuration list for PBXNativeTarget "Morrowward-macOS" */;
+			buildPhases = (
+				BF3BAF20EF73B2AC09B894FD /* Sources */,
+				BB7E8FC8EBF8CAAAD7B53FB3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Morrowward-macOS";
+			packageProductDependencies = (
+			);
+			productName = "Morrowward-macOS";
+			productReference = 5198309264FEABFFFE98618A /* Morrowward-macOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+		1EAF9AEFFCFA39D34F47F07D /* MorrowwardTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D51B999DE8D15D91CBE65211 /* Build configuration list for PBXNativeTarget "MorrowwardTests" */;
+			buildPhases = (
+				13505DF2790EF063CF6E5228 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F8FAF83F969E9849A3600216 /* PBXTargetDependency */,
+			);
+			name = MorrowwardTests;
+			packageProductDependencies = (
+			);
+			productName = MorrowwardTests;
+			productReference = 58F7B955D061BBBC042E6DD2 /* MorrowwardTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		4D7DD433474B10184BCFCD76 /* MorrowwardIOSUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 50A61BDE8936D829F246CB49 /* Build configuration list for PBXNativeTarget "MorrowwardIOSUITests" */;
+			buildPhases = (
+				77FD2D6F34AF4C422A28383F /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				6F0EFF86025CD6490D5C894D /* PBXTargetDependency */,
+			);
+			name = MorrowwardIOSUITests;
+			packageProductDependencies = (
+			);
+			productName = MorrowwardIOSUITests;
+			productReference = 83FCCDF868D684C39110E27E /* MorrowwardIOSUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		7EBC8D2E6054729E56253252 /* Morrowward-iOS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6B1C4D93399C2D5FF8619547 /* Build configuration list for PBXNativeTarget "Morrowward-iOS" */;
+			buildPhases = (
+				988323169DAEE204B7EEA950 /* Sources */,
+				762DCB74113797FB1E32D74D /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "Morrowward-iOS";
+			packageProductDependencies = (
+			);
+			productName = "Morrowward-iOS";
+			productReference = 7D06789A52793ADB9BB4EAEE /* Morrowward-iOS.app */;
+			productType = "com.apple.product-type.application";
+		};
+		8DE4F41D27B5580FA97D8687 /* MorrowwardMacUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AEEE4179EED70A55989E5ECB /* Build configuration list for PBXNativeTarget "MorrowwardMacUITests" */;
+			buildPhases = (
+				6168984B6A87644F0DA40F26 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				424D1BE402A9733263FBE2D8 /* PBXTargetDependency */,
+			);
+			name = MorrowwardMacUITests;
+			packageProductDependencies = (
+			);
+			productName = MorrowwardMacUITests;
+			productReference = 7E532401453B42D63E99C123 /* MorrowwardMacUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		3F739F1690A1E1A296823C1E /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					4D7DD433474B10184BCFCD76 = {
+						TestTargetID = 7EBC8D2E6054729E56253252;
+					};
+					8DE4F41D27B5580FA97D8687 = {
+						TestTargetID = 13F715AD76436D6086F0581A;
+					};
+				};
+			};
+			buildConfigurationList = D0236F007BF5ED52AD887F0C /* Build configuration list for PBXProject "MorrowwardApple" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 43E956AE42F52D71F7C3096C;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 0A71C06D1AD191CCD8447C1D /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7EBC8D2E6054729E56253252 /* Morrowward-iOS */,
+				13F715AD76436D6086F0581A /* Morrowward-macOS */,
+				4D7DD433474B10184BCFCD76 /* MorrowwardIOSUITests */,
+				8DE4F41D27B5580FA97D8687 /* MorrowwardMacUITests */,
+				1EAF9AEFFCFA39D34F47F07D /* MorrowwardTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		762DCB74113797FB1E32D74D /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C16B75FBC3573B099F410FE0 /* Assets.xcassets in Resources */,
+				5C4E07BD1B55A3B406AB1111 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BB7E8FC8EBF8CAAAD7B53FB3 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EC5C16BF4BF2A1C05A413375 /* Assets.xcassets in Resources */,
+				8FCBF4F5B86184EC71F4B870 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		13505DF2790EF063CF6E5228 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3C76F889C1045E030244EF93 /* MorrowwardBackupPayloadTests.swift in Sources */,
+				CAD9A7C82B90783D0C37FD4C /* MorrowwardOriginPolicyTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		6168984B6A87644F0DA40F26 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EB050789C1C59CDCA72004B7 /* MorrowwardMacUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		77FD2D6F34AF4C422A28383F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				84C011C98F9FEFFCBF07F35B /* MorrowwardIOSUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		988323169DAEE204B7EEA950 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				94E9FD31B1588FC2FC4E0D1B /* MorrowwardBackupBridge.swift in Sources */,
+				AA4AD995C08E85CC510F6D2C /* MorrowwardBackupDocument.swift in Sources */,
+				67EBA9D7012258F3A2BAF1FC /* MorrowwardBrowserModel.swift in Sources */,
+				FEA2C0A66105DB79CEF1C746 /* MorrowwardCompanionView.swift in Sources */,
+				BDFF1AC7CFD44E0369B1F3A6 /* MorrowwardEnvironment.swift in Sources */,
+				B5CC40E8D05ADF49BA3101B8 /* MorrowwardIOSApp.swift in Sources */,
+				174E8FDD24C809D066BA54CF /* MorrowwardMark.swift in Sources */,
+				74E468CF340F048019D88E65 /* MorrowwardNavigationDecider.swift in Sources */,
+				C8657FEF53D592BF7EF84946 /* MorrowwardOriginPolicy.swift in Sources */,
+				2EBEB36E28B1873DC517BE14 /* SystemURLLauncher.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		BF3BAF20EF73B2AC09B894FD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				15EB05D220C7FC38C6E34A93 /* MorrowwardBackupBridge.swift in Sources */,
+				5F6B626A3C8DC5F362413A26 /* MorrowwardBackupDocument.swift in Sources */,
+				7FE1F270C0DAC5EC705C80D3 /* MorrowwardBrowserModel.swift in Sources */,
+				7303B51D3652E577C7ADAAFB /* MorrowwardCompanionView.swift in Sources */,
+				1746088662EB6D565763BF98 /* MorrowwardEnvironment.swift in Sources */,
+				BE4A70A49EE034570A31CEC1 /* MorrowwardMacApp.swift in Sources */,
+				6479EAC03AE1F2B310ECD384 /* MorrowwardMark.swift in Sources */,
+				5BBF447026193DDC4446F721 /* MorrowwardNavigationDecider.swift in Sources */,
+				CF8B109E5F7825F31BB7D6F5 /* MorrowwardOriginPolicy.swift in Sources */,
+				3503ADDA4BEB5EE761F383FF /* SystemURLLauncher.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		424D1BE402A9733263FBE2D8 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 13F715AD76436D6086F0581A /* Morrowward-macOS */;
+			targetProxy = E01E41684FAF4AEA9C50D021 /* PBXContainerItemProxy */;
+		};
+		6F0EFF86025CD6490D5C894D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7EBC8D2E6054729E56253252 /* Morrowward-iOS */;
+			targetProxy = 8B9F09723D24E79473947B34 /* PBXContainerItemProxy */;
+		};
+		F8FAF83F969E9849A3600216 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 13F715AD76436D6086F0581A /* Morrowward-macOS */;
+			targetProxy = 128510F2EA46C3BF89D894A5 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0C8477F07D1B432054104BF9 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.thedavedev.morrowward.tests;
+				PRODUCT_MODULE_NAME = MorrowwardTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Morrowward.app/Contents/MacOS/Morrowward";
+			};
+			name = Debug;
+		};
+		1E369CA406055BEA69BBF987 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0.0;
+				MORROWWARD_RELEASE_ORIGIN = "https://morrowward.vercel.app";
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		44CC16F63F1B70043A3E8F27 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Configuration/iOS-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.thedavedev.morrowward.ios;
+				PRODUCT_MODULE_NAME = MorrowwardIOS;
+				PRODUCT_NAME = Morrowward;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		533F21C1FA81226557CAD84F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.thedavedev.morrowward.ios-uitests";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Morrowward-iOS";
+			};
+			name = Debug;
+		};
+		6C0D738B1E2396E6C62E6006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.thedavedev.morrowward.macos-uitests";
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = "Morrowward-macOS";
+			};
+			name = Release;
+		};
+		6CCB5ABD43CA992AD0BAAFBB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0.0;
+				MORROWWARD_RELEASE_ORIGIN = "https://morrowward.vercel.app";
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		7BAE00F607BBE2789698D66A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "com.thedavedev.morrowward.ios-uitests";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = "Morrowward-iOS";
+			};
+			name = Release;
+		};
+		B3C56C88F75E90E6248651E7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.thedavedev.morrowward.tests;
+				PRODUCT_MODULE_NAME = MorrowwardTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Morrowward.app/Contents/MacOS/Morrowward";
+			};
+			name = Release;
+		};
+		B6AE4C0BF3CA4321B8DA17C4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Configuration/macOS.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Configuration/macOS-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.thedavedev.morrowward.macos;
+				PRODUCT_MODULE_NAME = MorrowwardMac;
+				PRODUCT_NAME = Morrowward;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		CA0766B8C1FF723031B6797E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.thedavedev.morrowward.macos-uitests";
+				SDKROOT = macosx;
+				TEST_TARGET_NAME = "Morrowward-macOS";
+			};
+			name = Debug;
+		};
+		CD7D9AD853782FE1C1D27580 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Configuration/macOS.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Configuration/macOS-Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.thedavedev.morrowward.macos;
+				PRODUCT_MODULE_NAME = MorrowwardMac;
+				PRODUCT_NAME = Morrowward;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		DA3B70624C04E57CA22C63BA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Configuration/iOS-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.thedavedev.morrowward.ios;
+				PRODUCT_MODULE_NAME = MorrowwardIOS;
+				PRODUCT_NAME = Morrowward;
+				SDKROOT = iphoneos;
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		50A61BDE8936D829F246CB49 /* Build configuration list for PBXNativeTarget "MorrowwardIOSUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				533F21C1FA81226557CAD84F /* Debug */,
+				7BAE00F607BBE2789698D66A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		6B1C4D93399C2D5FF8619547 /* Build configuration list for PBXNativeTarget "Morrowward-iOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DA3B70624C04E57CA22C63BA /* Debug */,
+				44CC16F63F1B70043A3E8F27 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AEEE4179EED70A55989E5ECB /* Build configuration list for PBXNativeTarget "MorrowwardMacUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CA0766B8C1FF723031B6797E /* Debug */,
+				6C0D738B1E2396E6C62E6006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CCA08D3CD319A71FF5119819 /* Build configuration list for PBXNativeTarget "Morrowward-macOS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B6AE4C0BF3CA4321B8DA17C4 /* Debug */,
+				CD7D9AD853782FE1C1D27580 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D0236F007BF5ED52AD887F0C /* Build configuration list for PBXProject "MorrowwardApple" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6CCB5ABD43CA992AD0BAAFBB /* Debug */,
+				1E369CA406055BEA69BBF987 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		D51B999DE8D15D91CBE65211 /* Build configuration list for PBXNativeTarget "MorrowwardTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0C8477F07D1B432054104BF9 /* Debug */,
+				B3C56C88F75E90E6248651E7 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 3F739F1690A1E1A296823C1E /* Project object */;
+}

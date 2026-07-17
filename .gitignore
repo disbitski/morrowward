@@ -53,3 +53,11 @@ next-env.d.ts
 /downloads/
 /playwright-report/
 /test-results/
+
+# Apple local build and user state
+/apple/DerivedData*/
+/apple/build/
+/apple/*.xcworkspace/xcuserdata/
+/apple/*.xcodeproj/xcuserdata/
+/apple/*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcuserstate

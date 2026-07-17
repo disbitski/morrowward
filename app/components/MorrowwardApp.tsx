@@ -2045,7 +2045,7 @@ function MissionView({
             <span className="section-kicker">Beyond the browser</span>
             <h2 id="companion-title">Take Morrowward with you.</h2>
           </div>
-          <p>iPhone and Mac companion builds are next. Their source links will activate as soon as the local projects are ready; Dave’s work is already one click away.</p>
+          <p>Fresh iPhone and Mac companion source shares one SwiftUI/WebKit codebase and the stable Morrowward experience. The companion source links will activate when the complete repository becomes public on July 20; Dave’s site is already one click away.</p>
         </div>
         <ul>
           <li>
@@ -2056,7 +2056,7 @@ function MissionView({
                 <h3>Morrowward for iPhone</h3>
                 <p>A lightweight Apple companion for the same local-first Morrowward experience.</p>
               </div>
-              <span className="roadmap-source-status">Source link coming after the build</span>
+              <span className="roadmap-source-status">Source publishes with the repo on July 20</span>
             </article>
           </li>
           <li>
@@ -2067,7 +2067,7 @@ function MissionView({
                 <h3>Morrowward for Mac</h3>
                 <p>A focused desktop companion backed by the same stable Morrowward web app.</p>
               </div>
-              <span className="roadmap-source-status">Source link coming after the build</span>
+              <span className="roadmap-source-status">Source publishes with the repo on July 20</span>
             </article>
           </li>
           <li>
@@ -2122,8 +2122,10 @@ function SettingsView({
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = "morrowward-backup.json";
+    document.body.append(anchor);
     anchor.click();
-    URL.revokeObjectURL(url);
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
     setMessage("Backup exported. Keep it somewhere private.");
   };
 

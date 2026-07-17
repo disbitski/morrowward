@@ -1,0 +1,192 @@
+name: MorrowwardApple
+
+options:
+  bundleIdPrefix: com.thedavedev
+  createIntermediateGroups: true
+  deploymentTarget:
+    iOS: "26.0"
+    macOS: "26.0"
+
+settings:
+  base:
+    CURRENT_PROJECT_VERSION: 1
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    MARKETING_VERSION: 1.0.0
+    MORROWWARD_RELEASE_ORIGIN: https://morrowward.vercel.app
+    SWIFT_APPROACHABLE_CONCURRENCY: YES
+    SWIFT_STRICT_CONCURRENCY: complete
+    SWIFT_VERSION: 6.0
+
+targets:
+  Morrowward-iOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: Sources/Shared
+      - path: Apps/iPhone
+        excludes:
+          - README.md
+      - path: Resources/iOS/Assets.xcassets
+        buildPhase: resources
+      - path: Resources/PrivacyInfo.xcprivacy
+        buildPhase: resources
+    settings:
+      base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Configuration/iOS-Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.thedavedev.morrowward.ios
+        PRODUCT_MODULE_NAME: MorrowwardIOS
+        PRODUCT_NAME: Morrowward
+        SUPPORTS_MACCATALYST: NO
+        TARGETED_DEVICE_FAMILY: "1,2"
+    info:
+      path: Configuration/iOS-Info.plist
+      properties:
+        CFBundleDisplayName: Morrowward
+        CFBundleName: Morrowward
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.finance
+        LSRequiresIPhoneOS: true
+        MorrowwardReleaseOrigin: $(MORROWWARD_RELEASE_ORIGIN)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        WKAppBoundDomains:
+          - morrowward.vercel.app
+          - localhost
+          - 127.0.0.1
+
+  Morrowward-macOS:
+    type: application
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: Sources/Shared
+      - path: Apps/Mac
+        excludes:
+          - README.md
+      - path: Resources/macOS/Assets.xcassets
+        buildPhase: resources
+      - path: Resources/PrivacyInfo.xcprivacy
+        buildPhase: resources
+    settings:
+      base:
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_ENTITLEMENTS: Configuration/macOS.entitlements
+        ENABLE_HARDENED_RUNTIME: YES
+        GENERATE_INFOPLIST_FILE: NO
+        INFOPLIST_FILE: Configuration/macOS-Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: com.thedavedev.morrowward.macos
+        PRODUCT_MODULE_NAME: MorrowwardMac
+        PRODUCT_NAME: Morrowward
+    info:
+      path: Configuration/macOS-Info.plist
+      properties:
+        CFBundleDisplayName: Morrowward
+        CFBundleName: Morrowward
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        LSApplicationCategoryType: public.app-category.finance
+        LSMinimumSystemVersion: $(MACOSX_DEPLOYMENT_TARGET)
+        MorrowwardReleaseOrigin: $(MORROWWARD_RELEASE_ORIGIN)
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSHighResolutionCapable: true
+        NSSupportsAutomaticGraphicsSwitching: true
+        WKAppBoundDomains:
+          - morrowward.vercel.app
+          - localhost
+          - 127.0.0.1
+    entitlements:
+      path: Configuration/macOS.entitlements
+      properties:
+        com.apple.security.app-sandbox: true
+        com.apple.security.files.user-selected.read-write: true
+        com.apple.security.network.client: true
+
+  MorrowwardTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: Tests
+    dependencies:
+      - target: Morrowward-macOS
+    settings:
+      base:
+        BUNDLE_LOADER: $(TEST_HOST)
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.thedavedev.morrowward.tests
+        PRODUCT_MODULE_NAME: MorrowwardTests
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Morrowward.app/Contents/MacOS/Morrowward
+
+  MorrowwardIOSUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: UITests/iOS
+    dependencies:
+      - target: Morrowward-iOS
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.thedavedev.morrowward.ios-uitests
+        TEST_TARGET_NAME: Morrowward-iOS
+
+  MorrowwardMacUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: UITests/Mac
+    dependencies:
+      - target: Morrowward-macOS
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.thedavedev.morrowward.macos-uitests
+        TEST_TARGET_NAME: Morrowward-macOS
+
+schemes:
+  Morrowward-iOS:
+    build:
+      targets:
+        Morrowward-iOS: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - MorrowwardIOSUITests
+    archive:
+      config: Release
+
+  Morrowward-macOS:
+    build:
+      targets:
+        Morrowward-macOS: all
+        MorrowwardTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - MorrowwardTests
+        - MorrowwardMacUITests
+    archive:
+      config: Release

@@ -342,13 +342,36 @@ That makes the journal part of the hackathon deliverable in its own right. It do
 
 ## July 17 — Shared iOS and macOS companion shells
 
-- Create the fresh `apple/` project and shared SwiftUI/WebKit source.
-- Build the Morrowward icon and restrained native launch/navigation/error states.
-- The About page now uses a three-card companion panel: **Morrowward for iPhone**, **Morrowward for Mac**, and **Follow Dave online**. The iPhone and Mac source cards are intentionally informational and non-interactive until their exact local source folders exist; turn them into links only after the corresponding public GitHub folder URLs have been verified. **Follow Dave online** is active now and links to `https://thedavedev.com`.
-- Keep internal Morrowward navigation in the shell and open educational external links in the system browser.
-- Verify clean iPhone 17 Pro simulator and unsigned macOS builds.
-- Exercise onboarding, Practice, Market Journey, Education, themes, local persistence, export/import/reset, media playback, and network failure.
-- Add Apple setup, XcodeGen, local-server, signing, and architecture documentation.
+### Production signoff moved the product from features to portability
+
+Dave opened the stable Production site on Friday morning and confirmed that the scheduled briefing had published the source-backed three-section edition at 8:40 AM EDT. That hands-on check closed the remaining web feature loop: the deterministic product, educator, quotes, daily briefing, fallbacks, responsive interface, and four themes were now feature-complete. The day's job was no longer to invent another web feature. It was to demonstrate how Codex could carry that finished experience into Apple's tooling without destabilizing the product judges would actually use.
+
+The human–agent boundary was deliberate. Dave set the reason for adding the Apple apps: show portability and Codex capability, not manufacture two rushed native rewrites. Codex audited the installed Xcode/Swift/XcodeGen toolchain, checked current Apple SwiftUI/WebKit and design guidance, separated native-shell responsibilities from web-product responsibilities, and used bounded implementation work for the shared architecture and icon system. Dave's product discernment constrained the technical delegation: one proven backend, one source of financial truth, two honest companion entry points.
+
+### One fresh project, two small entry points, one product
+
+Fresh source now lives under [`apple/`](../apple/), with `project.yml` as the XcodeGen source of truth and an included generated Xcode project for judges who simply want to open it. [`Apps/iPhone`](../apple/Apps/iPhone/) and [`Apps/Mac`](../apple/Apps/Mac/) contain only their platform entry points; launch, loading, error/retry, navigation, privacy, and brand behavior live in one shared SwiftUI/WebKit source tree.
+
+The architecture keeps the boundary inspectable:
+
+- Release is pinned to the stable `https://morrowward.vercel.app` origin; Debug can opt into only Production, `localhost`, or `127.0.0.1` for local testing.
+- Apple's iOS/macOS 26 `WebPage` and SwiftUI `WebView` host the same complete product in a persistent default WebKit store, preserving local IndexedDB data across launches without inventing a second persistence model.
+- Exact-origin Morrowward navigation stays in the shell. User-activated external HTTP(S) education links are handed to the system browser; lookalike origins, insecure downgrades, redirects, and unknown schemes are rejected.
+- Device-sensor permission requests are denied. When signed, the Mac target uses App Sandbox with network-client access plus user-selected read/write access for explicit backup export and import. A privacy manifest describes the native boundary, and no API key belongs in either app.
+- Standard SwiftUI navigation and controls receive the platform's current visual treatment. Morrowward's content layer is not covered in decorative glass or redesigned merely to look native.
+- A fresh code-generated Morrowward icon carries the orange rising-horizon mark across both asset catalogs without copying earlier project code or claiming App Store distribution.
+
+The root README now makes the companion source prominent, and the dedicated [Apple README](../apple/README.md) documents architecture, XcodeGen regeneration, Release and Debug origins, Simulator use, unsigned Mac builds, security, local persistence, and optional physical-device signing. The About panel also tells the current truth: the source exists, but its iPhone and Mac cards stay non-interactive until the complete repository becomes public and the final GitHub folder URLs resolve on July 20. No placeholder URL or App Store badge is used.
+
+### Runtime proof, not a pair of mockups
+
+Codex then exercised both entry points against the stable Production site. The iOS Release target compiled and launched in an iPhone 17 Pro Simulator; its production UI test passed 1/1 after reaching Today, terminating the app, relaunching it, and confirming that the local plan remained while onboarding did not return. The Mac Release compiled and launched with an ad-hoc signature, passed strict signature verification, and exposed the configured App Sandbox, network-client, and user-selected read/write entitlements. Its matching production UI persistence journey also passed 1/1.
+
+The native unit suite passed 7/7 checks across origin and backup boundaries: exact-origin paths were accepted; lookalikes, HTTPS downgrades, wrong ports, deep/user-info origins, and unapproved Debug overrides were rejected; trusted and untrusted blob origins were distinguished; and malformed or oversized backup messages were rejected while valid payloads were decoded and filenames sanitized. The two UI journeys retained real runtime captures at [`morrowward-iphone-companion.png`](screenshots/morrowward-iphone-companion.png) and [`morrowward-mac-companion.png`](screenshots/morrowward-mac-companion.png), so the README can show the actual companion windows rather than a design mockup.
+
+The portability milestone also reran the complete web gate: 264/264 unit tests, lint, TypeScript, and the production build passed, followed by 12/12 Playwright journeys across desktop Chrome and a Pixel 7 viewport. A final Apple-source and built-binary scan found no OpenAI key, Vercel token, cron or bypass credential, protected-preview origin, or other embedded secret. Both Release products resolved only the stable Production origin, contained the privacy manifest, and the generated Xcode project reproduced byte-for-byte from `project.yml`.
+
+That evidence closes build, launch, and local-persistence acceptance. It does not silently convert source presence into complete integration acceptance: export and import panels, external-link handoff, historical video playback, warmed offline behavior, keyboard use, Reduce Motion, and VoiceOver remain granular hands-on checks for July 18. Error/retry states and the native backup bridge exist in source, but those failure paths still need runtime exercise before they are marked complete.
 
 ## July 18 — Submission package and recording
 
