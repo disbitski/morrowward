@@ -95,11 +95,7 @@ async function setDesktopTheme(page, theme) {
 }
 
 async function setMobileTheme(page, theme) {
-  await page.getByRole("button", { name: "Open menu" }).click();
-  await page
-    .getByRole("navigation", { name: "Mobile menu" })
-    .getByRole("button", { name: /Settings/i })
-    .click();
+  await page.getByTestId("mobile-nav-settings").click();
   await page.getByRole("heading", { name: /Your plan belongs to you/i }).waitFor();
   const appearance = page.locator(".setting-card").filter({ hasText: "Choose a theme" });
   await appearance.getByTestId(`theme-${theme}`).click();

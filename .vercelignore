@@ -1,0 +1,27 @@
+# Local dependencies and build products
+node_modules/
+.next/
+.vinext/
+dist/
+.wrangler/
+.vercel/
+test-results/
+playwright-report/
+coverage/
+.DS_Store
+.env*
+
+# Private/local creative review material
+.media-review/
+
+# Native companion source and local Xcode products are distributed through GitHub,
+# not bundled into the Vercel web deployment.
+apple/
+
+# Repository-only material
+.git/
+docs/
+tests/
+scripts/
+README.md
+NOTICE.md

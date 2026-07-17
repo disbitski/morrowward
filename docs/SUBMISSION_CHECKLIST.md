@@ -10,6 +10,8 @@
 - [ ] `disbitski/morrowward` is public with its full history and MIT license.
 - [x] Commit `74f77ad` passes a clean-clone `npm install`, 122 tests, lint, Grok dry run, vinext production build, and Vercel/Next production build using the README workflow.
 - [x] No credentials, personal portfolio data, or private reference folders appear in Git history.
+- [x] Final July 17 privacy gate covers the current tree, every local and remote Git ref, ignored local files, built Apple products, tracked-media metadata, representative video frames, and the public client bundle. It found no credential, private key, personal contact detail, machine-local path, signing team/profile, or private deployment identifier.
+- [ ] Confirm whether the small, partially obscured background people in Dave's intentionally published age-ten photograph should remain intact or be blurred/cropped before the repository becomes public.
 - [x] Demo seed state works without network access or live market conditions.
 - [x] API-offline and quote-offline fallbacks are verified.
 - [x] Daily GPT-5.6 quote batching, required web search, strict per-asset source/schema/time rejection, eleven-asset allowlist, durable snapshot/lock behavior, self-healing first load, bounded observation-only rechecks, freshness, and synthetic fallback are covered by the July 15 passing local suite.
@@ -27,6 +29,7 @@
 - [x] About page uses the polished three-card companion layout for **Morrowward for iPhone**, **Morrowward for Mac**, and **Follow Dave online**.
 - [x] The iPhone and Mac source cards link to their exact GitHub folders. They resolve now for repository-authorized collaborators and become publicly accessible at the same URLs when the repository is made public on July 20.
 - [x] **Follow Dave online** links to `https://thedavedev.com`.
+- [x] Native Mac **About Morrowward** keeps the standard icon/name/version, adds the concise financial-freedom mission line, and links **Follow Dave online** to `https://thedavedev.com/`.
 - [x] No App Store download badge or availability claim is used for companion builds distributed as source.
 - [x] Fresh `apple/` project contains shared SwiftUI/WebKit code plus separate iPhone and Mac entry points.
 - [x] Fresh generated app-icon assets, a reproducible icon generator, and branded loading/error/retry states exist in source.
@@ -42,6 +45,7 @@
 - [x] **Hackathon companion acceptance signed off July 17.** Dave accepted the finished end-user experience after using Production; Release build/launch, exact-origin policy, native unit coverage, and local-persistence journeys provide the intended lightweight-companion proof.
 - **N/A — explicitly waived as additional hackathon gates, not represented as tested:** forced native offline/retry recovery; native export and import panels; external-link handoff; historical video playback; warmed offline reload; and keyboard, Reduce Motion, and VoiceOver smoke checks. These remain worthwhile post-hackathon validation for any distributed release, but they are not blockers for the honest source-distributed SwiftUI/WebKit companion scope Dave accepted.
 - [x] Same-day demo setup complete: the verified iPhone Release build is installed and running in the booted iPhone 17 Pro Simulator; the verified ad-hoc signed Mac build is installed at `~/Applications/Morrowward.app` and running for Dave's hands-on use and recording.
+- [x] Post-signoff iPhone navigation fix is live: the fixed mobile footer exposes an always-visible Settings destination, the focused mobile golden path reaches Settings and changes theme through it, and the reopened Simulator visibly shows all six footer destinations.
 - [x] Root and Apple READMEs document the shared architecture, XcodeGen, local-server testing, Release origin, Simulator, unsigned and ad-hoc signed Mac verification, and optional physical-device signing.
 
 Earlier protected preview verified July 14: `https://morrowward-qui11xo7k-thedavedev.vercel.app`. Anonymous requests redirect to Vercel Authentication. Its health route reports GPT-5.6 configured, and its deployed GPT-5.6 educator response was verified. The July 15 market-milestone preview is recorded below. The stable production alias moved to public-but-unannounced integration testing on July 16; protected previews remain private.

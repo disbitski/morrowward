@@ -2211,7 +2211,8 @@ function AppFooter({ onNavigate }: { onNavigate: (view: View) => void }) {
 function MobileNav({ active, onNavigate }: { active: View; onNavigate: (view: View) => void }) {
   return (
     <nav className="bottom-nav" aria-label="Mobile primary navigation">
-      {NAV_ITEMS.map((item) => { const Icon = item.icon; return <button data-testid={`mobile-nav-${item.id}`} key={item.id} type="button" className={active === item.id ? "active" : ""} onClick={() => onNavigate(item.id)} aria-current={active === item.id ? "page" : undefined}><Icon size={19} aria-hidden="true" /><span>{item.label}</span></button>; })}
+      {NAV_ITEMS.map((item) => { const Icon = item.icon; const label = item.id === "plan" ? "Horizon" : item.label; return <button data-testid={`mobile-nav-${item.id}`} key={item.id} type="button" className={active === item.id ? "active" : ""} onClick={() => onNavigate(item.id)} aria-current={active === item.id ? "page" : undefined}><Icon size={19} aria-hidden="true" /><span>{label}</span></button>; })}
+      <button data-testid="mobile-nav-settings" type="button" className={active === "settings" ? "active" : ""} onClick={() => onNavigate("settings")} aria-current={active === "settings" ? "page" : undefined}><Settings size={19} aria-hidden="true" /><span>Settings</span></button>
     </nav>
   );
 }

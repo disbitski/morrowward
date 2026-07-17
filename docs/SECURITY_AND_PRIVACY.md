@@ -43,6 +43,14 @@ Morrowward is an educational simulator. Its safest path is also its default path
 - The full development tree reports 12 transitive advisories (1 low, 4 moderate, 6 high, and 1 critical) in build/test tooling. npm's complete automatic remediation path requires breaking or out-of-range upgrades, so those upgrades are intentionally deferred to a dedicated post-hackathon dependency pass rather than forced into the release candidate.
 - The project therefore does not claim a vulnerability-free development toolchain; the verified statement is limited to the installed production dependency graph.
 
+## Final artifact audit — July 17, 2026
+
+- Current tracked source, ignored local files, every local/remote Git ref, and all commits reachable from the branch and release tag were scanned for common OpenAI, xAI, GitHub, AWS, JWT, and private-key signatures without printing candidate values. None were found.
+- `.env.example` contains empty or documented placeholder values only. No other `.env`, PEM, provisioning profile, or signing credential is tracked. Apple source and the ad-hoc signed Mac Release contain no development team, provisioning profile, API credential, home-directory path, or temporary-machine path.
+- Git commit metadata uses the intentional GitHub noreply identity `212058+disbitski@users.noreply.github.com`. No home-directory path occurs anywhere in reachable Git history.
+- Tracked screenshots, image metadata, video metadata, captions, publication manifests, and representative frames from both welcome videos contain no personal contact details, browser profiles, notifications, machine-local paths, credentials, or private deployment identifiers. The only open visual decision is whether to retain or obscure two small, partially visible background people in Dave's deliberately published childhood photograph.
+- The public client bundle was checked separately and contains the new mobile Settings control with no scanned credential or machine-path signature. The oversized intermediate Vercel source deployment was replaced by a clean tracked-source package and deleted; the stable alias now points to the 199-file clean deployment.
+
 ## Operational checklist
 
 Before public launch:

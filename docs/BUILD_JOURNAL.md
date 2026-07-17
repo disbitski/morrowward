@@ -381,6 +381,22 @@ The signoff marks **final feature development complete on July 17**. Codex then 
 
 That four-day arc is also the clearest summary of the human–agent loop captured by this journal. Dave supplied the mission, decades of investor lessons, taste, and final discernment; Codex delegated and implemented the architecture, safety boundaries, tests, content pipelines, deployment, and Apple portability; each real-product review became the next concrete refinement. The result is not merely “AI generated an app quickly.” It is inspectable evidence that sustained human judgment and agent execution can move from a deeply personal idea to a finished, accepted product in four days.
 
+### Hands-on companion use found one submission-blocking navigation defect
+
+Dave's first direct iPhone Simulator session found a real container-specific problem after feature-complete signoff: the companion's native navigation chrome could cover the responsive website header, making the hamburger route to Settings impractical. The Mac companion did not share the defect because its top Settings control remained visible.
+
+The fix stayed in the shared product instead of adding iPhone-only financial logic. Morrowward's fixed mobile footer now has a sixth, always-visible **Settings** destination with a gear icon; the adjacent plan label is shortened to **Horizon** at that width so all six destinations remain readable. Desktop navigation and the Mac experience are unchanged. The Playwright Settings helper now exercises the same footer route a mobile user takes, and the focused Pixel 7 golden path passed after switching the theme from the new destination. ESLint and the production web build also remained clean.
+
+Dave's Mac review produced a separate, platform-appropriate polish request rather than another navigation fix. The standard **About Morrowward** panel now keeps the app icon, name, and version while adding the concise mission line **Helping you move toward financial freedom through daily discipline and financial education.** and a clickable **Follow Dave online** link to `https://thedavedev.com/`. The ad-hoc signed universal Release build compiled successfully with Swift 6 strict concurrency.
+
+### Final privacy gate narrowed the deployment package
+
+Before reopening the companions, Dave asked for one final check that the project had not shipped machine-local details or credentials. Codex audited the current tree, ignored local files, every commit reachable from Git, the Apple project, tracked media metadata, the built Mac product, and the public browser bundle without printing suspected secret values.
+
+The review found no OpenAI, xAI, GitHub, AWS, JWT, private-key, or other credential signature; no committed `.env` value; no home-directory or temporary-machine path in Git history; no Apple development team or provisioning profile; and no identifying metadata pattern in the shipped media. Git history contains only Dave's intentional GitHub noreply identity. The intentional public story remains explicit rather than being mistaken for a leak: Dave's name, age-ten photograph, personal mission, public GitHub identity, and `thedavedev.com` link are product content he supplied for publication. A visual pass did flag two small, partially obscured background people in the original childhood photograph; whether to preserve the family photo intact or obscure those incidental figures remains an explicit pre-publication choice rather than an assumed consent decision.
+
+The first CLI publish attempt also exposed a release-process issue: archive mode ignored the intended local upload boundary and sent an oversized private source package containing local build dependencies and artifacts to Vercel's build service. Codex immediately replaced it with a clean 21 MB staging export assembled from tracked source plus the reviewed changes. Vercel received 199 files in a 19.5 MB archive, published deployment `dpl_7mwizQtDbSMibQm5dmTLnoDdyZti` at the unchanged `https://morrowward.vercel.app` alias, and the superseded oversized deployment was deleted. The stable public bundle contains the new mobile Settings control and no scanned secret or machine-path signature; `/api/v1/health` reports the expected configured GPT-5.6, durable quote store, and durable briefing store.
+
 ## July 18 — Submission package and recording
 
 - Finalize the Devpost description, README, screenshots, attribution, and three-minute demo path.

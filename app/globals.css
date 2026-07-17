@@ -1159,7 +1159,7 @@ textarea:focus-visible,
   .privacy-panel ul { grid-column: 2; }
   .app-footer { grid-template-columns: 1fr; padding-bottom: 105px; }
   .app-footer nav { grid-column: auto; }
-  .bottom-nav { position: fixed; z-index: 60; left: 10px; right: 10px; bottom: max(9px, env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(5, 1fr); border: 1px solid var(--line); border-radius: 17px; padding: 5px; background: color-mix(in srgb, var(--surface) 94%, transparent); box-shadow: 0 12px 40px color-mix(in srgb, #000 30%, transparent); backdrop-filter: blur(18px); }
+  .bottom-nav { position: fixed; z-index: 60; left: 10px; right: 10px; bottom: max(9px, env(safe-area-inset-bottom)); display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border: 1px solid var(--line); border-radius: 17px; padding: 5px; background: color-mix(in srgb, var(--surface) 94%, transparent); box-shadow: 0 12px 40px color-mix(in srgb, #000 30%, transparent); backdrop-filter: blur(18px); }
   .bottom-nav button { display: grid; justify-items: center; gap: 3px; border-radius: 11px; padding: 7px 3px; color: var(--faint); font-size: 10px; font-weight: 750; }
   .bottom-nav button.active { background: var(--surface-raised); color: var(--accent); }
 }

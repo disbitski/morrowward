@@ -42,11 +42,7 @@ async function openSettings(page: Page) {
     await desktop.click();
     return;
   }
-  await page.getByRole("button", { name: "Open menu" }).click();
-  await page
-    .getByRole("navigation", { name: "Mobile menu" })
-    .getByRole("button", { name: /Settings/i })
-    .click();
+  await page.getByTestId("mobile-nav-settings").click();
 }
 
 async function onboard(
