@@ -397,18 +397,14 @@ The review found no OpenAI, xAI, GitHub, AWS, JWT, private-key, or other credent
 
 The first CLI publish attempt also exposed a release-process issue: archive mode ignored the intended local upload boundary and sent an oversized private source package containing local build dependencies and artifacts to Vercel's build service. Codex immediately replaced it with a clean 21 MB staging export assembled from tracked source plus the reviewed changes. Vercel received 199 files in a 19.5 MB archive, published deployment `dpl_7mwizQtDbSMibQm5dmTLnoDdyZti` at the unchanged `https://morrowward.vercel.app` alias, and the superseded oversized deployment was deleted. The stable public bundle contains the new mobile Settings control and no scanned secret or machine-path signature; `/api/v1/health` reports the expected configured GPT-5.6, durable quote store, and durable briefing store.
 
-## July 18 — Submission package and recording
+## July 17 — Video complete and submitted to Devpost
 
-- Finalize the Devpost description, README, screenshots, attribution, and three-minute demo path.
-- Record the public demo showing the web app plus the iPhone and macOS companion shells.
-- Keep the product demonstration independent from live market conditions by using repeatable seeded state.
+With the web product and both Apple companion shells working, Dave created the final demonstration video and completed Morrowward's final Devpost submission on July 17. The submission milestone arrived on the same day as feature-complete signoff, preserving the central build narrative: the first repository commit landed on July 14, and the finished project, companion apps, video, and hackathon submission were complete four calendar days later.
 
-## July 19 — Buffer and submission-blocking fixes
+The GitHub repository remains private through the official submission window. Dave added `build-week-event@openai.com` and `testing@devpost.com` as repository collaborators so the OpenAI Build Week and Devpost teams can inspect the full code and commit history before public release if they choose. This preserves judge access without publishing the project early.
 
-Reserved for issues discovered during recording, clean-room setup verification, final security/history review, and submission-blocking fixes only.
+Morrowward is scheduled to become public after the official deadline on **July 21 at 8:00 PM ET**. At that point the same repository URL will expose the complete hackathon history, MIT license, setup instructions, build journal, deterministic verification record, web application source, and iPhone/macOS companion source without rewriting or reconstructing the development timeline.
 
-## July 20 — Publish and submit
+## July 18–21 — Submitted-project buffer
 
-- Make the full repository history public and enable indexing on the already-stable Production deployment.
-- Recheck clean clone, public website, Apple project instructions, YouTube visibility, and every Devpost link.
-- Submit during the evening, preserving the full-day buffer before the July 21, 8:00 PM ET deadline.
+The remaining window is reserved for submission-blocking corrections only. Production stays available at its stable public URL, the submitted video and Devpost page remain the reference artifacts, and the private repository stays accessible to the two official review accounts until the planned post-deadline public release.
