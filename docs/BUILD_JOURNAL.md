@@ -332,6 +332,14 @@ The same pass rebuilt the public README gallery directly from the stable Product
 
 The link-and-gallery close reached **264 passing unit/integration tests across 25 files**, clean full-project ESLint and TypeScript checks, clean vinext and Next/Vercel production builds, and all **12 Playwright journeys** across desktop and mobile Chrome.
 
+### The journal became a first-class project artifact
+
+After reviewing the complete July 16 record, Dave recognized that the journal captured something the final interface and commit graph could not show alone: the repeated human–agent collaboration loop behind the result. The README now presents the journal near the top of the project instead of treating it as supporting documentation near the end.
+
+The framing uses Rick Dakan and Joseph Feller's [AI Fluency Framework](https://www.anthropic.com/ai-fluency/overview), supported by Anthropic, as a useful vocabulary rather than a claim of affiliation. **Delegation** appears in Dave's product mission and acceptance decisions alongside Codex's implementation and bounded specialist work. **Description** appears when ideas become explicit behavior, contracts, and tests. **Discernment** appears every time Dave exercises the actual product and rejects, redirects, or approves the result. **Diligence** appears in the privacy, source, safety, cost, accessibility, and release evidence. The resulting [Description–Discernment loop](https://www.anthropic.com/ai-fluency/description-discernment-loop) is visible throughout the dated entries: describe an outcome, build and verify it, use the real experience, then refine from evidence.
+
+That makes the journal part of the hackathon deliverable in its own right. It documents not merely what Codex generated, but how human context, taste, domain knowledge, and responsibility governed the work—and how the agent converted that judgment into tested code.
+
 ## July 17 — Shared iOS and macOS companion shells
 
 - Create the fresh `apple/` project and shared SwiftUI/WebKit source.

@@ -14,6 +14,23 @@ Built for the OpenAI Build Week **Apps for Your Life** category.
 > [!IMPORTANT]
 > Morrowward is an educational simulation, not financial, investment, tax, or legal advice. Illustrations are not forecasts or guarantees. Users are responsible for their decisions and should consider qualified professionals for guidance about their circumstances.
 
+## The build is part of the submission
+
+**[Read the dated Morrowward build journal →](docs/BUILD_JOURNAL.md)**
+
+The journal is a chronological, evidence-backed record of the human–agent collaboration that produced Morrowward—not a retrospective reconstructed after the product was finished. It preserves Dave's intent and domain experience, Codex's delegated implementation, hands-on product feedback, production failures, changed decisions, model and tool boundaries, privacy and cost tradeoffs, test results, commit milestones, and deployment evidence.
+
+Using the vocabulary of the [AI Fluency Framework](https://www.anthropic.com/ai-fluency/overview), developed by Rick Dakan and Joseph Feller with support from Anthropic, the history makes all four competencies visible:
+
+| AI Fluency competency | What the journal makes inspectable |
+| --- | --- |
+| **Delegation** | Dave sets the mission, product boundaries, financial lessons, and acceptance criteria; Codex decomposes and executes the engineering work, including bounded specialist agents. |
+| **Description** | Ideas become concrete prompts, interface behavior, contracts, disclosures, tests, and demo requirements. |
+| **Discernment** | Dave repeatedly uses the real product, challenges confusing or incomplete results, and decides what is good enough; Codex audits evidence and converts that judgment into verified changes. |
+| **Diligence** | Privacy boundaries, source provenance, simulated-versus-real labels, spending controls, accessibility, failure modes, and release decisions remain explicit and testable. |
+
+The recurring [Description–Discernment loop](https://www.anthropic.com/ai-fluency/description-discernment-loop) was simple: Dave described the next outcome, Codex built and verified it, Dave exercised the real experience, and both refined the result from evidence. The journal may therefore be as useful to judges as the finished code: it shows not only what Codex accelerated, but where human context, taste, responsibility, and judgment materially changed the product.
+
 ## Why it exists
 
 At age ten, I was diagnosed with Type 1 diabetes and learned early that my future would require preparation. That same year, money saved from a paper route bought my first Commodore 64. Small daily experiments in BASIC started a path into technology that changed my life and my family’s future.
