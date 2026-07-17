@@ -340,7 +340,7 @@ The framing uses Rick Dakan and Joseph Feller's [AI Fluency Framework](https://w
 
 That makes the journal part of the hackathon deliverable in its own right. It documents not merely what Codex generated, but how human context, taste, domain knowledge, and responsibility governed the work—and how the agent converted that judgment into tested code.
 
-## July 17 — Shared iOS and macOS companion shells
+## July 17 — Shared iOS and macOS companion shells, then feature-complete signoff
 
 ### Production signoff moved the product from features to portability
 
@@ -371,11 +371,18 @@ The native unit suite passed 7/7 checks across origin and backup boundaries: exa
 
 The portability milestone also reran the complete web gate: 264/264 unit tests, lint, TypeScript, and the production build passed, followed by 12/12 Playwright journeys across desktop Chrome and a Pixel 7 viewport. A final Apple-source and built-binary scan found no OpenAI key, Vercel token, cron or bypass credential, protected-preview origin, or other embedded secret. Both Release products resolved only the stable Production origin, contained the privacy manifest, and the generated Xcode project reproduced byte-for-byte from `project.yml`.
 
-That evidence closes build, launch, and local-persistence acceptance. It does not silently convert source presence into complete integration acceptance: export and import panels, external-link handoff, historical video playback, warmed offline behavior, keyboard use, Reduce Motion, and VoiceOver remain granular hands-on checks for July 18. Error/retry states and the native backup bridge exist in source, but those failure paths still need runtime exercise before they are marked complete.
+### Four calendar days from idea to code complete
+
+Git history verifies that Morrowward's first repository commit, `f7f645f`, landed on **July 14, 2026 at 9:49 PM EDT**. On July 17, after using the final Production experience with the completed web and Apple-source changes, Dave gave the human acceptance decision: the site looked amazing, the project was feature-complete, and no additional smoke-test matrix was needed for this hackathon scope. July 14, 15, 16, and 17 make the complete idea-to-code journey **four calendar days, inclusive**.
+
+This was not a declaration that every conceivable platform behavior had been individually certified. Export/import panels, external-link handoff, historical video playback, warmed offline behavior, keyboard use, Reduce Motion, and VoiceOver were explicitly waived as additional hackathon acceptance gates for the lightweight companion shells. The decision is recorded instead of silently checking unrun tests: the product already had Dave's end-user acceptance, both companion targets had real Release build/launch and persistence proof, and expanding the matrix would not change the honest source-distributed-companion claim.
+
+The signoff marks **final feature development complete on July 17**. Codex then installed and opened the verified Release build in the booted iPhone 17 Pro Simulator and installed the strictly verified, ad-hoc signed Mac build at `~/Applications/Morrowward.app`; both were launched for Dave's hands-on use and tomorrow's recording. What remains is release work—recording, publication, Devpost assembly, and submission—not another feature phase.
+
+That four-day arc is also the clearest summary of the human–agent loop captured by this journal. Dave supplied the mission, decades of investor lessons, taste, and final discernment; Codex delegated and implemented the architecture, safety boundaries, tests, content pipelines, deployment, and Apple portability; each real-product review became the next concrete refinement. The result is not merely “AI generated an app quickly.” It is inspectable evidence that sustained human judgment and agent execution can move from a deeply personal idea to a finished, accepted product in four days.
 
 ## July 18 — Submission package and recording
 
-- Complete final web and Apple smoke tests.
 - Finalize the Devpost description, README, screenshots, attribution, and three-minute demo path.
 - Record the public demo showing the web app plus the iPhone and macOS companion shells.
 - Keep the product demonstration independent from live market conditions by using repeatable seeded state.

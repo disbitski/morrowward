@@ -8,6 +8,9 @@ Built for the OpenAI Build Week **Apps for Your Life** category.
 
 **Stable production demo:** [morrowward.vercel.app](https://morrowward.vercel.app)
 
+> [!TIP]
+> **From idea to feature-complete in four days.** The repository's first commit was created on **July 14, 2026**; after daily hands-on Description–Discernment loops, Dave used the finished Production experience and gave final feature signoff on **July 17, 2026**. That is four calendar days, inclusive, from the first code to code complete. The verified iPhone build is installed and open in an iPhone 17 Pro Simulator, and the signed Mac build is installed locally for the recorded demo. What remains is release work: publish the video, repository, and Devpost submission.
+
 > [!NOTE]
 > Release plan: the stable production site was made public-but-unannounced on July 16 so the web app and Apple companion shells could share one production backend and one test target. Search indexing remains disabled, protected previews remain private, and the GitHub repository remains private through July 19. On July 20, indexing will be enabled and the complete repository history will be made public for judging ahead of the July 21, 2026, 8:00 PM ET deadline.
 

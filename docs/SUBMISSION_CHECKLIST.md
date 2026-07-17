@@ -39,13 +39,9 @@
 - [x] Local plan data survives complete app termination and relaunch in the 1/1 passing iPhone and 1/1 passing Mac Production UI journeys.
 - [x] Native origin and backup-payload unit suite passes 7/7.
 - [x] Actual iPhone and Mac runtime captures are saved under `docs/screenshots/` and embedded in the root README.
-- [ ] Force the native offline/error state and verify Retry recovers on iPhone and Mac.
-- [ ] Exercise native JSON export and confirm Apple's standard save panel and valid saved file on iPhone and Mac.
-- [ ] Exercise JSON import through the system file-input panel and confirm the restored plan on iPhone and Mac.
-- [ ] Open an external educational source and confirm system-browser handoff on iPhone and Mac.
-- [ ] Verify historical welcome video playback and captions in both shells.
-- [ ] Verify warmed offline reload after one successful online load in both shells.
-- [ ] Complete keyboard, Reduce Motion, and VoiceOver smoke checks on the applicable Apple targets.
+- [x] **Hackathon companion acceptance signed off July 17.** Dave accepted the finished end-user experience after using Production; Release build/launch, exact-origin policy, native unit coverage, and local-persistence journeys provide the intended lightweight-companion proof.
+- **N/A — explicitly waived as additional hackathon gates, not represented as tested:** forced native offline/retry recovery; native export and import panels; external-link handoff; historical video playback; warmed offline reload; and keyboard, Reduce Motion, and VoiceOver smoke checks. These remain worthwhile post-hackathon validation for any distributed release, but they are not blockers for the honest source-distributed SwiftUI/WebKit companion scope Dave accepted.
+- [x] Same-day demo setup complete: the verified iPhone Release build is installed and running in the booted iPhone 17 Pro Simulator; the verified ad-hoc signed Mac build is installed at `~/Applications/Morrowward.app` and running for Dave's hands-on use and recording.
 - [x] Root and Apple READMEs document the shared architecture, XcodeGen, local-server testing, Release origin, Simulator, unsigned and ad-hoc signed Mac verification, and optional physical-device signing.
 
 Earlier protected preview verified July 14: `https://morrowward-qui11xo7k-thedavedev.vercel.app`. Anonymous requests redirect to Vercel Authentication. Its health route reports GPT-5.6 configured, and its deployed GPT-5.6 educator response was verified. The July 15 market-milestone preview is recorded below. The stable production alias moved to public-but-unannounced integration testing on July 16; protected previews remain private.
