@@ -4,6 +4,13 @@ Morrowward for iPhone and Morrowward for Mac are lightweight companion shells bu
 
 Both apps use Apple's iOS/macOS 26 `WebPage` and SwiftUI `WebView` APIs. The Release origin is pinned to [`https://morrowward.vercel.app`](https://morrowward.vercel.app). Personal plans and practice holdings stay in each app's private persistent WebKit store; they do not automatically sync with Safari or with the other companion app.
 
+Platform entry points:
+
+- [Morrowward for iPhone source](https://github.com/disbitski/morrowward/tree/main/apple/Apps/iPhone)
+- [Morrowward for Mac source](https://github.com/disbitski/morrowward/tree/main/apple/Apps/Mac)
+
+These are source-distributed companion builds, not App Store releases. The links resolve for repository-authorized collaborators while the repository is private and become public at the same URLs when the repository is made public on July 20.
+
 ## Requirements
 
 - macOS 26

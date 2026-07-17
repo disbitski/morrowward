@@ -132,12 +132,20 @@ test("one-time historical welcome never autoplays and guides the next practice s
   await expect(companionPanel).toBeVisible();
   const iphoneSource = page.getByTestId("mission-source-iphone");
   const macSource = page.getByTestId("mission-source-mac");
-  await expect(iphoneSource.getByRole("heading", { name: "Morrowward for iPhone" })).toBeVisible();
+  await expect(iphoneSource.getByRole("heading", { name: "Morrowward for iOS" })).toBeVisible();
   await expect(macSource.getByRole("heading", { name: "Morrowward for Mac" })).toBeVisible();
-  await expect(iphoneSource.getByText(/Source publishes with the repo on July 20/i)).toBeVisible();
-  await expect(macSource.getByText(/Source publishes with the repo on July 20/i)).toBeVisible();
-  await expect(iphoneSource.locator("a, button, [role='button'], [tabindex]")).toHaveCount(0);
-  await expect(macSource.locator("a, button, [role='button'], [tabindex]")).toHaveCount(0);
+  await expect(iphoneSource).toHaveAttribute(
+    "href",
+    "https://github.com/disbitski/morrowward/tree/main/apple/Apps/iPhone",
+  );
+  await expect(macSource).toHaveAttribute(
+    "href",
+    "https://github.com/disbitski/morrowward/tree/main/apple/Apps/Mac",
+  );
+  await expect(iphoneSource.getByText(/View iOS source/i)).toBeVisible();
+  await expect(macSource.getByText(/View Mac source/i)).toBeVisible();
+  await expect(iphoneSource).toHaveAttribute("target", "_blank");
+  await expect(macSource).toHaveAttribute("target", "_blank");
   const followDave = page.getByTestId("mission-follow-dave");
   await expect(followDave).toHaveAttribute("href", "https://thedavedev.com/");
   await expect(followDave).toHaveAttribute("target", "_blank");

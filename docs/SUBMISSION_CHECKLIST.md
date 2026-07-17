@@ -25,7 +25,7 @@
 ## Apple companion shells
 
 - [x] About page uses the polished three-card companion layout for **Morrowward for iPhone**, **Morrowward for Mac**, and **Follow Dave online**.
-- [x] The iPhone and Mac source cards remain intentionally informational, non-interactive, and free of placeholder URLs while GitHub is private. Turn them into links only after the corresponding public GitHub folder URLs resolve on July 20.
+- [x] The iPhone and Mac source cards link to their exact GitHub folders. They resolve now for repository-authorized collaborators and become publicly accessible at the same URLs when the repository is made public on July 20.
 - [x] **Follow Dave online** links to `https://thedavedev.com`.
 - [x] No App Store download badge or availability claim is used for companion builds distributed as source.
 - [x] Fresh `apple/` project contains shared SwiftUI/WebKit code plus separate iPhone and Mac entry points.

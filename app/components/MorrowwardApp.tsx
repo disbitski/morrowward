@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import {
+  AppWindowMac,
   ArrowRight,
   Bitcoin,
   BookOpen,
@@ -24,7 +25,6 @@ import {
   LineChart,
   Lock,
   Menu,
-  Monitor,
   Moon,
   PiggyBank,
   Plus,
@@ -35,9 +35,9 @@ import {
   Settings,
   ShieldCheck,
   SlidersHorizontal,
-  Smartphone,
   Sparkles,
   Sun,
+  TabletSmartphone,
   Target,
   TrendingUp,
   Upload,
@@ -2045,30 +2045,48 @@ function MissionView({
             <span className="section-kicker">Beyond the browser</span>
             <h2 id="companion-title">Take Morrowward with you.</h2>
           </div>
-          <p>Fresh iPhone and Mac companion source shares one SwiftUI/WebKit codebase and the stable Morrowward experience. The companion source links will activate when the complete repository becomes public on July 20; Dave’s site is already one click away.</p>
+          <p>The same local-first product, now in two lightweight Apple shells. Open the source in GitHub; it becomes public with the full repository on July 20.</p>
         </div>
         <ul>
           <li>
-            <article className="roadmap-source-card" data-state="pending" data-testid="mission-source-iphone">
-              <span className="roadmap-source-icon"><Smartphone size={22} aria-hidden="true" /></span>
+            <a
+              className="roadmap-source-card"
+              data-platform="ios"
+              data-state="active"
+              data-testid="mission-source-iphone"
+              href="https://github.com/disbitski/morrowward/tree/main/apple/Apps/iPhone"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span className="roadmap-source-icon"><TabletSmartphone size={31} strokeWidth={1.7} aria-hidden="true" /></span>
               <div className="roadmap-source-copy">
-                <span className="roadmap-source-platform">iPhone source</span>
-                <h3>Morrowward for iPhone</h3>
-                <p>A lightweight Apple companion for the same local-first Morrowward experience.</p>
+                <span className="roadmap-source-platform">iPhone + iPad</span>
+                <h3>Morrowward for iOS</h3>
+                <p>Shared SwiftUI companion.</p>
               </div>
-              <span className="roadmap-source-status">Source publishes with the repo on July 20</span>
-            </article>
+              <span className="roadmap-source-cta">View iOS source <ExternalLink size={15} aria-hidden="true" /></span>
+              <span className="sr-only"> (opens in a new tab)</span>
+            </a>
           </li>
           <li>
-            <article className="roadmap-source-card" data-state="pending" data-testid="mission-source-mac">
-              <span className="roadmap-source-icon"><Monitor size={22} aria-hidden="true" /></span>
+            <a
+              className="roadmap-source-card"
+              data-platform="mac"
+              data-state="active"
+              data-testid="mission-source-mac"
+              href="https://github.com/disbitski/morrowward/tree/main/apple/Apps/Mac"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span className="roadmap-source-icon"><AppWindowMac size={31} strokeWidth={1.7} aria-hidden="true" /></span>
               <div className="roadmap-source-copy">
-                <span className="roadmap-source-platform">Mac source</span>
+                <span className="roadmap-source-platform">macOS</span>
                 <h3>Morrowward for Mac</h3>
-                <p>A focused desktop companion backed by the same stable Morrowward web app.</p>
+                <p>Native desktop companion.</p>
               </div>
-              <span className="roadmap-source-status">Source publishes with the repo on July 20</span>
-            </article>
+              <span className="roadmap-source-cta">View Mac source <ExternalLink size={15} aria-hidden="true" /></span>
+              <span className="sr-only"> (opens in a new tab)</span>
+            </a>
           </li>
           <li>
             <a
@@ -2083,7 +2101,7 @@ function MissionView({
               <div className="roadmap-source-copy">
                 <span className="roadmap-source-platform">TheDaveDev.com</span>
                 <h3>Follow Dave online</h3>
-                <p>Field notes, projects, and practical experiments in real-world AI.</p>
+                <p>Field notes and real-world AI experiments.</p>
               </div>
               <span className="roadmap-source-cta">Visit Dave’s site <ExternalLink size={15} aria-hidden="true" /></span>
               <span className="sr-only"> (opens in a new tab)</span>

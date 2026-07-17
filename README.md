@@ -36,10 +36,10 @@ The recurring [Description–Discernment loop](https://www.anthropic.com/ai-flue
 Morrowward now includes fresh iPhone and Mac companion source created during Build Week. Two small platform entry points share one SwiftUI/WebKit implementation, preserve the complete web product instead of splitting it into rushed rewrites, and use the stable [`https://morrowward.vercel.app`](https://morrowward.vercel.app) Release origin. Plans and practice holdings remain in each app's private persistent WebKit store. Neither target needs an OpenAI key or Vercel credential; AI remains behind the same server-side endpoints as the web app.
 
 - **[Apple setup, architecture, and security boundaries →](apple/README.md)**
-- **[Morrowward for iPhone source →](apple/Apps/iPhone/)**
-- **[Morrowward for Mac source →](apple/Apps/Mac/)**
+- **[Morrowward for iPhone source →](https://github.com/disbitski/morrowward/tree/main/apple/Apps/iPhone)**
+- **[Morrowward for Mac source →](https://github.com/disbitski/morrowward/tree/main/apple/Apps/Mac)**
 
-These are honestly labeled source-distributed companion shells, not App Store releases or claims of two full native rewrites. Native loading and retry states, an exact-origin navigation policy, and system-browser handoff add the platform value needed for the demonstration while Morrowward remains the same tested local-first product. The two About-page source cards remain informational until the private repository becomes public and their final GitHub URLs can be verified on July 20.
+These are honestly labeled source-distributed companion shells, not App Store releases or claims of two full native rewrites. Native loading and retry states, an exact-origin navigation policy, and system-browser handoff add the platform value needed for the demonstration while Morrowward remains the same tested local-first product. The About-page source cards now link to the exact iPhone and Mac folders. Repository-authorized collaborators can open them while GitHub is private; the same URLs become publicly resolvable when the repository is made public on July 20.
 
 Runtime verification on July 17 produced clean Release builds for both targets, 7/7 passing native policy and backup-payload unit tests, and 1/1 passing production persistence journey on each platform. The iPhone journey ran in an iPhone 17 Pro Simulator; the ad-hoc signed Mac Release launched successfully and its sandbox, network-client, and user-selected file-access entitlements were inspected. These captures come from those real companion runs:
 
