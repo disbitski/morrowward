@@ -78,6 +78,58 @@ async function openMission(page: Page) {
   await page.getByTestId("mobile-nav-mission").click();
 }
 
+async function replaceWithSequentialTyping(
+  page: Page,
+  testId: string,
+  value: string,
+) {
+  const input = page.getByTestId(testId);
+  await input.click();
+  await input.selectText();
+  await page.keyboard.press("Backspace");
+  await expect(input).toHaveValue("");
+  await input.pressSequentially(value);
+  await expect(input).toHaveValue(value);
+  return input;
+}
+
+test("onboarding plan fields accept real sequential typing and commit the edited calculation", async ({ page }) => {
+  await page.goto("/");
+  await page.getByTestId("experience-new").click();
+  await page.getByTestId("onboarding-next").click();
+  await page.getByTestId("onboarding-theme-horizon").click();
+  await page.getByTestId("onboarding-next").click();
+
+  await replaceWithSequentialTyping(page, "plan-current-age", "42");
+
+  const targetAge = await replaceWithSequentialTyping(
+    page,
+    "plan-target-age",
+    "41",
+  );
+  await targetAge.blur();
+  await expect(targetAge).toHaveValue("43");
+
+  await replaceWithSequentialTyping(page, "plan-target-age", "67");
+  await replaceWithSequentialTyping(
+    page,
+    "plan-starting-balance",
+    "12500",
+  );
+  await page.getByTestId("onboarding-complete").click();
+
+  const greeting = page.getByTestId("historical-greeting-dialog");
+  await expect(greeting).toBeVisible();
+  await greeting.getByRole("button", { name: /^Skip welcome$/i }).click();
+  await openView(page, "plan");
+
+  await expect(page.getByTestId("plan-edit-current-age")).toHaveValue("42");
+  await expect(page.getByTestId("plan-edit-target-age")).toHaveValue("67");
+  await expect(page.getByTestId("plan-edit-starting")).toHaveValue("12500");
+  await expect(page.getByText("nominal value at age 67")).toBeVisible();
+  await expect(page.getByText("$45,000", { exact: true })).toBeVisible();
+});
+
 test("one-time historical welcome never autoplays and guides the next practice step", async ({ page }) => {
   await onboard(page, { leaveGreetingOpen: true });
   const dialog = page.getByTestId("historical-greeting-dialog");

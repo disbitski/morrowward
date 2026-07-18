@@ -913,6 +913,8 @@ function NumberField({
   testId?: string;
   integer?: boolean;
 }) {
+  const [draftValue, setDraftValue] = useState(() => String(value));
+  const editingRef = useRef(false);
   const accessibleUnit =
     prefix === "$"
       ? " in US dollars"
@@ -921,6 +923,26 @@ function NumberField({
         : suffix
           ? ` in ${suffix}`
           : "";
+
+  useEffect(() => {
+    if (!editingRef.current) {
+      setDraftValue(String(value));
+    }
+  }, [value]);
+
+  const commitDraft = () => {
+    editingRef.current = false;
+    const parsed = Number(draftValue);
+    if (draftValue.trim() === "" || !Number.isFinite(parsed)) {
+      setDraftValue(String(value));
+      return;
+    }
+
+    const bounded = clamp(parsed, min, max);
+    const normalized = integer ? Math.round(bounded) : bounded;
+    setDraftValue(String(normalized));
+    if (normalized !== value) onChange(normalized);
+  };
 
   return (
     <label className="number-field">
@@ -931,15 +953,32 @@ function NumberField({
           data-testid={testId}
           type="number"
           inputMode={integer ? "numeric" : "decimal"}
-          value={value}
+          value={draftValue}
           min={min}
           max={max}
           step={integer ? 1 : "any"}
+          onFocus={() => {
+            editingRef.current = true;
+          }}
           onChange={(event) => {
-            const parsed = Number(event.target.value);
-            if (!Number.isFinite(parsed)) return;
-            const bounded = clamp(parsed, min, max);
-            onChange(integer ? Math.round(bounded) : bounded);
+            const nextDraft = event.target.value;
+            setDraftValue(nextDraft);
+            if (nextDraft.trim() === "") return;
+
+            const parsed = Number(nextDraft);
+            if (
+              !Number.isFinite(parsed) ||
+              parsed < min ||
+              parsed > max ||
+              (integer && !Number.isInteger(parsed))
+            ) {
+              return;
+            }
+            onChange(parsed);
+          }}
+          onBlur={commitDraft}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") event.currentTarget.blur();
           }}
         />
         {suffix && <span aria-hidden="true">{suffix}</span>}
