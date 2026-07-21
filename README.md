@@ -4,9 +4,9 @@
 
 Morrowward is a local-first financial future simulator for adults who want to understand how time, consistent contributions, compounding, inflation, and risk interact. It combines a deterministic long-term projection engine, a synthetic Market Journey lab, a no-real-money practice portfolio, a financial-literacy center, and a bounded GPT-5.6 educator.
 
-Built for the OpenAI Build Week **Apps for Your Life** category.
+Built for the [OpenAI Build Week](https://devpost.com/software/morrowward) **Apps for Your Life** category.
 
-**Stable production demo:** [morrowward.vercel.app](https://morrowward.vercel.app)
+**Check out Morrowward right now:** [morrowward.vercel.app](https://morrowward.vercel.app)
 
 > [!TIP]
 > **From idea to feature-complete in four days.** The repository's first commit was created on **July 14, 2026**; after daily hands-on Description–Discernment loops, Dave used the finished Production experience and gave final feature signoff on **July 17, 2026**. That is four calendar days, inclusive, from the first code to code complete. The verified iPhone build is installed and open in an iPhone 17 Pro Simulator, and the signed Mac build is installed locally for the recorded demo. What remains is release work: publish the video, repository, and Devpost submission.
